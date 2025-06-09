@@ -1,0 +1,140 @@
+x-logging:
+  &json-logging
+  driver: json-file
+  options:
+    max-size: "1m"
+    max-file: "3"
+
+services:
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+      args:
+        - ARCHITECTURE=${APP_ARCHITECTURE:-arm64v8}
+        - TIMEZONE=${APP_TIMEZONE:-UTC}
+    image: nginx.quiz-app
+    container_name: nginx.quiz-app
+    restart: always
+    env_file:
+      - ./container_envs/common/.env
+      - ./container_envs/nginx/.env
+    environment:
+      - VPN_ACCESS_IP=${APP_VPN_IP:-10.0.100.3}
+      - VPN_ACCESS_PORT=${APP_VPN_PORT:-8082}
+    volumes:
+      - static:/etc/nginx/static:ro
+      - certs:/etc/letsencrypt
+      - ./nginx/default.template:/etc/nginx/templates/default.template:ro
+      - ./nginx/html:/var/www/html
+    depends_on:
+      - django
+    networks:
+      frontend-link:
+      localnet:
+        ipv4_address: ${APP_VPN_IP:-10.0.100.3}
+    ports:
+      - ${APP_ACCESS_PORT:-8443}:443
+    logging: *json-logging
+
+  django:
+    build:
+      context: ./django
+      dockerfile: Dockerfile
+      args:
+        - UID
+        - GID
+        - USERNAME=user
+        - GROUPNAME=user
+        - ARCHITECTURE=${APP_ARCHITECTURE:-arm64v8}
+        - TIMEZONE=${APP_TIMEZONE:-UTC}
+    image: django.quiz-app
+    container_name: django.quiz-app
+    restart: always
+    env_file:
+      - ./container_envs/common/.env
+      - ./container_envs/django/.env
+      - ./container_envs/postgres/.env
+    environment:
+      - DJANGO_TIMEZONE=${APP_TIMEZONE:-UTC}
+      - DJANGO_REDIS_HOST=redis
+      - DJANGO_REDIS_PORT=6379
+      - DJANGO_DATABASE_HOST=postgres
+      - DJANGO_DATABASE_PORT=5432
+    volumes:
+      - static:/var/static
+      - ./django/bashrc:/opt/home/.bashrc:ro
+      - ./django/app:/opt/app
+      - ./django/pyproject.toml:/opt/pyproject.toml
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - frontend-link
+      - backend-link
+    expose:
+      - 8001
+    logging: *json-logging
+
+  redis:
+    build:
+      context: ./redis
+      dockerfile: Dockerfile
+      args:
+        - ARCHITECTURE=${APP_ARCHITECTURE:-arm64v8}
+        - TIMEZONE=${APP_TIMEZONE:-UTC}
+    image: redis.quiz-app
+    container_name: redis.quiz-app
+    restart: always
+    privileged: true
+    volumes:
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    networks:
+      - backend-link
+    expose:
+      - 6379
+    logging: *json-logging
+
+  postgres:
+    build:
+      context: ./postgres
+      dockerfile: Dockerfile
+      args:
+        - ARCHITECTURE=${APP_ARCHITECTURE:-arm64v8}
+        - TIMEZONE=${APP_TIMEZONE:-UTC}
+    image: postgres.quiz-app
+    container_name: postgres.quiz-app
+    restart: always
+    env_file:
+      - ./container_envs/postgres/.env
+    environment:
+      - PGDATA=/var/lib/postgresql/data/pgdata
+      - LANG=C
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --locale=C
+    volumes:
+      - database:/var/lib/postgresql/data
+    networks:
+      - backend-link
+    expose:
+      - 5432
+    logging: *json-logging
+
+networks:
+  frontend-link:
+    name: frontend-quiz-app
+  backend-link:
+    name: backend-quiz-app
+  localnet:
+    name: shared-localnet
+    external: true
+
+volumes:
+  certs:
+    name: letsencrypt-cert
+    driver: local
+  database:
+    name: quiz-app-db
+    driver: local
+  static:
+    name: quiz-app-static
+    driver: local
