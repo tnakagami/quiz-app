@@ -35,30 +35,18 @@ if [ "${BACKEND_EXECUTABLE_TYPE}" = "production" ]; then
     echo
     certbot certonly -c /data/cli.ini ${domains}
   fi
-
-  # Create config file
-  readonly env_vars=$({
-    echo '$$BACKEND_ALLOWED_HOSTS'
-    echo '$$SSL_CERT_PATH'
-    echo '$$SSL_CERTKEY_PATH'
-    echo '$$SSL_STAPLING_VERIFY'
-    echo '$$SSL_TRUSTED_CERTIFICATE_PATH'
-    echo '$$VPN_ACCESS_IP'
-    echo '$$VPN_ACCESS_PORT'
-  } | tr '\n' ' ')
-  cat ${template_filepath} | envsubst "${env_vars}" > ${conf_filepath}
-else
-  # Create config file
-  readonly env_vars=$({
-    echo '$$SSL_CERT_PATH'
-    echo '$$SSL_CERTKEY_PATH'
-    echo '$$SSL_STAPLING_VERIFY'
-    echo '$$SSL_TRUSTED_CERTIFICATE_PATH'
-    echo '$$VPN_ACCESS_IP'
-    echo '$$VPN_ACCESS_PORT'
-  } | tr '\n' ' ')
-  cat ${template_filepath} | envsubst "${env_vars}" | sed -e 's|${BACKEND_ALLOWED_HOSTS}|localhost|g' > ${conf_filepath}
 fi
+# Create config file
+readonly env_vars=$({
+  echo '$$BACKEND_ALLOWED_HOSTS'
+  echo '$$SSL_CERT_PATH'
+  echo '$$SSL_CERTKEY_PATH'
+  echo '$$SSL_STAPLING_VERIFY'
+  echo '$$SSL_TRUSTED_CERTIFICATE_PATH'
+  echo '$$VPN_ACCESS_IP'
+  echo '$$VPN_ACCESS_PORT'
+} | tr '\n' ' ')
+cat ${template_filepath} | envsubst "${env_vars}" > ${conf_filepath}
 
 # Define sigterm handler
 is_running=1

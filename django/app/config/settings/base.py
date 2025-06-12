@@ -32,7 +32,9 @@ INSTALLED_APPS = [
     'django.contrib.humanize',
     'django.forms',
     'channels',
-    'adminrestrict',
+    # User's app
+    'utils.apps.UtilsConfig',
+    'account.apps.AccountConfig',
 ]
 
 MIDDLEWARE = [
@@ -44,7 +46,6 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'adminrestrict.middleware.AdminPagesRestrictMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -54,7 +55,6 @@ TEMPLATES = [
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
             os.path.join(BASE_DIR, 'templates'),
-            os.path.join(BASE_DIR, 'config', 'email_templates'),
             os.path.join(django.__path__[0], 'forms/templates'),
         ],
         'APP_DIRS': True,
@@ -109,7 +109,7 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        'NAME': 'account.validators.CustomPasswordValidator',
     },
 ]
 
@@ -140,3 +140,9 @@ STATIC_ROOT = '/var/static'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# ========================================
+# = Custom settings defined by developer =
+# ========================================
+# Define custom user model
+AUTH_USER_MODEL = 'account.User'

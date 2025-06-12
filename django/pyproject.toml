@@ -25,7 +25,6 @@ daphne = "^4.2.0"
 rules = "^3.5"
 psycopg = { version="^3.2.6", extras=["c", "pool"] }
 crumbles = "^0.1.2"
-django-adminrestrict = "^3.1"
 
 [tool.poetry.group.test.dependencies]
 pytest = "^8.3.5"
@@ -53,10 +52,11 @@ python_files = ["test_*.py", "tests.py", "*_test.py"]
 markers = [
   "customtag: mark tests as custom_tags",
   "widget: mark tests as widget",
+  "validator: mark tests as Django Validator",
   "model: mark tests as Django Model",
   "form: mark tests as Django Form",
   "view: mark tests as Django View",
-  "common: mark tests as common application",
+  "utils: mark tests as utils application",
   "account: mark tests as account application",
   "webtest: mark tests as django-webtest",
 ]
@@ -64,6 +64,9 @@ cache_dir = "/opt/home/.cache"
 asyncio_default_fixture_loop_scope = "session"
 asyncio_default_test_loop_scope = "session"
 asyncio_mode = "strict"
+filterwarnings = [
+  "ignore:.*_after_postgeneration will stop",
+]
 
 [build-system]
 requires = ["poetry-core"]
