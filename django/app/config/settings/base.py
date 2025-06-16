@@ -23,6 +23,7 @@ DEBUG = False
 
 # Application definition
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -50,11 +51,13 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'config.urls'
 
+FORM_RENDERER = 'django.forms.renderers.TemplatesSetting'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
             os.path.join(BASE_DIR, 'templates'),
+            os.path.join(BASE_DIR, 'utils', 'templates'),
             os.path.join(django.__path__[0], 'forms/templates'),
         ],
         'APP_DIRS': True,
@@ -64,6 +67,9 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
             ],
+            'libraries': {
+                'custom_tags': 'utils.tags.custom_tags',
+            },
         },
     },
 ]
@@ -129,6 +135,13 @@ USE_I18N = True
 
 USE_TZ = True
 
+LOCALE_PATHS = (
+    os.path.join(BASE_DIR, 'account', 'locale'),
+    os.path.join(BASE_DIR, 'config', 'locale'),
+    os.path.join(BASE_DIR, 'templates', 'locale'),
+    os.path.join(BASE_DIR, 'utils', 'locale'),
+    os.path.join(BASE_DIR, 'utils', 'templates', 'locale'),
+)
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
@@ -144,5 +157,71 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # ========================================
 # = Custom settings defined by developer =
 # ========================================
+# Define cach setting
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': '{host}://{host}:{port}'.format(host=os.getenv('DJANGO_REDIS_HOST', 'redis'), port=os.getenv('DJANGO_REDIS_PORT', 6379)),
+    }
+}
+# Define the salt of hash value
+HASH_SALT = os.getenv('DJANGO_HASH_SALT')
 # Define custom user model
 AUTH_USER_MODEL = 'account.User'
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+]
+LOGIN_URL = 'account:login'
+LOGIN_REDIRECT_URL = 'utils:index'
+LOGOUT_URL = 'account:logout'
+LOGOUT_REDIRECT_URL = 'utils:index'
+# Define comma interval to use human readable expression
+NUMBER_GROUPING = 3
+# Define configuration of account registration and password reset timeout
+ACTIVATION_TIMEOUT_SECONDS = 10*60
+PASSWORD_RESET_TIMEOUT = 5*60
+# Setup e-mail
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.getenv('DJANGO_EMAIL_ADDRESS')
+EMAIL_HOST_PASSWORD = os.getenv('DJANGO_APPLICATION_PASSWORD')
+
+# Log setting
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{asctime}[{levelname}] {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+        'verbose_console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['verbose_console'],
+        'level': 'INFO',
+        'propagate': False,
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}

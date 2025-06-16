@@ -18,6 +18,29 @@ Please remember the two-step guides to making model changes:
 1. Run `python manage.py makemigrations something-apps` to create migrations for those changes in your application
 1. After that, execute `python manage.py migrate` command to apply those changes to the database.
 
+### Create superuser
+By referring the following table, create superuser account.
+
+| Argument | Detail | Example |
+| :---- | :---- | :---- |
+| `--email` | Superuser's e-mail address | `hoge@example.com` |
+| `--password` | Superuser's password | `superuser-password` |
+
+Specifically, after definition of `email` and `password`, you can type the following command.
+
+```bash
+# In the docker environment
+python manage.py custom_createsuperuser --email hoge@example.com --password superuser-password
+```
+
+### Collect static files
+After that, execute the following command to get static files.
+
+```bash
+# In the docker environment
+python manage.py collectstatic
+```
+
 ### Create multilingual localization messages
 Run the following commands to reflect translation messages.
 

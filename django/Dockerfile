@@ -58,9 +58,14 @@ RUN    apk update \
     && chown -R ${USERNAME}:${GROUPNAME} /opt/poetry.lock \
     && rm -rf /root/.cache /var/cache/apk/* /tmp/*
 
+COPY ./execute.sh /execute.sh
+RUN    mkdir -p /var/static \
+    && chown -R ${USERNAME}:${GROUPNAME} /execute.sh /var/static \
+    && chmod 755 /execute.sh
+
 WORKDIR ${APP_ROOT_PATH}
 USER ${USERNAME}
 
 EXPOSE 8001
 
-CMD ["daphne", "-b", "0.0.0.0", "-p", "8001", "--ping-interval", "10", "--ping-timeout", "120", "--proxy-headers", "config.asgi:application"]
+CMD ["/execute.sh"]

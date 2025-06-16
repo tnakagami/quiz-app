@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block content %}
+{% include 'breadcrumbs.html' with title=_("Index") %}
+<div class="row justify-content-center">
+  <div class="col">
+    {% if not user.is_authenticated %}
+    <p>{% trans "Please login from above link or create new account." %}</p>
+    {% else %}
+    <div class="row row-cols-1 g-2">
+      {% if user.has_guest_role %}
+        {# Quiz room #}
+      {% endif %}
+      {% if user.has_creator_role %}
+        {# Check/Create/Update/Delete quizzes #}
+      {% endif %}
+      {% if user.has_manager_role %}
+      <div class="col">
+        <a href="" class="link-underline link-underline-opacity-0">
+          <div class="card custom-boxshadow">
+            <div class="card-header">{% trans "Manager only" %}</div>
+            <div class="card-body">
+              <p class="card-title h3">{% trans "Quiz genre" %}</p>
+              <p class="card-text">{% trans "Create/Update quiz genres." %}</p>
+            </div>
+          </div>
+        </a>
+      </div>
+      <div class="col">
+        <a href="{% url 'account:role_change_requests' %}" class="link-underline link-underline-opacity-0">
+          <div class="card custom-boxshadow">
+            <div class="card-header">{% trans "Manager only" %}</div>
+            <div class="card-body">
+              <p class="card-title h3">{% trans "Role change request" %}</p>
+              <p class="card-text">{% trans "Check/update role change requests." %}</p>
+            </div>
+          </div>
+        </a>
+      </div>
+      <div class="col">
+        <div class="card">
+          <div class="card-header">{% trans "Manager only" %}</div>
+          <div class="card-body">
+            <p class="card-title h3">{% trans "Today's hash value" %}</p>
+            <p class="card-text" id="hash-value">{{ hash_value|safe }}</p>
+            <a
+              id="copy-hash-value"
+              tabindex="0"
+              role="button"
+              class="btn btn-outline-primary custom-boxshadow"
+              data-bs-toggle="popover"
+              data-bs-trigger="focus"
+              data-bs-placement="right"
+              data-bs-content="{% trans 'Copied!' %}"
+            >
+              {% trans "Copy to clipboard" %}
+            </a>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block bodyjs %}
+{% if user.has_manager_role %}
+<script>
+(function () {
+  const init = () => {
+    const btn = document.querySelector('#copy-hash-value');
+    const popover = new bootstrap.Popover(btn, {
+      delay: {
+        'show': 100,
+        'hide': 1500,
+      },
+    });
+    btn.addEventListener('click', (event) => {
+      const element = document.querySelector('#hash-value');
+      const digest = element.textContent;
+      // Create textarea which is temporary element
+      const textarea = document.createElement('textarea');
+      textarea.value = digest;
+      // Add element and copy text
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      // Remove textarea element
+      document.body.removeChild(textarea);
+      popover.show();
+    }, false);
+  };
+  // Add DOM event
+  document.addEventListener('DOMContentLoaded', init);
+})();
+</script>
+{% endif %}
+{% endblock %}

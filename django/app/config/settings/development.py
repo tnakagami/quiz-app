@@ -3,7 +3,7 @@ from .base import *
 
 DEBUG = True
 ALLOWED_HOSTS = ['*']
-CSRF_TRUSTED_ORIGINS = ['https://localhost', 'http://localhost:8081']
+CSRF_TRUSTED_ORIGINS = os.getenv('DJANGO_TRUSTED_ORIGINS').split(',')
 
 DATABASES = {
     'default': {
@@ -14,3 +14,5 @@ DATABASES = {
         },
     }
 }
+
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

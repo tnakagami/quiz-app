@@ -1,5 +1,7 @@
 from django.db import models
+from django.conf import settings
 from django.utils import timezone, dateformat
+import hashlib
 import uuid
 
 ##
@@ -21,6 +23,16 @@ def convert_timezone(utc_time, is_string=False, strformat='Y-m-d'):
     output = dateformat.format(output, strformat)
 
   return output
+
+##
+# @brief Make hash value based on current date
+# @return digest hash value of hex string with salt given by developer
+def get_digest():
+  current_time = get_current_time()
+  message = convert_timezone(current_time, is_string=True, strformat='Y-m-d(w)')
+  digest = hashlib.sha256(f'{message}#{settings.HASH_SALT}'.encode()).hexdigest()
+
+  return digest
 
 class BaseModel(models.Model):
   class Meta:
