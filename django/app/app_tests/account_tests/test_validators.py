@@ -73,10 +73,9 @@ def test_check_help_text_method_of_password_validator():
 
 @pytest.mark.account
 @pytest.mark.validator
-def test_check_valid_digest_of_digest_validator(mocker):
+def test_check_valid_digest_of_digest_validator():
   exact_val = 'abc123'
-  mocker.patch('account.validators.get_digest', return_value=exact_val)
-  validator = validators.CustomDigestValidator()
+  validator = validators.CustomDigestValidator(exact_val)
 
   try:
     validator.validate(exact_val)
@@ -85,10 +84,8 @@ def test_check_valid_digest_of_digest_validator(mocker):
 
 @pytest.mark.account
 @pytest.mark.validator
-def test_check_invalid_digest_of_digest_validator(mocker):
-  exact_val = 'abc123'
-  mocker.patch('account.validators.get_digest', return_value='abc123')
-  validator = validators.CustomDigestValidator()
+def test_check_invalid_digest_of_digest_validator():
+  validator = validators.CustomDigestValidator('abc123')
   err_msg = 'Invalid a digest value.'
 
   with pytest.raises(ValidationError) as ex:

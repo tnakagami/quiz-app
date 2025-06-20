@@ -47,7 +47,7 @@ services:
       - frontend-link
       - backend-link
     ports:
-      - 8080:8080
+      - ${APP_BACKDOOR_PORT-:3000}:8080
     expose:
       - 80
     logging: *json-logging

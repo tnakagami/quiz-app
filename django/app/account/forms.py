@@ -11,6 +11,7 @@ from django.contrib.auth.forms import (
 from django.contrib.sites.shortcuts import get_current_site
 from django.template.loader import render_to_string
 from django.utils.translation import gettext_lazy
+from utils.models import get_digest
 from utils.forms import BaseFormWithCSS
 from utils.widgets import CustomSwitchInput
 from .validators import CustomDigestValidator
@@ -20,6 +21,11 @@ UserModel = get_user_model()
 
 class LoginForm(AuthenticationForm, BaseFormWithCSS):
   username = forms.EmailField(widget=forms.EmailInput(attrs={'autofocus': True}))
+
+def _validate_hash_sign(value):
+  exact_digest = get_digest()
+  instance = CustomDigestValidator(exact_digest)
+  instance.validate(value)
 
 class UserCreationForm(BaseUserCreationForm, BaseFormWithCSS):
   class Meta:
@@ -39,7 +45,7 @@ class UserCreationForm(BaseUserCreationForm, BaseFormWithCSS):
     label=gettext_lazy('Hash value'),
     required=True,
     widget=forms.TextInput(),
-    validators=[CustomDigestValidator().validate],
+    validators=[_validate_hash_sign],
     help_text=gettext_lazy("Enter the today's hash value."),
   )
 

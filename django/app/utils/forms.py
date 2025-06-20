@@ -32,10 +32,17 @@ class ModelFormBasedOnUser(forms.ModelForm):
   # @param args Positional arguments
   # @param kwargs Named arguments
   def save(self, *args, **kwargs):
-    # Replace the named argument
-    kwargs['commit'] = False
-    instance = super().save(*args, **kwargs)
+    instance = super().save(commit=False)
     setattr(instance, self.owner_name, self.user)
+    self.post_process(instance, *args, **kwargs)
     instance.save()
 
     return instance
+
+  ##
+  # @brief Update instance before calling save method
+  # @param instance Target instance
+  # @param args Positional arguments
+  # @param kwargs Named arguments
+  def post_process(self, instance, *args, **kwargs):
+    pass

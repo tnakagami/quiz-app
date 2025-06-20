@@ -37,6 +37,7 @@ class RoleApprovalFactory(factory.django.DjangoModelFactory):
 
   user = factory.SubFactory(UserFactory)
   requested_date = factory.LazyFunction(timezone.now)
+  is_completed = False
 
 class IndividualGroupFactory(factory.django.DjangoModelFactory):
   class Meta:

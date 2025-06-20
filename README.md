@@ -37,6 +37,7 @@ Please see [direct_edit](./nginx/direct_edit/) for details.
     | :---- | :---- | :---- |
     | `APP_DOMAINS` | `localhost -> http://nginx:80` | See [https-portal](https://github.com/SteveLTN/https-portal) for details. |
     | `APP_ACCESS_PORT` | 8443 | from 1025 to 65535 |
+    | `APP_BACKDOOR_PORT` | 3000 | from 1025 to 65535 |
     | `APP_ARCHITECTURE` | arm64v8 | amd64, arm32v5, arm32v6, arm32v7, arm64v8, i386, mips64le, ppc64le, riscv64, s390x |
     | `APP_TIMEZONE` | Asia/Tokyo | UTC, Asia/Tokyo, etc. |
 

@@ -11,6 +11,28 @@ g_wrong_password = 'h0o$jAx4#Pi5'
 
 @pytest.mark.account
 @pytest.mark.form
+def test_valid_digest_validator(mocker):
+  exact_digest = 'abc123'
+  mocker.patch('account.forms.get_digest', return_value=exact_digest)
+
+  try:
+    forms._validate_hash_sign(exact_digest)
+  except Exception as ex:
+    pytest.fail(f'Unexpected Error: {ex}')
+
+@pytest.mark.account
+@pytest.mark.form
+def test_invalid_digest_validator(mocker):
+  mocker.patch('account.forms.get_digest', return_value='abc123')
+  err_msg = 'Invalid a digest value.'
+
+  with pytest.raises(ValidationError) as ex:
+    forms._validate_hash_sign('xyz')
+
+  assert err_msg in ex.value.args
+
+@pytest.mark.account
+@pytest.mark.form
 @pytest.mark.django_db
 @pytest.mark.parametrize([
   'email',

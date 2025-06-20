@@ -73,7 +73,50 @@ class LoginPage(LoginView, DjangoBreadcrumbsMixin):
 class LogoutPage(LogoutView):
   template_name = 'index.html'
 
-class CreateAccountPage(CreateView, DjangoBreadcrumbsMixin):
+# ================
+# = User profile =
+# ================
+class UserProfilePage(LoginRequiredMixin, IsOwner, DetailView, DjangoBreadcrumbsMixin):
+  raise_exception = True
+  model = UserModel
+  template_name = 'account/profiles/user_profile.html'
+  context_object_name = 'owner'
+  crumbles = DjangoBreadcrumbsMixin.get_target_crumbles(
+    url_name='account:user_profile',
+    title=gettext_lazy('User profile'),
+    parent_view_class=Index,
+    url_keys=['pk'],
+  )
+
+class UpdateUserProfilePage(LoginRequiredMixin, IsOwner, UpdateView, DjangoBreadcrumbsMixin):
+  raise_exception = True
+  model = UserModel
+  form_class = forms.UserProfileForm
+  template_name = 'account/profiles/profile_form.html'
+  crumbles = DjangoBreadcrumbsMixin.get_target_crumbles(
+    url_name='account:update_profile',
+    title=gettext_lazy('Update user profile'),
+    parent_view_class=UserProfilePage,
+    url_keys=['pk'],
+  )
+
+  ##
+  # @brief Get the URL to come back to the previous page
+  # @return Target URL
+  def get_success_url(self):
+    return reverse('account:user_profile', kwargs={'pk': self.kwargs['pk']})
+
+class IsNotAuthenticated(UserPassesTestMixin):
+  ##
+  # @brief Check whether request user can access to target page or not
+  # @return bool Judgement result
+  # @retval True Request user can access to the page
+  # @retval False Request user can access to the page except superuser
+  def test_func(self):
+    return not self.request.user.is_authenticated
+
+class CreateAccountPage(IsNotAuthenticated, CreateView, DjangoBreadcrumbsMixin):
+  raise_exception = True
   form_class = forms.UserCreationForm
   template_name = 'account/create_account.html'
   subject_template_name = 'account/mail_template/provisional_registration/subject.txt'
@@ -101,7 +144,7 @@ class CreateAccountPage(CreateView, DjangoBreadcrumbsMixin):
 
     return response
 
-class DoneAccountCreationPage(TemplateView, DjangoBreadcrumbsMixin):
+class DoneAccountCreationPage(IsNotAuthenticated, TemplateView, DjangoBreadcrumbsMixin):
   template_name = 'account/done_account_creation.html'
   crumbles = DjangoBreadcrumbsMixin.get_target_crumbles(
     url_name='account:done_account_creation',
@@ -120,7 +163,7 @@ class DoneAccountCreationPage(TemplateView, DjangoBreadcrumbsMixin):
 
     return context
 
-class CompleteAccountCreationPage(TemplateView):
+class CompleteAccountCreationPage(IsNotAuthenticated, TemplateView):
   template_name = 'account/complete_account_creation.html'
 
   ##
@@ -145,40 +188,8 @@ class CompleteAccountCreationPage(TemplateView):
 
     return response
 
-# ================
-# = User profile =
-# ================
-class UserProfilePage(LoginRequiredMixin, IsOwner, DetailView, DjangoBreadcrumbsMixin):
+class ChangePasswordPage(LoginRequiredMixin, PasswordChangeView, DjangoBreadcrumbsMixin):
   raise_exception = True
-  model = UserModel
-  template_name = 'account/profiles/user_profile.html'
-  context_object_name = 'owner'
-  crumbles = DjangoBreadcrumbsMixin.get_target_crumbles(
-    url_name='account:user_profile',
-    title=gettext_lazy('User profile'),
-    parent_view_class=Index,
-    url_keys=['pk'],
-  )
-
-class UpdateUserProfilePage(LoginRequiredMixin, IsOwner, UpdateView, DjangoBreadcrumbsMixin):
-  raise_exception = True
-  model = UserModel
-  form_class = forms.UserProfileForm
-  template_name =  'account/profiles/profile_form.html'
-  crumbles = DjangoBreadcrumbsMixin.get_target_crumbles(
-    url_name='account:update_profile',
-    title=gettext_lazy('Update user profile'),
-    parent_view_class=UserProfilePage,
-    url_keys=['pk'],
-  )
-
-  ##
-  # @brief Get the URL to come back to the previous page
-  # @return Target URL
-  def get_success_url(self):
-    return reverse('account:user_profile', kwargs={'pk': self.kwargs['pk']})
-
-class ChangePasswordPage(PasswordChangeView, DjangoBreadcrumbsMixin):
   form_class = forms.CustomPasswordChangeForm
   template_name = 'account/passwords/password_change_form.html'
   success_url = reverse_lazy('account:done_password_change')
@@ -195,7 +206,8 @@ class ChangePasswordPage(PasswordChangeView, DjangoBreadcrumbsMixin):
 
     return context
 
-class DonePasswordChangePage(PasswordChangeView, DjangoBreadcrumbsMixin):
+class DonePasswordChangePage(LoginRequiredMixin, PasswordChangeView, DjangoBreadcrumbsMixin):
+  raise_exception = True
   template_name = 'account/passwords/done_password_change.html'
   crumbles = DjangoBreadcrumbsMixin.get_target_crumbles(
     url_name='account:done_password_change',
@@ -203,19 +215,22 @@ class DonePasswordChangePage(PasswordChangeView, DjangoBreadcrumbsMixin):
     parent_view_class=Index,
   )
 
-class ResetPasswordPage(PasswordResetView, DjangoBreadcrumbsMixin):
+class ResetPasswordPage(IsNotAuthenticated, PasswordResetView, DjangoBreadcrumbsMixin):
+  raise_exception = True
   form_class = forms.CustomPasswordResetForm
   template_name = 'account/passwords/password_reset_form.html'
   subject_template_name = 'account/mail_template/password_reset/subject.txt'
   email_template_name = 'account/mail_template/password_reset/message.txt'
   extra_email_context = {'timelimit': _get_password_reset_timeout_minutes()}
+  success_url = reverse_lazy('account:done_password_reset')
   crumbles = DjangoBreadcrumbsMixin.get_target_crumbles(
     url_name='account:reset_password',
     title=gettext_lazy('Reset password'),
     parent_view_class=LoginPage,
   )
 
-class DonePasswordResetPage(PasswordResetDoneView, DjangoBreadcrumbsMixin):
+class DonePasswordResetPage(IsNotAuthenticated, PasswordResetDoneView, DjangoBreadcrumbsMixin):
+  raise_exception = True
   template_name = 'account/passwords/done_password_reset.html'
 
   ##
@@ -229,12 +244,14 @@ class DonePasswordResetPage(PasswordResetDoneView, DjangoBreadcrumbsMixin):
 
     return context
 
-class ConfirmPasswordResetPage(PasswordResetConfirmView):
+class ConfirmPasswordResetPage(IsNotAuthenticated, PasswordResetConfirmView):
+  raise_exception = True
   form_class = forms.CustomSetPasswordForm
   template_name = 'account/passwords/confirm_password_form.html'
   success_url = reverse_lazy('account:complete_password_reset')
 
-class CompletePasswordResetPage(PasswordResetCompleteView, DjangoBreadcrumbsMixin):
+class CompletePasswordResetPage(IsNotAuthenticated, PasswordResetCompleteView, DjangoBreadcrumbsMixin):
+  raise_exception = True
   template_name = 'account/passwords/complete_password_reset.html'
   crumbles = DjangoBreadcrumbsMixin.get_target_crumbles(
     url_name='account:complete_password_reset',

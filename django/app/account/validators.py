@@ -2,7 +2,6 @@ from django.core.exceptions import ValidationError
 from django.core.signing import BadSignature, SignatureExpired, loads
 from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy
-from utils.models import get_digest
 import re
 
 UserModel = get_user_model()
@@ -39,8 +38,8 @@ class CustomPasswordValidator:
 class CustomDigestValidator:
   ##
   # @brief Constructor of CustomDigestValidator
-  def __init__(self):
-    self._digest = get_digest()
+  def __init__(self, digest):
+    self._digest = digest
 
   ##
   # @brief Validate input digest
