@@ -53,6 +53,7 @@ class IndividualGroupFactory(factory.django.DjangoModelFactory):
 
     if extracted:
       self.members.add(*extracted)
+      self.save()
     else:
       friends = list(self.owner.my_friends.all())
       counts = len(friends)

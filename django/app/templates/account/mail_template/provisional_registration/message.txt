@@ -2,7 +2,7 @@
 Dear {{ email }}
 {% endblocktranslate %}
 {% trans "Thank you for conducting provisional registration process." %}
-{% trans "We'd like you to access the following URL to complete a definitive registration." %}
+{% trans "We&apos;d like you to access the following URL to complete a definitive registration." %}
 {% trans "Note: Your registration process has not completed yet." %}
 
 {% trans "Definitive registration URL" %}

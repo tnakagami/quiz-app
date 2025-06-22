@@ -58,7 +58,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
                 ('requested_date', models.DateTimeField(default=utils.models.get_current_time, verbose_name='Requested time')),
-                ('is_completed', models.BooleanField(default=False, help_text="Designates whether this user's role has already been approved or not.", verbose_name='Approval status')),
+                ('is_completed', models.BooleanField(default=False, help_text="Designates whether this user’s role has already been approved or not.", verbose_name='Approval status')),
                 ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='approvals', to=settings.AUTH_USER_MODEL, verbose_name='Candidate for approval')),
             ],
             options={

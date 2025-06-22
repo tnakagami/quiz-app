@@ -14,6 +14,9 @@ def mock_current_time(mocker):
     return_value=datetime(2021,7,3,10,17,48,microsecond=123456,tzinfo=timezone.utc),
   )
 
+# ========
+# = User =
+# ========
 @pytest.mark.account
 @pytest.mark.model
 @pytest.mark.django_db
@@ -279,6 +282,23 @@ def test_invalid_same_email():
 @pytest.mark.account
 @pytest.mark.model
 @pytest.mark.django_db
+def test_queryset_of_usermodel():
+  _ = factories.UserFactory(is_active=True, is_staff=True, is_superuser=True)
+  _ = factories.UserFactory(is_active=True, is_staff=True)
+  _ = factories.UserFactory.create_batch(2, is_active=False)
+  valid_users = factories.UserFactory.create_batch(3, is_active=True)
+  queryset = models.User.objects.collect_valid_normal_users()
+  pks = [user.pk for user in valid_users]
+
+  assert queryset.count() == len(pks)
+  assert all([queryset.filter(pk=pk).exists() for pk in pks])
+
+# =================
+# = Role Approval =
+# =================
+@pytest.mark.account
+@pytest.mark.model
+@pytest.mark.django_db
 def test_check_role_approval_state():
   user, other = factories.UserFactory.create_batch(2)
   _ = factories.RoleApprovalFactory(user=user, is_completed=False)
@@ -381,58 +401,68 @@ def test_check_update_record_method_of_role_approval(role, email, expected_email
   assert instance.user.email == expected_email
   assert instance.is_completed == expected_status
 
+# ===================
+# = IndividualGroup =
+# ===================
 @pytest.mark.account
 @pytest.mark.model
 @pytest.mark.django_db
-@pytest.mark.parametrize([
-  'number_of_friends',
-], (
-  (0, ),
-  (1, ),
-  (2, ),
-), ids=[
-  'no-friends',
-  'best-friend',
-  'many-friends',
-])
-def test_check_save_method_of_individual_group(number_of_friends):
-  friends = list(factories.UserFactory.create_batch(number_of_friends)) if number_of_friends > 0 else []
-  owner = factories.UserFactory(friends=friends)
-  instance = factories.IndividualGroupFactory.build(owner=owner, members=friends)
+def test_valid_friends_change():
+  friends = list(factories.UserFactory.create_batch(5, is_active=True))
+  user = factories.UserFactory(is_active=True, friends=friends)
+  instance = factories.IndividualGroupFactory(owner=user, members=[friends[1], friends[2]])
+  # Define new friends by removing the first friend (friends[0])
+  new_friends = models.User.objects.filter(pk__in=[user.pk for user in friends[1:]])
+  rest_friends = instance.extract_invalid_friends(new_friends)
 
-  try:
-    instance.save()
-  except Exception as ex:
-    pytest.fail(f'Unexpected Error: {ex}')
-  # Make exact data
-  exact_instance_name = f'{instance.name}({owner})'
-
-  assert str(instance) == exact_instance_name
+  assert rest_friends.count() == 0
 
 @pytest.mark.account
 @pytest.mark.model
 @pytest.mark.django_db
-def test_invalid_members_of_individual_group(mocker):
-  mocker.patch('account.models.IndividualGroup.clean', return_value=None)
+def test_invalid_friends_change_in_individual_group():
+  friends = list(factories.UserFactory.create_batch(5, is_active=True))
+  user = factories.UserFactory(is_active=True, friends=friends)
+  instance = factories.IndividualGroupFactory(owner=user, members=[friends[1], friends[2]])
+  # Define new friends by removing the second friend (friends[1]) and the last friend (friends[-1])
+  new_friends = models.User.objects.filter(pk__in=[friends[0].pk, friends[2].pk, friends[3].pk])
+  rest_friends = instance.extract_invalid_friends(new_friends)
+
+  assert rest_friends.count() == 1
+  assert str(rest_friends[0].pk) == str(friends[1].pk)
+
+@pytest.mark.account
+@pytest.mark.model
+@pytest.mark.django_db
+def test_invalid_members_of_individual_group():
   friends = list(factories.UserFactory.create_batch(3))
   _other = factories.UserFactory()
   owner = factories.UserFactory(friends=friends)
   instance = factories.IndividualGroupFactory(owner=owner, members=[_other, *friends])
   # Call target method
-  invalid = instance._exists_invalid_members()
+  input_friends = models.User.objects.filter(pk__in=[user.pk for user in friends])
+  invalid = instance.exists_invalid_members(instance.members, input_friends)
 
   assert invalid
 
 @pytest.mark.account
 @pytest.mark.model
 @pytest.mark.django_db
-def test_check_save_method_exception_of_individual_group(mocker):
-  owner = factories.UserFactory()
-  instance = factories.IndividualGroupFactory.build(owner=owner)
-  mocker.patch('account.models.IndividualGroup._exists_invalid_members', return_value=True)
-  err_msg = "Invalid member list. Some members are assigned except owner's friends."
+@pytest.mark.parametrize([
+  'friend_indices',
+  'rest_count',
+], [
+  ([0, 1, 2], 0),
+  ([0, 2, 3], 1),
+], ids=[
+  'vaild-friends',
+  'invaild-friends',
+])
+def test_invalid_friends_of_individual_group(friend_indices, rest_count):
+  friends = list(factories.UserFactory.create_batch(5, is_active=True))
+  # Define the specific friends given by `friend_indices`
+  user = factories.UserFactory(is_active=True, friends=[friends[idx] for idx in friend_indices])
+  instance = factories.IndividualGroupFactory(owner=user, members=[friends[1], friends[2]])
+  rest_friends = instance.extract_invalid_friends()
 
-  with pytest.raises(ValidationError) as ex:
-    instance.save()
-
-  assert err_msg in str(ex.value.args)
+  assert rest_friends.count() == rest_count

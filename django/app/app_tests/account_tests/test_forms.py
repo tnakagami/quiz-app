@@ -9,6 +9,9 @@ UserModel = get_user_model()
 g_complex_passwd = 'h2o$Jax3#1Pi'
 g_wrong_password = 'h0o$jAx4#Pi5'
 
+# ====================
+# = Global functions =
+# ====================
 @pytest.mark.account
 @pytest.mark.form
 def test_valid_digest_validator(mocker):
@@ -31,6 +34,9 @@ def test_invalid_digest_validator(mocker):
 
   assert err_msg in ex.value.args
 
+# =============
+# = LoginForm =
+# =============
 @pytest.mark.account
 @pytest.mark.form
 @pytest.mark.django_db
@@ -69,6 +75,9 @@ def test_check_login_form(email, password, is_valid):
 
   assert form.is_valid() == is_valid
 
+# ====================
+# = UserCreationForm =
+# ====================
 @pytest.mark.account
 @pytest.mark.form
 @pytest.mark.django_db
@@ -231,6 +240,9 @@ def test_check_send_email_method_of_user_creation_form(mocker):
   assert exact_url in message
   assert exact_timelimit in message
 
+# ===================
+# = UserProfileForm =
+# ===================
 @pytest.mark.account
 @pytest.mark.form
 @pytest.mark.parametrize([
@@ -256,6 +268,9 @@ def test_user_profile_form(params, is_valid):
 
   assert form.is_valid() is is_valid
 
+# ============================
+# = CustomPasswordChangeForm =
+# ============================
 @pytest.mark.account
 @pytest.mark.form
 @pytest.mark.django_db
@@ -287,6 +302,9 @@ def test_password_change_form(params, is_valid):
 
   assert form.is_valid() == is_valid
 
+# ===========================
+# = CustomPasswordResetForm =
+# ===========================
 @pytest.mark.account
 @pytest.mark.form
 @pytest.mark.parametrize([
@@ -309,6 +327,9 @@ def test_check_password_reset_form(email, is_valid):
 
   assert form.is_valid() == is_valid
 
+# =========================
+# = CustomSetPasswordForm =
+# =========================
 @pytest.mark.account
 @pytest.mark.form
 @pytest.mark.django_db
@@ -332,6 +353,9 @@ def test_set_password_form(params, is_valid):
 
   assert form.is_valid() == is_valid
 
+# =========================
+# = RoleChangeRequestForm =
+# =========================
 @pytest.mark.account
 @pytest.mark.form
 @pytest.mark.django_db
@@ -379,6 +403,10 @@ def test_check_save_method_of_role_change_request_form(mocker, commit, count):
 
   assert ra_mock.call_count == count
 
+
+# ====================
+# = RoleApprovalForm =
+# ====================
 @pytest.mark.account
 @pytest.mark.form
 @pytest.mark.django_db
@@ -418,7 +446,7 @@ def test_invalid_arguments_of_clean_method_in_role_approval_form(mocker, role):
   with pytest.raises(ValidationError) as ex:
     form.clean()
 
-  assert "You don't have permission to update this record." in str(ex.value.args)
+  assert "You don’t have permission to update this record." in str(ex.value.args)
 
 @pytest.mark.account
 @pytest.mark.form
@@ -448,3 +476,220 @@ def test_check_approval_process_of_role_approval_form(mocker, is_approve, call_c
   assert is_valid
   assert ra_mock.call_count == call_counts
   assert models.RoleApproval.objects.all().count() == record_counts
+
+# ==============
+# = FriendForm =
+# ==============
+@pytest.mark.account
+@pytest.mark.form
+@pytest.mark.django_db
+@pytest.mark.parametrize([
+  'number_of_friends',
+], [
+  (0, ),
+  (1, ),
+  (2, ),
+], ids=[
+  'no-friends',
+  'best-friend',
+  'manay-friends',
+])
+def test_validate_inputs_of_friend_form(number_of_friends):
+  friends = list(factories.UserFactory.create_batch(number_of_friends, is_active=True)) if number_of_friends > 0 else []
+  user = factories.UserFactory()
+  params = {
+    'friends': friends,
+  }
+  form = forms.FriendForm(user=user, data=params)
+
+  assert form.is_valid()
+
+@pytest.mark.account
+@pytest.mark.form
+@pytest.mark.django_db
+@pytest.mark.parametrize([
+  'friends_indices',
+  'is_valid',
+  'err_msg',
+], [
+  # members: 2, 3
+  (   [      2, 3, 4], True, ''),
+  (   [0,    2,    4], False, 'You need to select relevant friends because the individual group &quot;hoge&quot; has D member(s).'),
+], ids=[
+  'can-remove-friends',
+  'cannot-remove-friends',
+])
+def test_validate_clean_friends_method_of_friend_form(friends_indices, is_valid, err_msg):
+  # Index:  0    1    2    3    4
+  names = ['A', 'B', 'C', 'D', 'E']
+  friends = [factories.UserFactory(screen_name=name, is_active=True) for name in names]
+  user = factories.UserFactory(is_active=True, friends=friends)
+  _ = factories.IndividualGroupFactory(owner=user, name='hoge', members=[friends[2], friends[3]])
+  new_friends = [friends[idx] for idx in friends_indices]
+  params = {
+    'friends': new_friends,
+  }
+  form = forms.FriendForm(user=user, data=params)
+  out = form.is_valid()
+
+  assert out == is_valid
+  assert err_msg in str(form.errors)
+
+@pytest.mark.account
+@pytest.mark.form
+@pytest.mark.django_db
+@pytest.mark.parametrize([
+  'number_of_friends',
+], [
+  (0, ),
+  (1, ),
+  (2, ),
+], ids=[
+  'no-friends',
+  'best-friend',
+  'manay-friends',
+])
+def test_check_options_of_friend_form(number_of_friends):
+  friends = list(factories.UserFactory.create_batch(number_of_friends, is_active=True)) if number_of_friends > 0 else []
+  others = factories.UserFactory.create_batch(4, is_active=True)
+  user = factories.UserFactory(friends=friends)
+  _generate_item = lambda user, is_assigned: (str(user.pk), f'{user}(Code:{user.code})', is_assigned) 
+  form = forms.FriendForm(user=user)
+  options = form.get_options
+  exacts_items = [_generate_item(user, True) for user in friends] + [_generate_item(user, False) for user in others]
+  _sorted = lambda arr: sorted(arr, key=lambda xs: xs[0])
+
+  assert len(options) == len(exacts_items)
+  assert all([
+    all([_est_val == _exact_val for _est_val, _exact_val in zip(estimated, exact)])
+    for estimated, exact in zip(_sorted(options), _sorted(exacts_items))
+  ])
+
+# =======================
+# = IndividualGroupForm =
+# =======================
+@pytest.mark.account
+@pytest.mark.form
+@pytest.mark.django_db
+@pytest.mark.parametrize([
+  'name',
+  'data_type',
+  'is_valid',
+], [
+  (None, 'best-friend', False),
+  ('test-group', 'no-friends', False),
+  ('test-group', 'best-friend', True),
+  ('test-group', 'manay-friends', True),
+  ('test-group', 'include-other-friends', False),
+], ids=[
+  'name-is-not-set',
+  'no-friends',
+  'best-friend',
+  'manay-friends',
+  'include-other-friends',
+])
+def test_validate_inputs_of_individual_group_form(name, data_type, is_valid):
+  friends = list(factories.UserFactory.create_batch(3, is_active=True))
+  others = list(factories.UserFactory.create_batch(2, is_active=True))
+  all_members = friends + others
+  user = factories.UserFactory(friends=friends)
+  # Define patterns
+  patterns = {
+    'no-friends': [],
+    'best-friend': [friends[0]],
+    'manay-friends':friends,
+    'include-other-friends': all_members,
+  }
+  params = {
+    'members': patterns[data_type],
+  }
+  if name is not None:
+    params['name'] = name
+  form = forms.IndividualGroupForm(user=user, data=params)
+
+  assert form.is_valid() == is_valid
+
+@pytest.mark.account
+@pytest.mark.form
+@pytest.mark.django_db
+@pytest.mark.parametrize([
+  'data_type',
+  'exists_instance',
+], [
+  ('no-friends', False),
+  ('best-friend', True),
+  ('best-friend', False),
+  ('manay-friends', True),
+  ('manay-friends', False),
+], ids=lambda val: str(val).lower())
+def test_check_options_of_individual_group_form(data_type, exists_instance):
+  friends = list(factories.UserFactory.create_batch(3, is_active=True))
+  others = list(factories.UserFactory.create_batch(2, is_active=True))
+  all_members = friends + others
+  # Define patterns
+  patterns = {
+    'no-friends': [],
+    'best-friend': [friends[0]],
+    'manay-friends': friends,
+  }
+  # Define instances
+  user = factories.UserFactory(friends=patterns[data_type])
+  instance = factories.IndividualGroupFactory(owner=user, members=[friends[0]]) if exists_instance else None
+  _generate_item = lambda user, is_assigned: (str(user.pk), f'{user}(Code:{user.code})', is_assigned) 
+  expected = {
+    'no-friends': [],
+    'best-friend': [_generate_item(friends[0], True)] if exists_instance else [_generate_item(friends[0], False)],
+    'manay-friends': [_generate_item(friends[0], True), _generate_item(friends[1], False), _generate_item(friends[2], False)] if exists_instance else [_generate_item(user, False) for user in friends],
+  }
+  params = {
+    'name': 'test-group',
+    'members': patterns[data_type],
+  }
+  exacts_items = expected[data_type]
+  form = forms.IndividualGroupForm(user=user, data=params, instance=instance)
+  options = form.get_options
+  _sorted = lambda arr: sorted(arr, key=lambda xs: xs[0])
+
+  assert len(options) == len(exacts_items)
+  assert all([
+    all([_est_val == _exact_val for _est_val, _exact_val in zip(estimated, exact)])
+    for estimated, exact in zip(_sorted(options), _sorted(exacts_items))
+  ])
+
+@pytest.mark.account
+@pytest.mark.form
+@pytest.mark.django_db
+def test_check_default_options_in_individual_group_form():
+  friends = list(factories.UserFactory.create_batch(3, is_active=True))
+  # Define instances
+  user = factories.UserFactory(friends=friends)
+  form = forms.IndividualGroupForm(user=user)
+  form.instance = None
+  options = form.get_options
+  expected = [(str(user.pk), f'{user}(Code:{user.code})', False) for user in friends]
+  _sorted = lambda arr: sorted(arr, key=lambda xs: xs[0])
+
+  assert len(options) == len(expected)
+  assert len(options[0]) == len(expected[0])
+  assert all([
+    all([_est_val == _exact_val for _est_val, _exact_val in zip(estimated, exact)])
+    for estimated, exact in zip(_sorted(options), _sorted(expected))
+  ])
+
+@pytest.mark.account
+@pytest.mark.form
+@pytest.mark.django_db
+def test_check_clean_members_method_in_individual_group_form():
+  user = factories.UserFactory()
+  other = factories.UserFactory()
+  params = {
+    'name': 'hoge-group',
+    'members': [other],
+  }
+  form = forms.IndividualGroupForm(user=user, data=params)
+  form.cleaned_data = {'members': UserModel.objects.filter(pk__in=[other.pk])}
+
+  with pytest.raises(ValidationError) as ex:
+    form.clean_members()
+
+  assert "Invalid member list. Some members are assigned except owner’s friends." in str(ex.value.args)

@@ -26,4 +26,11 @@ urlpatterns = [
   path('role-change-list', views.RoleChangeRequestListPage.as_view(), name='role_change_requests'),
   path('change-role', views.CreateRoleChangeRequestPage.as_view(), name='create_role_change_request'),
   path('approve-role-change/<pk>', views.UpdateRoleApproval.as_view(), name='update_role_approval'),
+  # Add friend
+  path('update-friend/<pk>', views.UpdateFriendPage.as_view(), name='update_friend'),
+  # Check/Create/Update/Delete individual group
+  path('individual-group', views.IndividualGroupListPage.as_view(), name='individual_group_list'),
+  path('create-group', views.CreateIndividualGroupPage.as_view(), name='create_group'),
+  path('update-group/<pk>', views.UpdateIndividualGroupPage.as_view(), name='update_group'),
+  path('delete-group/<pk>', views.DeleteIndividualGroup.as_view(), name='delete_group'),
 ]

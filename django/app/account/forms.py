@@ -12,7 +12,7 @@ from django.contrib.sites.shortcuts import get_current_site
 from django.template.loader import render_to_string
 from django.utils.translation import gettext_lazy
 from utils.models import get_digest
-from utils.forms import BaseFormWithCSS
+from utils.forms import BaseFormWithCSS, ModelFormBasedOnUser
 from utils.widgets import CustomSwitchInput
 from .validators import CustomDigestValidator
 from . import models
@@ -22,6 +22,9 @@ UserModel = get_user_model()
 class LoginForm(AuthenticationForm, BaseFormWithCSS):
   username = forms.EmailField(widget=forms.EmailInput(attrs={'autofocus': True}))
 
+##
+# @brief Validate input digest
+# @exception ValidationError if input digest does not match exact one
 def _validate_hash_sign(value):
   exact_digest = get_digest()
   instance = CustomDigestValidator(exact_digest)
@@ -46,7 +49,7 @@ class UserCreationForm(BaseUserCreationForm, BaseFormWithCSS):
     required=True,
     widget=forms.TextInput(),
     validators=[_validate_hash_sign],
-    help_text=gettext_lazy("Enter the today's hash value."),
+    help_text=gettext_lazy("Enter the today’s hash value."),
   )
 
   ##
@@ -177,15 +180,20 @@ class RoleApprovalForm(forms.ModelForm):
     required=False,
   )
 
+  ##
+  # @brief Check data
+  # @exception ValidationError User does not have manager role
   def clean(self):
     is_valid = self.user.has_manager_role()
 
     if not is_valid:
       raise forms.ValidationError(
-        gettext_lazy("You don't have permission to update this record."),
+        gettext_lazy("You don’t have permission to update this record."),
         code='no_permission',
       )
 
+  ##
+  # @brief Conduct approval process
   def approval_process(self):
     instance = super().save(commit=False)
     is_approve = self.cleaned_data.get('is_approve')
@@ -196,3 +204,127 @@ class RoleApprovalForm(forms.ModelForm):
     # In the case of that the request is rejected
     else:
       instance.delete()
+
+class FriendForm(forms.ModelForm):
+  dual_listbox_template_name = 'renderer/custom_dual_listbox_preprocess.html'
+
+  class Meta:
+    model = UserModel
+    fields = ('friends',)
+    widgets = {
+      'friends': forms.SelectMultiple(attrs={
+        'class': 'custom-multi-selectbox',
+      }),
+    }
+
+  ##
+  # @brief Constructor of RoleApprovalForm
+  # @param user Instance of access user
+  # @param args Positional arguments
+  # @param kwargs Named arguments
+  def __init__(self, user, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+    self.user = user
+    self.fields['friends'].queryset = UserModel.objects.collect_valid_normal_users().exclude(pk__in=[self.user.pk])
+
+  ##
+  # @brief Get options of select element
+  # @return options option element which consists of primary-key, label-name, and selected-or-not
+  @property
+  def get_options(self):
+    _user_formatter = lambda user: f'{user}(Code:{user.code})'
+    friends = self.user.friends.all()
+    queryset = self.fields['friends'].queryset.exclude(pk__in=list(friends.values_list('pk', flat=True)))
+    selected_options = [(str(user.pk), _user_formatter(user), True) for user in friends]
+    not_selected_options = [(str(user.pk), _user_formatter(user), False) for user in queryset]
+    options = selected_options + not_selected_options
+
+    return options
+
+  ##
+  # @brief Check friends list
+  # @exception ValidationError Some individual groups include deleted firends
+  def clean_friends(self):
+    friends = self.cleaned_data.get('friends')
+
+    for group in self.user.group_owners.all():
+      rest_friends = group.extract_invalid_friends(friends)
+
+      if rest_friends.exists():
+        names = [str(friend) for friend in rest_friends]
+
+        raise forms.ValidationError(
+          gettext_lazy('You need to select relevant friends because the individual group "%(group)s" has %(friends)s member(s).'),
+          code='invalid_friends',
+          params={'group': str(group), 'friends': ','.join(names)},
+        )
+
+    return friends
+
+class IndividualGroupForm(ModelFormBasedOnUser):
+  dual_listbox_template_name = 'renderer/custom_dual_listbox_preprocess.html'
+  owner_name = 'owner'
+
+  class Meta:
+    model = models.IndividualGroup
+    fields = ('name', 'members')
+    widgets = {
+      'name': forms.TextInput(attrs={
+        'class': 'form-control',
+      }),
+      'members': forms.SelectMultiple(attrs={
+        'class': 'custom-multi-selectbox',
+      }),
+    }
+
+  def __init__(self, user, *args, **kwargs):
+    super().__init__(*args, user=user, **kwargs)
+    self.fields['members'].queryset = self.user.friends.all()
+    self.fields['members'].required = False
+
+  ##
+  # @brief Get options of select element
+  # @return options option element which consists of primary-key, label-name, and selected-or-not
+  @property
+  def get_options(self):
+    friends = self.user.friends.all()
+    _user_formatter = lambda user: f'{user}(Code:{user.code})'
+
+    if self.instance:
+      members = self.instance.members.all()
+      queryset = friends.exclude(pk__in=list(members.values_list('pk', flat=True)))
+      selected_options = [(str(user.pk), _user_formatter(user), True) for user in members]
+      not_selected_options = [(str(user.pk), _user_formatter(user), False) for user in queryset]
+      options = selected_options + not_selected_options
+    else:
+      options = [(str(user.pk), _user_formatter(user), False) for user in friends]
+
+    return options
+
+  ##
+  # @brief Check `members` data
+  # @exception ValidationError There are no members in the request data
+  def clean_members(self):
+    members = self.cleaned_data.get('members')
+    # Check input members
+    if not members:
+      raise forms.ValidationError(
+        gettext_lazy('This field is required.'),
+        code='invalid_request',
+      )
+    # Check the constituent members
+    if self._meta.model.exists_invalid_members(members, self.user.friends):
+      raise forms.ValidationError(
+        gettext_lazy("Invalid member list. Some members are assigned except owner’s friends."),
+        code='invalid_members',
+      )
+
+    return members
+
+  ##
+  # @brief Update friends column in UserModel
+  # @param instance Instance of UserModel
+  # @param args Positional arguments
+  # @param kwargs Named arguments
+  def post_process(self, instance, *args, **kwargs):
+    self.save_m2m()

@@ -15,9 +15,16 @@ class IsOwner(UserPassesTestMixin):
   # @retval True Request user can access to the page
   # @retval False Request user can access to the page except superuser
   def test_func(self):
-    instance = self.get_object()
-    owner = getattr(instance, self.owner_name, instance)
-    is_valid = owner.pk == self.request.user.pk or self.request.user.is_superuser
+    try:
+      # Get target instance
+      instance = self.get_object()
+      # Get owner
+      owner = getattr(instance, self.owner_name, instance)
+      # Judge whether the access is valid or not.
+      user = self.request.user
+      is_valid = owner.pk == user.pk or user.is_superuser
+    except:
+      is_valid = False
 
     return is_valid
 

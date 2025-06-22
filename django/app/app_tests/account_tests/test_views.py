@@ -143,7 +143,7 @@ def test_logout_page(init_records, client):
 @pytest.mark.account
 @pytest.mark.view
 @pytest.mark.django_db
-def test_with_authenticated_client_for_user_profile(init_records, client):
+def test_with_authentication_for_user_profile(init_records, client):
   user = init_records[0].user
   url = reverse('account:user_profile', kwargs={'pk': user.pk})
   client.force_login(user)
@@ -278,7 +278,7 @@ def get_input_patterns_for_create_account_page(request):
     data = (clone_node, 'This field is required')
   elif request.param == 'wrong-password':
     clone_node['password2'] = clone_node['password1'] + 'abc'
-    data = (clone_node, 'The two password fields didn')
+    data = (clone_node, 'The two password fields didn’t match')
   elif request.param == 'weak-password':
     clone_node['password1'] = 'weak'
     clone_node['password2'] = 'weak'
@@ -453,7 +453,7 @@ def get_input_patterns_for_change_password_page(request):
     err_msg = 'The new password is same as new password. Please enter difference passwords.'
   elif request.param == 'invalid-new-password':
     clone_node['new_password2'] = 'h2o!nH3@xxx+'
-    err_msg = 'The two password fields didn'
+    err_msg = 'The two password fields didn’t match.'
   elif request.param == 'old-password-is-empty':
     del clone_node['old_password']
   elif request.param == 'new-password1-is-empty':
@@ -638,7 +638,7 @@ def get_url_of_confirm_page():
   'params',
   'err_msg',
 ], [
-  ({'new_password1': 'h2o!nH3@foo+', 'new_password2': 'h2o!nH3@xxx+'}, 'The two password fields didn'),
+  ({'new_password1': 'h2o!nH3@foo+', 'new_password2': 'h2o!nH3@xxx+'}, 'The two password fields didn’t match.'),
   ({                                 'new_password2': 'h2o!nH3@foo+'}, 'This field is required.'),
   ({'new_password1': 'h2o!nH3@foo+'                                 }, 'This field is required.'),
 ], ids=[
@@ -714,8 +714,10 @@ def test_with_authentication_for_complete_password_reset_page(init_records, clie
 def test_without_authentication_for_role_change_request_list_page(client):
   url = reverse('account:role_change_requests')
   response = client.get(url)
+  redirected_url = '{}?next={}'.format(reverse('account:login'), url)
 
   assert response.status_code == status.HTTP_302_FOUND
+  assert response['Location'] == redirected_url
 
 @pytest.mark.account
 @pytest.mark.view
@@ -924,4 +926,308 @@ def test_is_not_approve_for_update_role_approval(init_records, client):
   assert response.status_code == status.HTTP_302_FOUND
   assert response['Location'] == reverse('account:role_change_requests')
   assert user.role == models.RoleType.GUEST
+  assert count == 0
+
+# ===========
+# = Friends =
+# ===========
+@pytest.mark.account
+@pytest.mark.view
+@pytest.mark.django_db
+def test_without_authentication_for_update_friend_page(init_records, client):
+  user = init_records[0].user
+  url = reverse('account:update_friend', kwargs={'pk': user.pk})
+  response = client.get(url)
+
+  assert response.status_code == status.HTTP_403_FORBIDDEN
+
+@pytest.mark.account
+@pytest.mark.view
+@pytest.mark.django_db
+def test_with_authentication_for_update_friend_page(init_records, client):
+  user = init_records[0].user
+  url = reverse('account:update_friend', kwargs={'pk': user.pk})
+  client.force_login(user)
+  response = client.get(url)
+
+  assert response.status_code == status.HTTP_200_OK
+
+@pytest.mark.account
+@pytest.mark.view
+@pytest.mark.django_db
+def test_invalid_access_by_other_user_in_update_friend_page(init_records, client):
+  user = init_records[0].user
+  other = init_records[1].user
+  url = reverse('account:update_friend', kwargs={'pk': user.pk})
+  client.force_login(other)
+  response = client.get(url)
+
+  assert response.status_code == status.HTTP_403_FORBIDDEN
+
+@pytest.mark.account
+@pytest.mark.view
+@pytest.mark.django_db
+@pytest.mark.parametrize([
+  'number_of_members',
+], [
+  (0, ),
+  (1, ),
+  (2, ),
+], ids=[
+  'no-members',
+  'only-one-member',
+  'many-members',
+])
+def test_valid_access_in_update_friend_page(client, number_of_members):
+  _ = factories.UserFactory(is_active=True, is_staff=True, is_superuser=True)
+  _ = factories.UserFactory(is_active=True, is_staff=True)
+  _ = factories.UserFactory(is_active=False, is_staff=False)
+  candidates = list(factories.UserFactory.create_batch(number_of_members, is_active=True)) if number_of_members > 0 else []
+  user = factories.UserFactory(is_active=True)
+  url = reverse('account:update_friend', kwargs={'pk': user.pk})
+  client.force_login(user)
+  params = {
+    'friends': [str(item.pk) for item in candidates],
+  }
+  response = client.post(url, data=params)
+  updated_user = UserModel.objects.get(pk=user.pk)
+
+  assert response.status_code == status.HTTP_302_FOUND
+  assert response['Location'] == reverse('account:user_profile', kwargs={'pk': user.pk})
+  assert updated_user.friends.all().count() == number_of_members
+
+# ====================
+# = Individual group =
+# ====================
+@pytest.mark.account
+@pytest.mark.view
+def test_without_authentication_for_individual_group_list_page(client):
+  url = reverse('account:individual_group_list')
+  response = client.get(url)
+  redirected_url = '{}?next={}'.format(reverse('account:login'), url)
+
+  assert response.status_code == status.HTTP_302_FOUND
+  assert response['Location'] == redirected_url
+
+@pytest.mark.account
+@pytest.mark.view
+@pytest.mark.django_db
+def test_with_authentication_for_individual_group_list_page(init_records, client):
+  user = init_records[0].user
+  url = reverse('account:individual_group_list')
+  client.force_login(user)
+  response = client.get(url)
+
+  assert response.status_code == status.HTTP_200_OK
+
+@pytest.mark.account
+@pytest.mark.view
+@pytest.mark.django_db
+@pytest.mark.parametrize([
+  'number_of_groups',
+  'name',
+], [
+  (0, 'test-group0'),
+  (1, 'test-group1'),
+  (2, 'test-group2'),
+], ids=[
+  'no-groups',
+  'only-one-group',
+  'many-groups',
+])
+def test_check_groups_in_individual_group_list_page(client, number_of_groups, name):
+  _ = factories.UserFactory(is_active=True, is_staff=True, is_superuser=True)
+  _ = factories.UserFactory(is_active=True, is_staff=True)
+  friends = list(factories.UserFactory.create_batch(5, is_active=True))
+  user = factories.UserFactory(is_active=True, friends=friends)
+  groups = factories.IndividualGroupFactory.create_batch(number_of_groups, owner=user, name=name, members=[friends[0], friends[2]])
+  # Get access
+  url = reverse('account:individual_group_list')
+  client.force_login(user)
+  response = client.get(url)
+  lists = response.context['own_groups']
+
+  assert response.status_code == status.HTTP_200_OK
+  assert len(lists) == number_of_groups
+
+@pytest.mark.account
+@pytest.mark.view
+def test_without_authentication_for_create_individual_group_page(client):
+  url = reverse('account:create_group')
+  response = client.get(url)
+
+  assert response.status_code == status.HTTP_403_FORBIDDEN
+
+@pytest.mark.account
+@pytest.mark.view
+@pytest.mark.django_db
+def test_with_authentication_for_create_individual_group_page(init_records, client):
+  user = init_records[0].user
+  url = reverse('account:create_group')
+  client.force_login(user)
+  response = client.get(url)
+
+  assert response.status_code == status.HTTP_200_OK
+
+@pytest.mark.account
+@pytest.mark.view
+@pytest.mark.django_db
+@pytest.mark.parametrize([
+  'name',
+  'number_of_request_members',
+], [
+  ('group1', 1),
+  ('group2', 2),
+], ids=[
+  'only-one-member',
+  'many-members',
+])
+def test_valid_request_for_create_individual_group_page(client, name, number_of_request_members):
+  friends = list(factories.UserFactory.create_batch(3, is_active=True))
+  user = factories.UserFactory(is_active=True, friends=friends)
+  url = reverse('account:create_group')
+  params = {
+    'name': name,
+    'members': [str(friends[idx].pk) for idx in range(number_of_request_members)],
+  }
+  client.force_login(user)
+  response = client.post(url, data=params)
+  success_url = reverse('account:individual_group_list')
+  _res = client.get(success_url)
+  groups = _res.context['own_groups']
+
+  assert response.status_code == status.HTTP_302_FOUND
+  assert response['Location'] == success_url
+  assert len(groups) == 1
+  assert groups[0].members.all().count() == number_of_request_members
+
+@pytest.mark.account
+@pytest.mark.view
+@pytest.mark.django_db
+def test_without_authentication_for_update_individual_group_page(init_records, client):
+  user = init_records[0].user
+  instance = factories.IndividualGroupFactory(owner=user)
+  url = reverse('account:update_group', kwargs={'pk': instance.pk})
+  response = client.get(url)
+
+  assert response.status_code == status.HTTP_403_FORBIDDEN
+
+@pytest.mark.account
+@pytest.mark.view
+@pytest.mark.django_db
+def test_with_authentication_for_update_individual_group_page(init_records, client):
+  user = init_records[0].user
+  instance = factories.IndividualGroupFactory(owner=user)
+  url = reverse('account:update_group', kwargs={'pk': instance.pk})
+  client.force_login(user)
+  response = client.get(url)
+
+  assert response.status_code == status.HTTP_200_OK
+
+@pytest.mark.account
+@pytest.mark.view
+@pytest.mark.django_db
+def test_invalid_access_for_update_individual_group_page(init_records, client):
+  owner = init_records[0].user
+  other = init_records[1].user
+  instance = factories.IndividualGroupFactory(owner=owner)
+  url = reverse('account:update_group', kwargs={'pk': instance.pk})
+  client.force_login(other)
+  response = client.get(url)
+
+  assert response.status_code == status.HTTP_403_FORBIDDEN
+
+@pytest.mark.account
+@pytest.mark.view
+@pytest.mark.django_db
+@pytest.mark.parametrize([
+  'old_member_indices',
+  'new_member_indices',
+], [
+  ([0], [1]),
+  ([0], [0, 1]),
+  ([0], [1, 2]),
+], ids=[
+  'same-count',
+  'add-member',
+  'add-other-members',
+])
+def test_update_record_for_update_individual_group_page(client, old_member_indices, new_member_indices):
+  friends = list(factories.UserFactory.create_batch(5, is_active=True))
+  user = factories.UserFactory(is_active=True, friends=friends)
+  instance = factories.IndividualGroupFactory(owner=user, members=[friends[idx] for idx in old_member_indices])
+  new_members = [friends[idx] for idx in new_member_indices]
+  params = {
+    'name': instance.name,
+    'members': [str(item.pk) for item in new_members],
+  }
+  url = reverse('account:update_group', kwargs={'pk': instance.pk})
+  client.force_login(user)
+  response = client.post(url, data=params)
+  success_url = reverse('account:individual_group_list')
+  _instance = models.IndividualGroup.objects.get(pk=instance.pk)
+  updated_members = list(_instance.members.all())
+  _sort_record = lambda records: sorted(records, key=lambda item: str(item.pk))
+
+  assert response.status_code == status.HTTP_302_FOUND
+  assert response['Location'] == success_url
+  assert all([
+    str(estimated.pk) == str(exact.pk)
+    for estimated, exact in zip(_sort_record(updated_members), _sort_record(new_members))
+  ])
+
+@pytest.mark.account
+@pytest.mark.view
+@pytest.mark.django_db
+def test_invalid_get_access_for_delete_individual_group(client):
+  friends = list(factories.UserFactory.create_batch(2, is_active=True))
+  user = factories.UserFactory(is_active=True, friends=friends)
+  instance = factories.IndividualGroupFactory(owner=user, members=[friends[0]])
+  url = reverse('account:delete_group', kwargs={'pk': instance.pk})
+  client.force_login(user)
+  response = client.get(url)
+
+  assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
+
+@pytest.mark.account
+@pytest.mark.view
+@pytest.mark.django_db
+def test_without_authentication_for_delete_individual_group(client):
+  friends = list(factories.UserFactory.create_batch(2, is_active=True))
+  user = factories.UserFactory(is_active=True, friends=friends)
+  instance = factories.IndividualGroupFactory(owner=user, members=[friends[0]])
+  url = reverse('account:delete_group', kwargs={'pk': instance.pk})
+  response = client.post(url)
+
+  assert response.status_code == status.HTTP_403_FORBIDDEN
+
+@pytest.mark.account
+@pytest.mark.view
+@pytest.mark.django_db
+def test_invalid_access_by_other_user_for_delete_individual_group(client):
+  friends = list(factories.UserFactory.create_batch(2, is_active=True))
+  user = factories.UserFactory(is_active=True, friends=friends)
+  other = factories.UserFactory(is_active=True)
+  instance = factories.IndividualGroupFactory(owner=user, members=[friends[0]])
+  url = reverse('account:delete_group', kwargs={'pk': instance.pk})
+  client.force_login(other)
+  response = client.post(url)
+
+  assert response.status_code == status.HTTP_403_FORBIDDEN
+
+@pytest.mark.account
+@pytest.mark.view
+@pytest.mark.django_db
+def test_delete_record_in_delete_individual_group(client):
+  friends = list(factories.UserFactory.create_batch(2, is_active=True))
+  user = factories.UserFactory(is_active=True, friends=friends)
+  instance = factories.IndividualGroupFactory(owner=user, members=[friends[0]])
+  url = reverse('account:delete_group', kwargs={'pk': instance.pk})
+  success_url = reverse('account:individual_group_list')
+  client.force_login(user)
+  response = client.post(url)
+  count = models.IndividualGroup.objects.all().count()
+
+  assert response.status_code == status.HTTP_302_FOUND
+  assert response['Location'] == success_url
   assert count == 0

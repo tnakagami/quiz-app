@@ -28,6 +28,7 @@ from utils.views import (
   IsOwner,
   HasManagerRole,
   BaseCreateUpdateView,
+  CustomDeleteView,
   Index,
   DjangoBreadcrumbsMixin,
 )
@@ -76,7 +77,20 @@ class LogoutPage(LogoutView):
 # ================
 # = User profile =
 # ================
-class UserProfilePage(LoginRequiredMixin, IsOwner, DetailView, DjangoBreadcrumbsMixin):
+class IsPrivate(UserPassesTestMixin):
+  ##
+  # @brief Check whether request user can access to target page or not
+  # @return bool Judgement result
+  # @retval True Request user can access to the page
+  # @retval False Request user can access to the page except superuser
+  def test_func(self):
+    user = self.request.user
+    pk = self.kwargs.get('pk')
+    is_valid = str(pk) == str(user.pk) or user.is_superuser
+
+    return is_valid
+
+class UserProfilePage(LoginRequiredMixin, IsPrivate, DetailView, DjangoBreadcrumbsMixin):
   raise_exception = True
   model = UserModel
   template_name = 'account/profiles/user_profile.html'
@@ -88,7 +102,7 @@ class UserProfilePage(LoginRequiredMixin, IsOwner, DetailView, DjangoBreadcrumbs
     url_keys=['pk'],
   )
 
-class UpdateUserProfilePage(LoginRequiredMixin, IsOwner, UpdateView, DjangoBreadcrumbsMixin):
+class UpdateUserProfilePage(LoginRequiredMixin, IsPrivate, UpdateView, DjangoBreadcrumbsMixin):
   raise_exception = True
   model = UserModel
   form_class = forms.UserProfileForm
@@ -200,6 +214,10 @@ class ChangePasswordPage(LoginRequiredMixin, PasswordChangeView, DjangoBreadcrum
     parent_view_class=UserProfilePage,
   )
 
+  ##
+  # @brief Get context data
+  # @param kwargs named arguments
+  # @return context context which is used in template file
   def get_context_data(self, **kwargs):
     context = super().get_context_data(**kwargs)
     self.owner = self.request.user
@@ -273,9 +291,16 @@ class RoleChangeRequestListPage(LoginRequiredMixin, HasManagerRole, ListView, Dj
     parent_view_class=Index,
   )
 
+  ##
+  # @brief Get queryset
+  # @return Queryset of role approval records
   def get_queryset(self):
     return self.model.objects.collect_targets()
 
+  ##
+  # @brief Get context data
+  # @param kwargs named arguments
+  # @return context context which is used in template file
   def get_context_data(self, **kwargs):
     context = super().get_context_data(**kwargs)
     context['form'] = forms.RoleApprovalForm(user=self.request.user)
@@ -302,6 +327,10 @@ class CreateRoleChangeRequestPage(BaseCreateUpdateView, HasRequestPermission, Cr
     parent_view_class=UserProfilePage,
   )
 
+  ##
+  # @brief Get context data
+  # @param kwargs named arguments
+  # @return context context which is used in template file
   def get_context_data(self, **kwargs):
     context = super().get_context_data(**kwargs)
     self.owner = self.request.user
@@ -327,3 +356,94 @@ class UpdateRoleApproval(BaseCreateUpdateView, HasManagerRole, UpdateView):
     form.approval_process()
 
     return HttpResponseRedirect(self.get_success_url())
+
+# ===========
+# = Friends =
+# ===========
+class UpdateFriendPage(BaseCreateUpdateView, IsPrivate, UpdateView, DjangoBreadcrumbsMixin):
+  model = UserModel
+  form_class = forms.FriendForm
+  template_name = 'account/profiles/friend_form.html'
+  crumbles = DjangoBreadcrumbsMixin.get_target_crumbles(
+    url_name='account:update_friend',
+    title=gettext_lazy('Register/Unregister friends'),
+    parent_view_class=UserProfilePage,
+    url_keys=['pk'],
+  )
+
+  ##
+  # @brief Get the URL to come back to the previous page
+  # @return Target URL
+  def get_success_url(self):
+    return reverse('account:user_profile', kwargs={'pk': self.request.user.pk})
+
+# ====================
+# = Individual group =
+# ====================
+class IndividualGroupListPage(LoginRequiredMixin, ListView, DjangoBreadcrumbsMixin):
+  model = models.IndividualGroup
+  template_name = 'account/profiles/group_list.html'
+  crumbles_context_attribute = 'owner'
+  paginate_by = 15
+  context_object_name = 'own_groups'
+  crumbles = DjangoBreadcrumbsMixin.get_target_crumbles(
+    url_name='account:individual_group_list',
+    title=gettext_lazy('Individual groups'),
+    parent_view_class=UserProfilePage,
+  )
+
+  ##
+  # @brief Get queryset
+  # @return Queryset of individual group
+  def get_queryset(self):
+    return self.request.user.group_owners.all()
+
+  ##
+  # @brief Get context data
+  # @param kwargs named arguments
+  # @return context context which is used in template file
+  def get_context_data(self, **kwargs):
+    context = super().get_context_data(**kwargs)
+    self.owner = self.request.user
+
+    return context
+
+class CreateIndividualGroupPage(BaseCreateUpdateView, CreateView, DjangoBreadcrumbsMixin):
+  model = models.IndividualGroup
+  form_class = forms.IndividualGroupForm
+  template_name = 'account/profiles/group_form.html'
+  success_url = reverse_lazy('account:individual_group_list')
+  crumbles_context_attribute = 'owner'
+  crumbles = DjangoBreadcrumbsMixin.get_target_crumbles(
+    url_name='account:create_group',
+    title=gettext_lazy('Update/Edit group'),
+    parent_view_class=IndividualGroupListPage,
+  )
+
+  ##
+  # @brief Get context data
+  # @param kwargs named arguments
+  # @return context context which is used in template file
+  def get_context_data(self, **kwargs):
+    context = super().get_context_data(**kwargs)
+    self.owner = self.request.user
+
+    return context
+
+class UpdateIndividualGroupPage(BaseCreateUpdateView, IsOwner, UpdateView, DjangoBreadcrumbsMixin):
+  owner_name = 'owner'
+  model = models.IndividualGroup
+  form_class = forms.IndividualGroupForm
+  template_name = 'account/profiles/group_form.html'
+  success_url = reverse_lazy('account:individual_group_list')
+  crumbles = DjangoBreadcrumbsMixin.get_target_crumbles(
+    url_name='account:update_group',
+    title=gettext_lazy('Update/Edit group'),
+    parent_view_class=IndividualGroupListPage,
+    url_keys=['pk'],
+  )
+
+class DeleteIndividualGroup(CustomDeleteView):
+  owner_name = 'owner'
+  model = models.IndividualGroup
+  success_url = reverse_lazy('account:individual_group_list')

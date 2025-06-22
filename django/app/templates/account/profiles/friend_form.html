@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block header %}
+{% include form.dual_listbox_template_name with options=form.get_options %}
+{% endblock %}
+
+{% block content %}
+{% include 'breadcrumbs.html' with title=_("Register/Unregister friends") %}
+<div class="row justify-content-center">
+  <div class="col">
+    <form method="POST" id="friend-form">
+      {% csrf_token %}
+
+      {# Render errors if exists #}
+      {% if form.non_field_errors %}
+      <div class="col text-danger">
+        <p class="h5">{% trans "Errors" %}</p>
+        {{ form.non_field_errors }}
+      </div>
+      {% endif %}
+      {# Render contents #}
+      {% for field in form %}
+      <div class="m-1">
+        <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+        {{ field }}
+
+        {% if field.errors %}
+        <div class="col text-danger fs-6">
+          {{ field.errors }}
+        </div>
+        {% endif %}
+        {% if field.help_text %}
+        <div class="col helptext" {% if field.auto_id %} id="{{ field.auto_id }}_helptext"{% endif %}>
+          {{ field.help_text|safe }}
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+      {# Update or cancel #}
+      <div class="mt-1 row row-cols-1 row-cols-md-2 g-2">
+        <div class="col">
+          <button
+            type="submit"
+            class="btn btn-primary w-100 custom-boxshadow"
+          >
+            {% trans "Update" %}
+          </button>
+        </div>
+        <div class="col">
+          <a
+            href="{% url 'account:user_profile' pk=user.pk %}"
+            class="btn btn-secondary w-100 custom-boxshadow">
+            {% trans "Cancel" %}
+          </a>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block bodyjs %}
+<script>
+(function () {
+  // Add DOM event
+  document.addEventListener('DOMContentLoaded', () => {
+    const availableTitle = '{% trans "All Users" %}';
+    const selectedTitle = '{% trans "Assigned users" %}';
+    g_initDualListbox('.custom-multi-selectbox', availableTitle, selectedTitle);
+  });
+})();
+</script>
+{% endblock %}

@@ -42,7 +42,7 @@
         <div class="card">
           <div class="card-header">{% trans "Manager only" %}</div>
           <div class="card-body">
-            <p class="card-title h3">{% trans "Today's hash value" %}</p>
+            <p class="card-title h3">{% trans "Today&apos;s hash value" %}</p>
             <p class="card-text" id="hash-value">{{ hash_value|safe }}</p>
             <a
               id="copy-hash-value"
@@ -68,6 +68,7 @@
 
 {% block bodyjs %}
 {% if user.has_manager_role %}
+{{ block.super }}
 <script>
 (function () {
   const init = () => {
@@ -79,17 +80,9 @@
       },
     });
     btn.addEventListener('click', (event) => {
+      const helper = new HelperMethods();
       const element = document.querySelector('#hash-value');
-      const digest = element.textContent;
-      // Create textarea which is temporary element
-      const textarea = document.createElement('textarea');
-      textarea.value = digest;
-      // Add element and copy text
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand('copy');
-      // Remove textarea element
-      document.body.removeChild(textarea);
+      helper.copyToClipboard(element);
       popover.show();
     }, false);
   };

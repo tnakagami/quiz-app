@@ -52,22 +52,55 @@
             integrity="sha384-fbbOQedDUMZZ5KreZpsbe1LCZPVmfTnH7ois6mU1QK+m14rQ1l2bGBq41eYeM/fS"></script>
     {% block bodyjs %}
     <script>
-      const g_getCookie = (name) => {
-        let cookieValue = null;
+      class HelperMethods {
+        constructor() {
+          this.getCookie = this.getCookie.bind(this);
+          this.registerDeleteModalEvent = this.registerDeleteModalEvent.bind(this);
+        }
+        getCookie(name) {
+          let cookieValue = null;
 
-        if (document.cookie && document.cookie !== '') {
-          const cookies = document.cookie.split(';');
+          if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
 
-          for (const cookie of cookies) {
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-              cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-              break;
+            for (const cookie of cookies) {
+              if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+              }
             }
           }
-        }
 
-        return cookieValue;
-      };
+          return cookieValue;
+        }
+        registerDeleteModalEvent(args) {
+          const {btnClass, formID, modalID} = args;
+          const deleteBtns = document.querySelectorAll(`.${btnClass}`);
+          const deleteForm = document.querySelector(`#${formID}`);
+          const targetField = document.querySelector('#target-name');
+
+          for (const btn of deleteBtns) {
+            btn.addEventListener('click', (event) => {
+              deleteForm.action = btn.dataset.url;
+              targetField.textContent = btn.dataset.name;
+              const modal = new bootstrap.Modal(`#${modalID}`);
+              modal.show();
+            });
+          }
+        }
+        copyToClipboard(element=null, text='') {
+          const message = (element && element.textContent) || text;
+          // Create textarea which is temporary element
+          const textarea = document.createElement('textarea');
+          textarea.value = message;
+          // Add element and copy text
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand('copy');
+          // Remove textarea element
+          document.body.removeChild(textarea);
+        }
+      }
     </script>
     {% endblock %}
   </body>

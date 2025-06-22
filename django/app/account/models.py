@@ -2,7 +2,6 @@ from django.db import models
 from django.contrib.auth.models import PermissionsMixin
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.utils.translation import gettext_lazy
-from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
 from utils.models import get_current_time, convert_timezone, BaseModel
 
@@ -61,6 +60,12 @@ class CustomUserManager(BaseUserManager):
         raise ValueError(gettext_lazy('Superuser must have is_superuser=True.'))
 
     return self._create_user(email, password, **extra_fields)
+
+  ##
+  # @brief Get specific records
+  # @return Queryset which is satisfied with `is_active=True` and `is_staff=False`
+  def collect_valid_normal_users(self):
+    return self.get_queryset().filter(is_active=True, is_staff=False)
 
 class RoleType(models.IntegerChoices):
   # [format] name = value, label
@@ -240,7 +245,7 @@ class RoleApproval(BaseModel):
   is_completed = models.BooleanField(
     gettext_lazy('Approval status'),
     default=False,
-    help_text=gettext_lazy("Designates whether this user's role has already been approved or not."),
+    help_text=gettext_lazy("Designates whether this user’s role has already been approved or not."),
   )
 
   ##
@@ -302,37 +307,33 @@ class IndividualGroup(BaseModel):
 
   ##
   # @brief Get string object when the instance is called as `str(instance)`
-  # @return Group name with owner's name
+  # @return Group name
   def __str__(self):
-    return f'{self.name}({self.owner})'
+    return self.name
 
   ##
-  # @brief Check whether assigned members are valid or not.
-  # @exception ValidationError Invalid members are assigned.
-  def clean(self):
-    super().clean()
+  # @brief Extract specific members are removed from user's friends or not
+  # @param friends Input friends queryset (default is None)
+  # @return rest_friends Rest friends in the group
+  # @note If the number of rest friends is more than zero, the given friends are invalid.
+  def extract_invalid_friends(self, friends=None):
+    if friends is None:
+      friends = self.owner.friends
+    ids = friends.all().values_list('id', flat=True)
+    rest_friends = self.members.exclude(id__in=list(ids))
 
-    if self._exists_invalid_members():
-      raise ValidationError(
-        gettext_lazy("Invalid member list. Some members are assigned except owner's friends."),
-        code='invalid_members',
-      )
+    return rest_friends
 
   ##
   # @brief Check whether these members are assigned from owner's friends or not
+  # @param members Input members queryset
+  # @param friends Input friends queryset
   # @return bool Judgement result
   # @retval True  Some members are assigned except owner's friends.
   # @retval False All members are assigned from owner's friends.
-  def _exists_invalid_members(self):
-    friends = self.owner.friends.all().values_list('id', flat=True)
-    is_invalid = self.members.exclude(id__in=list(friends)).exists()
+  @classmethod
+  def exists_invalid_members(cls, members, friends):
+    ids = friends.all().values_list('id', flat=True)
+    is_invalid = members.exclude(id__in=list(ids)).exists()
 
     return is_invalid
-
-  ##
-  # @brief Save model instance to database
-  # @param args positional arguments
-  # @param kwargs named arguments
-  def save(self, *args, **kwargs):
-    self.full_clean()
-    super().save(*args, **kwargs)

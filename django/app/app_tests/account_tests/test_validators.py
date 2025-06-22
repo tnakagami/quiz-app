@@ -8,6 +8,9 @@ from account import validators
 UserModel = get_user_model()
 g_err_msg = 'Your password must contain at least four types which are an alphabet (uppercase/lowercase), a number, and a symbol.'
 
+# ===========================
+# = CustomPasswordValidator =
+# ===========================
 @pytest.mark.account
 @pytest.mark.validator
 @pytest.mark.parametrize([
@@ -71,6 +74,9 @@ def test_check_help_text_method_of_password_validator():
 
   assert out == g_err_msg
 
+# =========================
+# = CustomDigestValidator =
+# =========================
 @pytest.mark.account
 @pytest.mark.validator
 def test_check_valid_digest_of_digest_validator():
@@ -94,6 +100,9 @@ def test_check_invalid_digest_of_digest_validator():
   assert err_msg in ex.value.args
   assert err_msg == validator.get_help_text()
 
+# ====================================
+# = CustomRegistrationTokenValidator =
+# ====================================
 @pytest.mark.account
 @pytest.mark.validator
 @pytest.mark.django_db
