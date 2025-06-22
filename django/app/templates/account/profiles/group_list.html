@@ -70,8 +70,8 @@
 <script>
 (function () {
   const init = () => {
-    const instance = new HelperMethods();
-    instance.registerDeleteModalEvent({
+    const helper = new HelperMethods();
+    helper.registerDeleteModalEvent({
       btnClass: 'js-delete-group',
       formID: 'delete-form',
       modalID: 'delete-modal',

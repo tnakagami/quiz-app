@@ -1,6 +1,5 @@
 from django.contrib.auth.management.commands import createsuperuser
 from django.core.management import CommandError
-from account import models
 
 class Command(createsuperuser.Command):
   help = 'Create a superuser with a password non-interactively'
@@ -25,7 +24,6 @@ class Command(createsuperuser.Command):
       'email': email,
       'password': password,
       'screen_name': 'admin',
-      'role': models.RoleType.MANAGER,
       'is_active': True,
     }
     exists = self.UserModel._default_manager.db_manager(database).filter(email=email).exists()

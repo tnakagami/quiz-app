@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.exceptions import ValidationError
 from django.contrib.auth.models import PermissionsMixin
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.utils.translation import gettext_lazy
@@ -53,6 +54,7 @@ class CustomUserManager(BaseUserManager):
   def create_superuser(self, email, password=None, **extra_fields):
     extra_fields.setdefault('is_staff', True)
     extra_fields.setdefault('is_superuser', True)
+    extra_fields.setdefault('role', RoleType.MANAGER)
 
     if extra_fields.get('is_staff') is not True:
         raise ValueError(gettext_lazy('Superuser must have is_staff=True.'))
@@ -65,13 +67,22 @@ class CustomUserManager(BaseUserManager):
   # @brief Get specific records
   # @return Queryset which is satisfied with `is_active=True` and `is_staff=False`
   def collect_valid_normal_users(self):
-    return self.get_queryset().filter(is_active=True, is_staff=False)
+    return self.get_queryset().filter(is_active=True, is_staff=False).exclude(role=RoleType.MANAGER)
 
 class RoleType(models.IntegerChoices):
   # [format] name = value, label
   MANAGER = 1, gettext_lazy('Manager')
   CREATOR = 2, gettext_lazy('Creator')
   GUEST   = 3, gettext_lazy('Guest')
+
+def _validate_friends(value):
+  is_valid = all([not user.has_manager_role() for user in value])
+
+  if not is_valid:
+    raise ValidationError(
+      gettext_lazy('At least, there is an user which has manager role in your friends.'),
+      code='invalid_friends',
+    )
 
 class User(AbstractBaseUser, PermissionsMixin, BaseModel):
   email = models.EmailField(
@@ -121,7 +132,12 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
     related_name='my_friends',
     blank=True,
     verbose_name=gettext_lazy('My friends'),
+    validators=[_validate_friends],
     symmetrical=False,
+  )
+  created_at = models.DateTimeField(
+    gettext_lazy('Created time'),
+    default=get_current_time,
   )
 
   objects = CustomUserManager()
@@ -286,7 +302,7 @@ class RoleApproval(BaseModel):
 
 class IndividualGroup(BaseModel):
   class Meta:
-    ordering = ('name', )
+    ordering = ('-created_at', 'name', )
 
   owner = models.ForeignKey(
     User,
@@ -303,6 +319,10 @@ class IndividualGroup(BaseModel):
     User,
     related_name='group_members',
     verbose_name=gettext_lazy('Group members'),
+  )
+  created_at = models.DateTimeField(
+    gettext_lazy('Created time'),
+    default=get_current_time,
   )
 
   ##

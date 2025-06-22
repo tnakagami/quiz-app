@@ -646,7 +646,7 @@ def get_url_of_confirm_page():
   'new-password1-is-empty',
   'new-password2-is-empty',
 ])
-def test_invald_passwords_for_confirm_password_reset_page(init_records, client, get_url_of_confirm_page, params, err_msg):
+def test_invalid_passwords_for_confirm_password_reset_page(init_records, client, get_url_of_confirm_page, params, err_msg):
   user = init_records[0].user
   get_url = get_url_of_confirm_page(user)
   _ = client.get(get_url, follow=True)

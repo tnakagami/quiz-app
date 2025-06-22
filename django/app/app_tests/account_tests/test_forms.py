@@ -505,6 +505,33 @@ def test_validate_inputs_of_friend_form(number_of_friends):
   assert form.is_valid()
 
 @pytest.mark.account
+@pytest.mark.model
+@pytest.mark.django_db
+@pytest.mark.parametrize([
+  'user_type',
+], [
+  ('superuser', ),
+  ('manager', ),
+], ids=lambda xs: str(xs))
+def test_add_invalid_user_in_friend_form(user_type):
+  patterns = {
+    'superuser': factories.UserFactory(is_active=True, is_staff=True, is_superuser=True),
+    'manager': factories.UserFactory(is_active=True, role=models.RoleType.MANAGER),
+  }
+  invalid_user = patterns[user_type]
+  friends = list(factories.UserFactory.create_batch(2, is_active=True)) + [invalid_user]
+  user = factories.UserFactory()
+  params = {
+    'friends': friends,
+  }
+  form = forms.FriendForm(user=user, data=params)
+  is_valid = form.is_valid()
+  err_msg = 'Select a valid choice. {} is not one of the available choices.'.format(invalid_user.pk)
+
+  assert not is_valid
+  assert err_msg in str(form.errors)
+
+@pytest.mark.account
 @pytest.mark.form
 @pytest.mark.django_db
 @pytest.mark.parametrize([

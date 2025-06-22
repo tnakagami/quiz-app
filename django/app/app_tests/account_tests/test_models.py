@@ -198,6 +198,39 @@ def test_add_friends():
 @pytest.mark.account
 @pytest.mark.model
 @pytest.mark.django_db
+def test_add_valid_user_as_friends():
+  guest = factories.UserFactory(is_active=True, role=models.RoleType.GUEST)
+  creator = factories.UserFactory(is_active=True, role=models.RoleType.CREATOR)
+
+  try:
+    models._validate_friends([guest, creator])
+  except Exception as ex:
+    pytest.fail(f'Unexpected Error: {ex}')
+
+@pytest.mark.account
+@pytest.mark.model
+@pytest.mark.django_db
+@pytest.mark.parametrize([
+  'user_type',
+], [
+  ('superuser', ),
+  ('manager', ),
+], ids=lambda xs: str(xs))
+def test_add_invalid_user_as_friends(user_type):
+  patterns = {
+    'superuser': factories.UserFactory(is_active=True, is_staff=True, is_superuser=True),
+    'manager': factories.UserFactory(is_active=True, role=models.RoleType.MANAGER),
+  }
+  additional_friend = patterns[user_type]
+
+  with pytest.raises(ValidationError) as ex:
+    models._validate_friends([additional_friend])
+
+  assert 'At least, there is an user which has manager role in your friends.' in ex.value.args
+
+@pytest.mark.account
+@pytest.mark.model
+@pytest.mark.django_db
 @pytest.mark.parametrize([
   'role',
   'expected',
@@ -456,7 +489,7 @@ def test_invalid_members_of_individual_group():
   ([0, 2, 3], 1),
 ], ids=[
   'vaild-friends',
-  'invaild-friends',
+  'invalid-friends',
 ])
 def test_invalid_friends_of_individual_group(friend_indices, rest_count):
   friends = list(factories.UserFactory.create_batch(5, is_active=True))
