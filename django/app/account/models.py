@@ -12,6 +12,12 @@ def _get_code():
 
   return code
 
+class RoleType(models.IntegerChoices):
+  # [format] name = value, label
+  MANAGER = 1, gettext_lazy('Manager')
+  CREATOR = 2, gettext_lazy('Creator')
+  GUEST   = 3, gettext_lazy('Guest')
+
 class CustomUserManager(BaseUserManager):
   use_in_migrations = True
 
@@ -64,17 +70,20 @@ class CustomUserManager(BaseUserManager):
     return self._create_user(email, password, **extra_fields)
 
   ##
-  # @brief Get specific records
-  # @return Queryset which is satisfied with `is_active=True` and `is_staff=False`
+  # @brief Get normal users
+  # @return Queryset which is satisfied with `is_active=True`, `is_staff=False`, and `role != RoleType.MANAGER`
   def collect_valid_normal_users(self):
     return self.get_queryset().filter(is_active=True, is_staff=False).exclude(role=RoleType.MANAGER)
 
-class RoleType(models.IntegerChoices):
-  # [format] name = value, label
-  MANAGER = 1, gettext_lazy('Manager')
-  CREATOR = 2, gettext_lazy('Creator')
-  GUEST   = 3, gettext_lazy('Guest')
+  ##
+  # @brief Get creators only
+  # @return Queryset which consists of creator's role
+  def collect_creators(self):
+    return self.get_queryset().filter(is_active=True, is_staff=False, role=RoleType.CREATOR)
 
+##
+# @brief Validate input friends
+# @exception ValidationError These friends include the users which have manager's role
 def _validate_friends(value):
   is_valid = all([not user.has_manager_role() for user in value])
 
@@ -311,7 +320,7 @@ class IndividualGroup(BaseModel):
     related_name='group_owners',
   )
   name = models.CharField(
-    gettext_lazy('group name'),
+    gettext_lazy('Group name'),
     max_length=128,
     help_text=gettext_lazy('Required. 128 characters or fewer.'),
   )

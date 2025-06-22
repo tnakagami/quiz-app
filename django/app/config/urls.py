@@ -24,4 +24,5 @@ urlpatterns = [
 ] + i18n_patterns(
     path('', include('utils.urls')),
     path('account/', include('account.urls')),
+    path('quiz/', include('quiz.urls')),
 )

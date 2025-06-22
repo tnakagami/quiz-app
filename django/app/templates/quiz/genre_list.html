@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block content %}
+{% include 'breadcrumbs.html' with title=_("Genres") %}
+<div class="row justify-content-center">
+  <div class="col">
+    <div class="row row-cols-1 g-2">
+      <div class="col">
+        <a
+          href="{% url 'quiz:create_genre' %}"
+          class="btn btn-primary w-100 custom-boxshadow"
+        >
+          {% trans "Create a new genre" %}
+        </a>
+      </div>
+      {% if genres %}
+      <div class="col">
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr>
+                <th scope="col">{% trans "Genre name" %}</th>
+                <th scope="col">{% trans "Number of created quizzes" %}</th>
+                <th scope="col">{% trans "Operation" %}</th>
+              </tr>
+            </thead>
+            <tbody class="table-group-divider">
+            {% for instance in genres %}
+              <tr{% if not instance.is_enabled %} class="table-secondary"{% endif %}>
+                <td scope="row">{{ instance.name }}</td>
+                <td>{{ instance.quizzes.all.collect_quizzes.count }}</td>
+                <td>
+                  <a
+                    href="{% url 'quiz:update_genre' pk=instance.pk %}"
+                    class="btn btn-outline-success w-100 custom-boxshadow"
+                  >
+                    {% trans "Edit" %}
+                  </a>
+                </td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="col">
+      {% include "renderer/custom_pagenate.html" with page_obj=page_obj %}
+      </div>
+      {% else %}
+      <div class="col">
+        <p>{% trans "There is no genres." %}</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block bodyjs %}
+{% endblock %}

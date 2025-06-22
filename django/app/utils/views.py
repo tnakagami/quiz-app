@@ -28,14 +28,14 @@ class IsOwner(UserPassesTestMixin):
 
     return is_valid
 
-class IsGuest(UserPassesTestMixin):
+class IsCreator(UserPassesTestMixin):
   ##
   # @brief Check whether request user can access to target page or not
   # @return bool Judgement result
   # @retval True Request user can access to the page
   # @retval False Request user can access to the page except superuser
   def test_func(self):
-    return self.request.user.is_guest()
+    return self.request.user.is_creator()
 
 class HasManagerRole(UserPassesTestMixin):
   ##
@@ -45,6 +45,15 @@ class HasManagerRole(UserPassesTestMixin):
   # @retval False Request user can access to the page except superuser
   def test_func(self):
     return self.request.user.has_manager_role()
+
+class HasCreatorRole(UserPassesTestMixin):
+  ##
+  # @brief Check whether request user can access to target page or not
+  # @return bool Judgement result
+  # @retval True Request user can access to the page
+  # @retval False Request user can access to the page except superuser
+  def test_func(self):
+    return self.request.user.has_creator_role()
 
 class BaseCreateUpdateView(LoginRequiredMixin):
   raise_exception = True

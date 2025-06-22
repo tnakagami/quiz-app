@@ -9,7 +9,7 @@
     <p>{% trans "Please login from above link or create new account." %}</p>
     {% else %}
     <div class="row row-cols-1 g-2">
-      {% if user.has_guest_role %}
+      {% if user.is_player %}
         {# Quiz room #}
       {% endif %}
       {% if user.has_creator_role %}
@@ -17,7 +17,7 @@
       {% endif %}
       {% if user.has_manager_role %}
       <div class="col">
-        <a href="" class="link-underline link-underline-opacity-0">
+        <a href="{% url 'quiz:genre_list' %}" class="link-underline link-underline-opacity-0">
           <div class="card custom-boxshadow">
             <div class="card-header">{% trans "Manager only" %}</div>
             <div class="card-body">

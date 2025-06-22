@@ -11,13 +11,13 @@
           href="{% url 'account:create_group' %}"
           class="btn btn-primary w-100 custom-boxshadow"
         >
-          {% trans "Create new group" %}
+          {% trans "Create a new group" %}
         </a>
       </div>
-      <div class="col">
       {% if own_groups %}
+      <div class="col">
         <div class="table-responsive">
-          <table class="table table-hover">
+          <table class="table">
             <thead>
               <tr>
                 <th scope="col">{% trans "Group name" %}</th>
@@ -33,7 +33,7 @@
                 <td>
                   <a
                     href="{% url 'account:update_group' pk=instance.pk %}"
-                    class="btn btn-outline-sucess w-100 custom-boxshadow"
+                    class="btn btn-outline-success w-100 custom-boxshadow"
                   >
                     {% trans "Edit" %}
                   </a>
@@ -53,10 +53,15 @@
             </tbody>
           </table>
         </div>
-      {% else %}
-        <p>{% trans "There is no individual groups." %}</p>
-      {% endif %}
       </div>
+      <div class="col">
+      {% include "renderer/custom_pagenate.html" with page_obj=page_obj %}
+      </div>
+      {% else %}
+      <div class="col">
+        <p>{% trans "There is no individual groups." %}</p>
+      </div>
+      {% endif %}
     </div>
   </div>
 </div>

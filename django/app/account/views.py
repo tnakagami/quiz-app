@@ -416,7 +416,7 @@ class CreateIndividualGroupPage(BaseCreateUpdateView, CreateView, DjangoBreadcru
   crumbles_context_attribute = 'owner'
   crumbles = DjangoBreadcrumbsMixin.get_target_crumbles(
     url_name='account:create_group',
-    title=gettext_lazy('Update/Edit group'),
+    title=gettext_lazy('Create/Update group'),
     parent_view_class=IndividualGroupListPage,
   )
 
@@ -438,7 +438,7 @@ class UpdateIndividualGroupPage(BaseCreateUpdateView, IsOwner, UpdateView, Djang
   success_url = reverse_lazy('account:individual_group_list')
   crumbles = DjangoBreadcrumbsMixin.get_target_crumbles(
     url_name='account:update_group',
-    title=gettext_lazy('Update/Edit group'),
+    title=gettext_lazy('Create/Update group'),
     parent_view_class=IndividualGroupListPage,
     url_keys=['pk'],
   )

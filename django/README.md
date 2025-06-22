@@ -8,7 +8,7 @@ Migrations are how Django stores changes to your models and Django manages your 
 docker-compose run --rm django bash
 
 # In the docker environment
-python manage.py makemigrations utils account
+python manage.py makemigrations utils account quiz
 python manage.py migrate
 ```
 
