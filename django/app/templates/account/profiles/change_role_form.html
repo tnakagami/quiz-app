@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block content %}
+{% include 'breadcrumbs.html' with title=_("Change own role") %}
+<div class="row justify-content-center">
+  <div class="col">
+    <div class="row">
+      <div class="col">
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th scope="col">{% trans "Element" %}</th>
+                <th scope="col">{% trans "Value" %}</th>
+              </tr>
+            </thead>
+            <tbody class="table-group-divider">
+              <tr>
+                <th scope="row">{% trans 'screen name' %}</th>
+                <td>{{ user }}</td>
+              </tr>
+              <tr>
+                <th>{% trans 'Role' %}</th>
+                <td>{{ user.get_role_label }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col">
+        <form method="POST" id="change-role-form">
+          {% csrf_token %}
+
+          {{ form }}
+
+          {# Update or cancel #}
+          <div class="mt-1 row row-cols-1 row-cols-md-2 g-2">
+            <div class="col">
+              <button
+                type="submit"
+                class="btn btn-primary w-100 custom-boxshadow"
+              >
+                {% trans "Request" %}
+              </button>
+            </div>
+            <div class="col">
+              <a
+                href="{% url 'account:user_profile' pk=user.pk %}"
+                class="btn btn-secondary w-100 custom-boxshadow">
+                {% trans "Cancel" %}
+              </a>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block bodyjs %}
+{% endblock %}

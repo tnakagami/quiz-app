@@ -8,9 +8,6 @@ cat <<- _EOF
 Usage: $0 command [option] ...
 
 Enabled commands:
-  create-network
-    create docker network
-
   build
     Build docker image using Dockerfile
 
@@ -72,34 +69,6 @@ while [ -n "$1" ]; do
   case "$1" in
     help | -h )
       Usage
-
-      shift
-      ;;
-
-    create-network )
-      network_name="shared-localnet"
-
-      if ! $(docker network ls | grep -q "${network_name}"); then
-          base_ip=$(cat ${BASE_DIR}/.env | grep "APP_VPN_IP" | grep -oP "(?<==)((\d+|\.){5})")
-          subnet="${base_ip}.0/24"
-          gateway="${base_ip}.1"
-          echo    "Create docker network: "
-          echo    "  Name:    ${network_name}"
-          echo    "  Subnet:  ${subnet}"
-          echo    "  Gateway: ${gateway}"
-          echo -n "Are you ok? (y/n [y]): "
-          read is_valid
-
-          if [ -z "${is_valid}" -o "y" == "${is_valid}" ]; then
-              echo "Create docker network (bridge)"
-              docker network create --driver=bridge --subnet=${subnet} --gateway=${gateway} ${network_name}
-              docker network ls | grep ${network_name}
-          else
-              echo "Cancel to create docker network"
-          fi
-      else
-          echo Docker network \"${network_name}\" already exists.
-      fi
 
       shift
       ;;

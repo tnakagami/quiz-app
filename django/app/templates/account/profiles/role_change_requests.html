@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block content %}
+{% include 'breadcrumbs.html' with title=_("Role change requests") %}
+<div class="row justify-content-center">
+  <div class="col">
+    <div class="row">
+      <div class="col">
+      {% if role_change_reqs %}
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th scope="col">{% trans "Screen name (e-mail)" %}</th>
+                <th scope="col">{% trans "Role" %}</th>
+                <th colspan="2">{% trans "Operation" %}</th>
+              </tr>
+            </thead>
+            <tbody class="table-group-divider">
+              {% for instance in role_change_reqs %}
+              <tr
+                data-target="{{ instance.user.screen_name|default:'Empty' }}({{ instance.user.email }})"
+                data-url="{% url 'account:update_role_approval' pk=instance.pk %}"
+              >
+                <td scope="row">{{ instance.user.screen_name|default:"Empty" }}({{ instance.user.email }})</td>
+                <td>{{ instance.user.get_role_label }}</td>
+                <td>
+                  <button
+                    type="button"
+                    class="btn btn-outline-primary w-100 custom-boxshadow js-event"
+                    data-accept="true"
+                  >
+                    {% trans "Accept" %}
+                  </button>
+                </td>
+                <td>
+                  <button
+                    type="button"
+                    class="btn btn-outline-danger w-100 custom-boxshadow js-event"
+                    data-accept="false"
+                  >
+                    {% trans "Reject" %}
+                  </button>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p>{% trans "There is no role change requests." %}</p>
+      {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="approval-modal" tabindex="-1" aria-labelledby="approval-label" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <p class="modal-title fs-5" id="approval-label">{% trans "Confirm approval status" %}</p>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="fw-bold">{% trans "Please check the following judgement result." %}</p>
+        <p>{% trans "Target" %}: <span id="target-name" class="text-break"></span></p>
+        <p>{% trans "Result" %}: <span id="judgement-result" class="text-break"></span></p>
+      </div>
+      <div class="modal-footer">
+        <form method="POST" action="" id="approval-process-form" class="w-100">
+          {% csrf_token %}
+
+          {% with field=form.is_approve %}
+          <div class="form-check form-switch my-3">
+            {{ field }}
+            <label for="{{ field.id_for_label }}" class="form-check-label">{{ field.label }}</label>
+          </div>
+          {% endwith %}
+
+          <div class="row">
+            <div class="col-12 col-md-6">
+              <button type="submit" class="btn btn-primary w-100 custom-boxshadow">
+                {% trans "Submit" %}
+              </button>
+            </div>
+            <div class="col-12 col-md-6">
+              <button type="button" class="btn btn-secondary w-100 custom-boxshadow" data-bs-dismiss="modal">
+                {% trans "Cancel" %}
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block bodyjs %}
+<script>
+(function () {
+  const init = () => {
+    // Get elements
+    const form = document.querySelector('#approval-process-form');
+    const targetName = document.querySelector('#target-name');
+    const judgementResult = document.querySelector('#judgement-result');
+    const approvalType = document.querySelector('#approve-type');
+    const updateBtns = document.querySelectorAll('.js-event');
+    for (const btn of updateBtns) {
+      btn.addEventListener('click', (event) => {
+        const ownElem = event.target;
+        const isAccept = (ownElem.dataset.accept === 'true');
+        const trElem = ownElem.parentElement.parentElement;
+        targetName.textContent = trElem.dataset.target;
+        judgementResult.textContent = btn.textContent;
+        approvalType.checked = isAccept;
+        form.action = trElem.dataset.url;
+        // Auto execution
+        form.submit();
+      });
+    }
+    approvalType.addEventListener('change', (event) => {
+      const isChecked = event.target.checked;
+      const btnElem = document.querySelector(`[data-accept="${isChecked}"]`);
+      judgementResult.textContent = btnElem.textContent
+    });
+  };
+  // Add DOM event
+  document.addEventListener('DOMContentLoaded', init);
+})();
+</script>
+{% endblock %}

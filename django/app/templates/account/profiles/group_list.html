@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block content %}
+{% include 'breadcrumbs.html' with title=_("Individual groups") %}
+<div class="row justify-content-center">
+  <div class="col">
+    <div class="row row-cols-1 g-2">
+      <div class="col">
+        <a
+          href="{% url 'account:create_group' %}"
+          class="btn btn-primary w-100 custom-boxshadow"
+        >
+          {% trans "Create new group" %}
+        </a>
+      </div>
+      <div class="col">
+      {% if own_groups %}
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th scope="col">{% trans "Group name" %}</th>
+                <th scope="col">{% trans "Number of members" %}</th>
+                <th colspan="2">{% trans "Operation" %}</th>
+              </tr>
+            </thead>
+            <tbody class="table-group-divider">
+            {% for instance in own_groups %}
+              <tr>
+                <td scope="row">{{ instance.name }}</td>
+                <td>{{ instance.members.all.count }}</td>
+                <td>
+                  <a
+                    href="{% url 'account:update_group' pk=instance.pk %}"
+                    class="btn btn-outline-sucess w-100 custom-boxshadow"
+                  >
+                    {% trans "Edit" %}
+                  </a>
+                </td>
+                <td>
+                  <button
+                    type="button"
+                    class="btn btn-outline-danger w-100 custom-boxshadow js-delete-group"
+                    data-name="{{ instance.name }}"
+                    data-url="{% url 'account:delete_group' pk=instance.pk %}"
+                  >
+                    {% trans "Delete" %}
+                  </button>
+                </td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p>{% trans "There is no individual groups." %}</p>
+      {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{# Delete modal #}
+{% include "delete_modal_form.html" with modal_id="delete-modal" form_id="delete-form" %}
+{% endblock %}
+
+{% block bodyjs %}
+{{ block.super }}
+<script>
+(function () {
+  const init = () => {
+    const instance = new HelperMethods();
+    instance.registerDeleteModalEvent({
+      btnClass: 'js-delete-group',
+      formID: 'delete-form',
+      modalID: 'delete-modal',
+    });
+  };
+  // Add DOM event
+  document.addEventListener('DOMContentLoaded', init);
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block content %}
+{% include 'breadcrumbs.html' with title=_("Create account") %}
+<div class="row justify-content-center">
+  <div class="col">
+    <div class="card">
+      <div class="card-body">
+        <form action="{% url 'account:create_account' %}" method="POST" id="create-account-form">
+          {% csrf_token %}
+
+          {{ form }}
+
+          <div class="mt-2 row row-cols-1 row-cols-md-2 g-2">
+            <div class="col">
+              <button
+                type="submit"
+                class="btn btn-primary w-100 custom-boxshadow"
+              >
+                {% trans "Provisional registration" %}
+              </button>
+            </div>
+            <div class="col">
+              <a
+                href="{% url 'utils:index' %}"
+                class="btn btn-secondary w-100 custom-boxshadow"
+              >
+                {% trans "Cancel" %}
+              </a>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block bodyjs %}
+{% endblock %}

@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block content %}
+{% include 'breadcrumbs.html' with title=_("User profile") %}
+<div class="row justify-content-center">
+  <div class="col">
+    <div class="row">
+      <div class="col">
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th scope="col">{% trans "Element" %}</th>
+                <th scope="col">{% trans "Value" %}</th>
+                <th scope="col">{% trans "Operation" %}</th>
+              </tr>
+            </thead>
+            <tbody class="table-group-divider">
+              <tr>
+                <th scope="row">{% trans 'Screen name' %}</th>
+                <td>{{ owner }}</td>
+                <td>
+                  <a
+                    tabindex="0"
+                    role="button"
+                    class="btn btn-outline-primary custom-boxshadow js-copy-btn"
+                    data-text="{{ owner }}"
+                    data-bs-toggle="popover"
+                    data-bs-trigger="focus"
+                    data-bs-placement="right"
+                    data-bs-content="{% trans 'Copied!' %}"
+                  >
+                    {% trans "Copy to clipboard" %}
+                  </a>
+                </td>
+              </tr>
+              <tr>
+                <th>{% trans 'Code' %}</th>
+                <td>{{ owner.code }}</td>
+                <td>
+                  <a
+                    tabindex="0"
+                    role="button"
+                    class="btn btn-outline-primary custom-boxshadow js-copy-btn"
+                    data-text="{{ owner.code }}"
+                    data-bs-toggle="popover"
+                    data-bs-trigger="focus"
+                    data-bs-placement="right"
+                    data-bs-content="{% trans 'Copied!' %}"
+                  >
+                    {% trans "Copy to clipboard" %}
+                  </a>
+                </td>
+              </tr>
+              <tr>
+                <th>{% trans "Role" %}</th>
+                <td>{{ owner.get_role_label }}</td>
+                <td>-</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="row row-cols-1 g-2">
+      <div class="col">
+        <a
+          href="{% url 'account:update_profile' pk=owner.pk %}"
+          class="btn btn-primary w-100 custom-boxshadow"
+        >
+          {% trans "Update user profile" %}
+        </a>
+      </div>
+      <div class="col">
+        <a
+          href="{% url 'account:update_password' %}"
+          class="btn btn-primary w-100 custom-boxshadow"
+        >
+          {% trans "Update password" %}
+        </a>
+      </div>
+      {% if owner.is_player %}
+      <div class="col">
+        <a
+          href="{% url 'account:update_friend' pk=user.pk %}"
+          class="btn btn-success w-100 custom-boxshadow"
+        >
+          {% trans "Register/Unregister friends" %}
+        </a>
+      </div>
+      <div class="col">
+        <a
+          href="{% url 'account:individual_group_list' %}"
+          class="btn btn-success w-100 custom-boxshadow"
+        >
+          {% trans "Create/Edit/delete indivitual groups" %}
+        </a>
+      </div>
+      {% endif %}
+      {% if owner.is_guest and not owner.conducted_role_approval %}
+      <div class="col">
+        <a
+          href="{% url 'account:create_role_change_request' %}"
+          class="btn btn-success w-100 custom-boxshadow"
+        >
+          {% trans 'Change own role to "CREATOR"' %}
+        </a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block bodyjs %}
+{{ block.super }}
+<script>
+(function () {
+  const init = () => {
+    const copyButtons = document.querySelectorAll('.js-copy-btn');
+    const helper = new HelperMethods();
+
+    for (const btn of copyButtons) {
+      btn.addEventListener('click', (event) => {
+        const popover = new bootstrap.Popover(btn, {
+          delay: {
+            'show': 100,
+            'hide': 1500,
+          },
+        });
+        helper.copyToClipboard(null, btn.dataset.text);
+        popover.show();
+      }, false);
+    }
+  };
+  // Add DOM event
+  document.addEventListener('DOMContentLoaded', init);
+})();
+</script>
+{% endblock %}

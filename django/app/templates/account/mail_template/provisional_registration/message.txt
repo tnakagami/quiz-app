@@ -1,0 +1,13 @@
+{% load i18n %}{% blocktranslate with email=user.email %}
+Dear {{ email }}
+{% endblocktranslate %}
+{% trans "Thank you for conducting provisional registration process." %}
+{% trans "We&apos;d like you to access the following URL to complete a definitive registration." %}
+{% trans "Note: Your registration process has not completed yet." %}
+
+{% trans "Definitive registration URL" %}
+{{ protocol }}://{{ domain }}{% url 'account:complete_account_creation' token %}
+
+{% blocktranslate %}Caution: The above url is valid for {{ timelimit }} minutes.{% endblocktranslate %}
+
+{% trans "Administrator of Quiz app" %}

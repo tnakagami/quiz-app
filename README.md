@@ -35,71 +35,13 @@ Please see [direct_edit](./nginx/direct_edit/) for details.
 
     | Envrionment variable name | Example | Enables (option) |
     | :---- | :---- | :---- |
+    | `APP_DOMAINS` | `localhost -> http://nginx:80` | See [https-portal](https://github.com/SteveLTN/https-portal) for details. |
     | `APP_ACCESS_PORT` | 8443 | from 1025 to 65535 |
+    | `APP_BACKDOOR_PORT` | 3000 | from 1025 to 65535 |
     | `APP_ARCHITECTURE` | arm64v8 | amd64, arm32v5, arm32v6, arm32v7, arm64v8, i386, mips64le, ppc64le, riscv64, s390x |
     | `APP_TIMEZONE` | Asia/Tokyo | UTC, Asia/Tokyo, etc. |
-    | `APP_VPN_IP` | IP address on which the VPN client listens to Nginx | 10.0.100.3 |
-    | `APP_VPN_PORT` | Port number on which the VPN client listens on Nginx | 8082 |
 
     Please see [env.sample](./env.sample) for details.
-
-### Nginx
-Before you build docker image, you should make `nginx/cli.ini` and `nginx/direct_edit/txtedit.conf`. By referring as sample files, you can make these files. The example is shown below.
-
-#### `nginx/cli.ini`
-The example file is in [sample.cli.ini](./nginx/sample.cli.ini).
-
-```ini
-# ==========================
-# certbot configuration file
-# ==========================
-# Interactive mode
-non-interactive = true
-
-# Use ECC for the private key
-key-type = ecdsa
-elliptic-curve = secp384r1
-
-# Plugin type
-authenticator = manual
-preferred-challenges = dns
-manual-auth-hook = /data/direct_edit/txtregist.php
-manual-cleanup-hook = /data/direct_edit/txtdelete.php
-
-# Set E-mail
-email = *** enter your-email-address ***
-
-# Automatically agree to the terms of service of the ACME server
-agree-tos = true
-# Set ACME Directory Resource URI
-server = https://acme-v02.api.letsencrypt.org/directory
-```
-
-#### `nginx/direct_edit/txtedit.conf`
-The example file is in [sample.txtedit.conf](./nginx/direct_edit/sample.txtedit.conf).
-
-```php
-<?php
-// ------------------------------------------------------------
-//
-// txtedit.conf
-//
-// ------------------------------------------------------------
-?>
-<?php
-    $MYDNSJP_URL       = 'https://www.mydns.jp/directedit.html';
-    $MYDNSJP_MASTERID  = 'hogehoge-id';     /* Enter your MyDNS ID */
-    $MYDNSJP_MASTERPWD = 'foobar-password'; /* Enter your MyDNS Password */
-    $MYDNSJP_DOMAIN    = getenv('BASE_DOMAIN_NAME');
-?>
-```
-
-### Docker network
-Run the following command to create shared network in Docker.
-
-```bash
-echo -e "y\n" | ./wrapper.sh create-network
-```
 
 ## Build
 Run the following command to create docker images.
