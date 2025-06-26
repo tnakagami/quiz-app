@@ -6,25 +6,15 @@ from crumbles import CrumblesViewMixin, CrumbleDefinition
 from operator import attrgetter, methodcaller
 from .models import get_digest
 
-class IsOwner(UserPassesTestMixin):
-  owner_name = 'user'
-
+class CanUpdate(UserPassesTestMixin):
   ##
   # @brief Check whether request user can access to target page or not
   # @return bool Judgement result
   # @retval True Request user can access to the page
   # @retval False Request user can access to the page except superuser
   def test_func(self):
-    try:
-      # Get target instance
-      instance = self.get_object()
-      # Get owner
-      owner = getattr(instance, self.owner_name, instance)
-      # Judge whether the access is valid or not.
-      user = self.request.user
-      is_valid = owner.pk == user.pk or user.is_superuser
-    except:
-      is_valid = False
+    instance = self.get_object()
+    is_valid = instance.has_update_permission(self.request.user)
 
     return is_valid
 
@@ -66,11 +56,22 @@ class BaseCreateUpdateView(LoginRequiredMixin):
 
     return kwargs
 
-class CustomDeleteView(LoginRequiredMixin, IsOwner, DeleteView):
+class CustomDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
   raise_exception = True
   http_method_names = ['post']
   model = None
   success_url = None
+
+  ##
+  # @brief Check whether request user can access to target page or not
+  # @return bool Judgement result
+  # @retval True Request user can access to the page
+  # @retval False Request user can access to the page except superuser
+  def test_func(self):
+    instance = self.get_object()
+    is_valid = instance.has_delete_permission(self.request.user)
+
+    return is_valid
 
 class DjangoBreadcrumbsMixin(CrumblesViewMixin):
   ##

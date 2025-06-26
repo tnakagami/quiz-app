@@ -2,7 +2,7 @@
 {% load i18n %}
 
 {% block header %}
-{% include form.dual_listbox_template_name with options=form.get_options %}
+{% include form.dual_listbox_template_name %}
 {% endblock %}
 
 {% block content %}
@@ -61,13 +61,16 @@
 {% endblock %}
 
 {% block bodyjs %}
+{{ block.super }}
 <script>
 (function () {
   // Add DOM event
   document.addEventListener('DOMContentLoaded', () => {
+    const helper = new HelperMethods();
     const availableTitle = '{% trans "All Users" %}';
     const selectedTitle = '{% trans "Assigned users" %}';
-    g_initDualListbox('.custom-multi-selectbox', availableTitle, selectedTitle);
+    const options = '{{ form.get_options|safe }}';
+    helper.initDualListbox('.custom-multi-selectbox', availableTitle, selectedTitle, options);
   });
 })();
 </script>

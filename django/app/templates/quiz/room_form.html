@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block header %}
+{% include form.dual_listbox_template_name %}
+{% endblock %}
+
+{% block content %}
+{% include 'breadcrumbs.html' with title=_("Create/Update quiz room") %}
+<div class="row justify-content-center">
+  <div class="col">
+    <form method="POST" id="group-form">
+      {% csrf_token %}
+
+      {{ form }}
+
+      {# Update or cancel #}
+      <div class="mt-1 row row-cols-1 row-cols-md-2 g-2">
+        <div class="col">
+          <button
+            type="submit"
+            class="btn btn-primary w-100 custom-boxshadow"
+          >
+            {% trans "Create/Update" %}
+          </button>
+        </div>
+        <div class="col">
+          <a
+            href="{% url 'quiz:room_list' %}"
+            class="btn btn-secondary w-100 custom-boxshadow">
+            {% trans "Cancel" %}
+          </a>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block bodyjs %}
+{{ block.super }}
+<script>
+(function () {
+  // Add DOM event
+  document.addEventListener('DOMContentLoaded', () => {
+    const helper = new HelperMethods();
+    // For genre
+    (() => {
+      const element = document.querySelector('#genreList');
+      const availableTitle = element.dataset.available;
+      const selectedTitle = element.dataset.selected;
+      const options = '{{ form.get_genre_options|safe }}';
+      helper.initDualListbox(element, availableTitle, selectedTitle, options);
+    })();
+    // For creator
+    (() => {
+      const element = document.querySelector('#creatorList');
+      const availableTitle = element.dataset.available;
+      const selectedTitle = element.dataset.selected;
+      const options = '{{ form.get_creator_options|safe }}';
+      helper.initDualListbox(element, availableTitle, selectedTitle, options);
+    })();
+    // For member
+    const dualListbox = (() => {
+      const element = document.querySelector('#memberList');
+      const availableTitle = element.dataset.available;
+      const selectedTitle = element.dataset.selected;
+      const options = '{{ form.get_member_options|safe }}';
+      const out = helper.initDualListbox(element, availableTitle, selectedTitle, options);
+
+      return out;
+    })();
+    const individualGroup = document.querySelector('#individual-group');
+    individualGroup.addEventListener('change', async (event) => {
+      const element = event.target;
+      // Get new options
+      const data = {
+        owner_pk: '{{ user.pk }}',
+        group_pk: `${element.value}`,
+      };
+      const csrftoken = helper.getCookie('csrftoken');
+      const response = await fetch("{% url 'account:ajax_get_options' %}", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrftoken,
+        },
+        mode: 'same-origin',
+        body: JSON.stringify(data),
+      });
+      const output = await response.json();
+      // Update options and redraw options
+      dualListbox.options = output.options;
+      dualListbox.redraw();
+    });
+  });
+})();
+</script>
+{% endblock %}

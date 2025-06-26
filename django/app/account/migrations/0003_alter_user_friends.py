@@ -15,6 +15,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='user',
             name='friends',
-            field=models.ManyToManyField(blank=True, related_name='my_friends', to=settings.AUTH_USER_MODEL, validators=[account.models._validate_friends], verbose_name='My friends'),
+            field=models.ManyToManyField(blank=True, related_name='my_friends', to=settings.AUTH_USER_MODEL, verbose_name='My friends'),
         ),
     ]

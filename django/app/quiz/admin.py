@@ -12,7 +12,7 @@ class GenreAdmin(admin.ModelAdmin):
 @admin.register(Quiz)
 class QuizAdmin(admin.ModelAdmin):
   model = Quiz
-  fields = ('creator', 'genre', 'is_completed')
+  fields = ('creator', 'genre', 'question', 'answer', 'is_completed')
   list_display = ('creator', 'genre', 'is_completed')
   list_filter = ('creator', 'genre', 'is_completed')
   search_fields = ('creator__email', 'creator__screen_name', 'genre__name', 'is_completed')
@@ -20,7 +20,7 @@ class QuizAdmin(admin.ModelAdmin):
 @admin.register(QuizRoom)
 class QuizRoomAdmin(admin.ModelAdmin):
   model = QuizRoom
-  fields = ('owner', 'name', 'genres', 'creators', 'is_enabled')
+  fields = ('owner', 'name', 'genres', 'creators', 'members', 'max_question', 'is_enabled')
   list_display = ('owner', 'name', 'is_enabled')
   list_filter = ('owner', 'name', 'is_enabled')
   search_fields = ('owner__email', 'owner__screen_name', 'name', 'is_enabled')

@@ -27,9 +27,11 @@
             </thead>
             <tbody class="table-group-divider">
             {% for instance in genres %}
-              <tr{% if not instance.is_enabled %} class="table-secondary"{% endif %}>
-                <td scope="row">{{ instance.name }}</td>
-                <td>{{ instance.quizzes.all.collect_quizzes.count }}</td>
+              <tr>
+                {% with table_css=instance.is_enabled|yesno:',table-secondary' %}
+                <td scope="row" class="{{ table_css }}">{{ instance.name }}</td>
+                <td class="{{ table_css }}">{{ instance.quizzes.all.collect_quizzes.count }}</td>
+                {% endwith %}
                 <td>
                   <a
                     href="{% url 'quiz:update_genre' pk=instance.pk %}"

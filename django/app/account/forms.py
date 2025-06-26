@@ -11,8 +11,11 @@ from django.contrib.auth.forms import (
 from django.contrib.sites.shortcuts import get_current_site
 from django.template.loader import render_to_string
 from django.utils.translation import gettext_lazy
-from utils.models import get_digest
-from utils.forms import BaseFormWithCSS, ModelFormBasedOnUser
+from utils.models import get_digest, DualListbox
+from utils.forms import (
+  BaseFormWithCSS,
+  ModelFormBasedOnUser,
+)
 from utils.widgets import CustomSwitchInput
 from .validators import CustomDigestValidator
 from . import models
@@ -226,27 +229,28 @@ class FriendForm(forms.ModelForm):
     super().__init__(*args, **kwargs)
     self.user = user
     self.fields['friends'].queryset = UserModel.objects.collect_valid_normal_users().exclude(pk__in=[self.user.pk])
+    self.dual_listbox = DualListbox()
 
   ##
   # @brief Get options of select element
-  # @return options option element which consists of primary-key, label-name, and selected-or-not
+  # @return options JSON data of option element which consists of primary-key, label-name, and selected-or-not
   @property
   def get_options(self):
-    _user_formatter = lambda user: f'{user}(Code:{user.code})'
-    friends = self.user.friends.all()
-    queryset = self.fields['friends'].queryset.exclude(pk__in=list(friends.values_list('pk', flat=True)))
-    selected_options = [(str(user.pk), _user_formatter(user), True) for user in friends]
-    not_selected_options = [(str(user.pk), _user_formatter(user), False) for user in queryset]
-    options = selected_options + not_selected_options
+    all_friends = self.fields['friends'].queryset
+    selected_friends = self.user.friends.all()
+    callback = self.dual_listbox.user_cb
+    options = self.dual_listbox.collect_options_of_items(all_friends, selected_friends, callback)
 
     return options
 
   ##
   # @brief Check friends list
   # @exception ValidationError Some individual groups include deleted firends
+  # @exception ValidationError There are some users who have manager role
   def clean_friends(self):
     friends = self.cleaned_data.get('friends')
 
+    # Check whether the friends are included into each individual group or not.
     for group in self.user.group_owners.all():
       rest_friends = group.extract_invalid_friends(friends)
 
@@ -281,23 +285,17 @@ class IndividualGroupForm(ModelFormBasedOnUser):
     super().__init__(*args, user=user, **kwargs)
     self.fields['members'].queryset = self.user.friends.all()
     self.fields['members'].required = False
+    self.dual_listbox = DualListbox()
 
   ##
   # @brief Get options of select element
-  # @return options option element which consists of primary-key, label-name, and selected-or-not
+  # @return options JSON data of option element which consists of primary-key, label-name, and selected-or-not
   @property
   def get_options(self):
     friends = self.user.friends.all()
-    _user_formatter = lambda user: f'{user}(Code:{user.code})'
-
-    if self.instance:
-      members = self.instance.members.all()
-      queryset = friends.exclude(pk__in=list(members.values_list('pk', flat=True)))
-      selected_options = [(str(user.pk), _user_formatter(user), True) for user in members]
-      not_selected_options = [(str(user.pk), _user_formatter(user), False) for user in queryset]
-      options = selected_options + not_selected_options
-    else:
-      options = [(str(user.pk), _user_formatter(user), False) for user in friends]
+    members = self.instance.members.all() if self.instance else None
+    callback = self.dual_listbox.user_cb
+    options = self.dual_listbox.collect_options_of_items(friends, members, callback)
 
     return options
 
@@ -327,4 +325,5 @@ class IndividualGroupForm(ModelFormBasedOnUser):
   # @param args Positional arguments
   # @param kwargs Named arguments
   def post_process(self, instance, *args, **kwargs):
+    super().post_process(instance, *args, **kwargs)
     self.save_m2m()

@@ -33,4 +33,6 @@ urlpatterns = [
   path('create-group', views.CreateIndividualGroupPage.as_view(), name='create_group'),
   path('update-group/<pk>', views.UpdateIndividualGroupPage.as_view(), name='update_group'),
   path('delete-group/<pk>', views.DeleteIndividualGroup.as_view(), name='delete_group'),
+  # Ajax
+  path('ajax/get-options', views.IndividualGroupAjaxResponse.as_view(), name='ajax_get_options'),
 ]

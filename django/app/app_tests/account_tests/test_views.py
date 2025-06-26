@@ -3,8 +3,14 @@ from dataclasses import dataclass
 from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 from django.urls import reverse
-from app_tests import status, factories
+from app_tests import (
+  status,
+  factories,
+  g_generate_item,
+  g_compare_options,
+)
 from account import views, models
+import json
 
 UserModel = get_user_model()
 
@@ -1231,3 +1237,87 @@ def test_delete_record_in_delete_individual_group(client):
   assert response.status_code == status.HTTP_302_FOUND
   assert response['Location'] == success_url
   assert count == 0
+
+@pytest.mark.account
+@pytest.mark.view
+def test_get_access_to_individual_group_ajax_response(client):
+  url = reverse('account:ajax_get_options')
+  response = client.get(url)
+
+  assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
+
+@pytest.mark.account
+@pytest.mark.view
+@pytest.mark.django_db
+@pytest.mark.parametrize([
+  'is_authenticated',
+], [
+  (True, ),
+  (False, ),
+], ids=[
+  'user-is-authenticated',
+  'is-guest-user',
+])
+def test_get_access_to_individual_group_ajax_response(init_records, client, is_authenticated):
+  user = init_records[0].user
+  url = reverse('account:ajax_get_options')
+  # Execute force login or not
+  if is_authenticated:
+    client.force_login(user)
+  response = client.get(url)
+
+  assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
+
+@pytest.mark.account
+@pytest.mark.view
+@pytest.mark.django_db
+@pytest.mark.parametrize([
+  'arg_type',
+  'expected_type',
+], [
+  ('both-pairs', 'specific'),
+  ('only-owner', 'all'),
+  ('only-group', 'all'),
+  ('no-data', 'all'),
+], ids=lambda xs: str(xs))
+def test_post_access_to_individual_group_ajax_response(rf, arg_type, expected_type):
+  friends = list(factories.UserFactory.create_batch(4, is_active=True))
+  user = factories.UserFactory(is_active=True, friends=friends)
+  group = factories.IndividualGroupFactory(owner=user, members=[friends[0], friends[-1]])
+  patterns = {
+    'both-pairs': {'owner_pk': str(user.pk), 'group_pk': str(group.pk)},
+    'only-owner': {'owner_pk': str(user.pk)},
+    'only-group': {'group_pk': str(group.pk)},
+    'no-data':    {},
+  }
+  expected = {
+    'specific': g_generate_item([friends[0], friends[-1]], False),
+    'all': g_generate_item(UserModel.objects.collect_valid_normal_users(), False),
+  }
+  # Get option data
+  url = reverse('account:ajax_get_options')
+  params = patterns[arg_type]
+  exact_arr = expected[expected_type]
+  # Execute req-res
+  request = rf.post(url, data=params, content_type='application/json')
+  ajax_view = views.IndividualGroupAjaxResponse.as_view()
+  response = ajax_view(request)
+  data = json.loads(response.content)
+  options = data['options']
+
+  assert response.status_code == status.HTTP_200_OK
+  assert len(options) == len(exact_arr)
+  assert g_compare_options(options, exact_arr)
+
+@pytest.mark.account
+@pytest.mark.view
+def test_invalid_access_to_individual_group_ajax_response(client):
+  url = reverse('account:ajax_get_options')
+  params = {'owner_pk': 'abc', 'group_pk': 123}
+  # Execute req-res
+  response = client.post(url, data=params, headers={'Content-Type': 'application/json'})
+  data = json.loads(response.content)
+  options = data['options']
+
+  assert response.status_code == status.HTTP_200_OK
+  assert len(options) == 0

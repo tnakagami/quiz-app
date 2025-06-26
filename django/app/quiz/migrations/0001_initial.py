@@ -52,9 +52,9 @@ class Migration(migrations.Migration):
                 ('max_question', models.PositiveIntegerField(help_text='The maximum number of questions', validators=[django.core.validators.MinValueValidator(1)], verbose_name='Max question')),
                 ('is_enabled', models.BooleanField(default=False, help_text='Describes whether this quiz room is enabled or not.', verbose_name='Enable')),
                 ('created_at', models.DateTimeField(default=utils.models.get_current_time, verbose_name='Created time')),
-                ('creators', models.ManyToManyField(blank=True, help_text='Creators used in the quiz room', related_name='room_creators', to=settings.AUTH_USER_MODEL, validators=[quiz.models._validate_listed_creators], verbose_name='Creators')),
+                ('creators', models.ManyToManyField(blank=True, help_text='Creators used in the quiz room', related_name='room_creators', to=settings.AUTH_USER_MODEL, verbose_name='Creators')),
                 ('genres', models.ManyToManyField(blank=True, help_text='Genres used in the quiz room', related_name='quiz_rooms', to='quiz.genre', verbose_name='Genres')),
-                ('members', models.ManyToManyField(blank=True, help_text='Members assigned to the quiz room', related_name='room_members', to=settings.AUTH_USER_MODEL, validators=[quiz.models._validate_assigned_members], verbose_name='Room members')),
+                ('members', models.ManyToManyField(blank=True, help_text='Members assigned to the quiz room', related_name='room_members', to=settings.AUTH_USER_MODEL, verbose_name='Room members')),
                 ('owner', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='quiz_rooms', to=settings.AUTH_USER_MODEL, verbose_name='Owner')),
             ],
             options={

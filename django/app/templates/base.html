@@ -56,6 +56,8 @@
         constructor() {
           this.getCookie = this.getCookie.bind(this);
           this.registerDeleteModalEvent = this.registerDeleteModalEvent.bind(this);
+          this.copyToClipboard = this.copyToClipboard.bind(this);
+          this.initDualListbox = this.initDualListbox.bind(this);
         }
         getCookie(name) {
           let cookieValue = null;
@@ -99,6 +101,33 @@
           document.execCommand('copy');
           // Remove textarea element
           document.body.removeChild(textarea);
+        }
+        initDualListbox(elementName, availableTitle, selectedTitle, options) {
+          const dualListbox = new DualListbox(elementName, {
+            availableTitle: availableTitle,
+            selectedTitle:  selectedTitle,
+            addButtonText: '>',
+            removeButtonText: '<',
+            addAllButtonText: '>>',
+            removeAllButtonText: '<<',
+            sortable: true,
+            upButtonText: 'Up',
+            downButtonText: 'Down',
+            draggable: true,
+            options: JSON.parse(options),
+          });
+          // Update css
+          dualListbox.search_left.classList.remove('dual-listbox__search');
+          dualListbox.search_left.classList.add('form-control', 'px-2');
+          dualListbox.search_right.classList.remove('dual-listbox__search');
+          dualListbox.search_right.classList.add('form-control', 'px-2');
+
+          for (const name of ['add_button', 'add_all_button', 'remove_button', 'remove_all_button']) {
+            dualListbox[name].classList.remove('dual-listbox__button');
+            dualListbox[name].classList.add('btn', 'btn-outline-dark', 'w-100', 'h-100', 'm-2');
+          }
+
+          return dualListbox;
         }
       }
     </script>

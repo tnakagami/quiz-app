@@ -88,7 +88,7 @@ class Quiz(BaseModel):
     blank=True,
     help_text=gettext_lazy('Enter the question.'),
   )
-  answer = models.JSONField(
+  answer = models.TextField(
     gettext_lazy('Answer'),
     blank=True,
     help_text=gettext_lazy('Enter the answer for the question.'),
@@ -105,38 +105,42 @@ class Quiz(BaseModel):
   # @brief Get string object for the question
   # @return text A part of a sentence
   def __str__(self):
-    length = len(self.question)
+    return f'{self.get_short_question()}({self.creator})'
 
-    if length > 16:
-      text = self.question[:16]
+  ##
+  # @brief Split string object
+  # @param sentence Input text
+  # @param max_length Max length of text (default is 16)
+  # @return output A part of a sentence
+  def _split_text(self, sentence, max_length=16):
+    length = len(sentence)
+
+    if length > max_length:
+      output = sentence[:max_length]
     else:
-      text = self.question
+      output = sentence
 
-    return text
+    return output
 
-##
-# @brief Validate listed creators
-# @exception ValidationError There are invalid users. Some users are not creators.
-def _validate_listed_creators(value):
-  is_valid = all([user.is_creator() for user in value])
+  ##
+  # @brief Get string object for the question
+  # @return text A part of a sentence
+  def get_short_question(self):
+    return self._split_text(self.question)
 
-  if not is_valid:
-    raise ValidationError(
-      gettext_lazy('You have to assign only creators.'),
-      code='invalid_users',
-    )
+  ##
+  # @brief Get string object for the answer
+  # @return text A part of a sentence
+  def get_short_answer(self):
+    return self._split_text(self.answer)
 
-##
-# @brief Validate assigned members
-# @exception ValidationError There are invalid users. Some users are not players.
-def _validate_assigned_members(value):
-  is_valid = all([user.is_player() for user in value])
-
-  if not is_valid:
-    raise ValidationError(
-      gettext_lazy('You have to assign only players whose role is `Guest` or `Creator`.'),
-      code='invalid_users',
-    )
+  ##
+  # @brief Check whether request user has a update permission
+  # @return bool Judgement result
+  # @retval True  The request user can update instance
+  # @retval False The request user cannot update instance
+  def has_update_permission(self, user):
+    return self.creator.pk == user.pk or user.has_manager_role()
 
 class QuizRoomQuerySet(models.QuerySet):
   ##
@@ -170,7 +174,6 @@ class QuizRoom(BaseModel):
     blank=True,
     verbose_name=gettext_lazy('Creators'),
     help_text=gettext_lazy('Creators used in the quiz room'),
-    validators=[_validate_listed_creators],
   )
   members = models.ManyToManyField(
     UserModel,
@@ -178,7 +181,6 @@ class QuizRoom(BaseModel):
     blank=True,
     verbose_name=gettext_lazy('Room members'),
     help_text=gettext_lazy('Members assigned to the quiz room'),
-    validators=[_validate_assigned_members],
   )
   max_question = models.PositiveIntegerField(
     gettext_lazy('Max question'),
@@ -209,16 +211,85 @@ class QuizRoom(BaseModel):
   # @retval True  The request user can access
   # @retval False The request user cannot access
   def is_assigned(self, user):
-    return self.members.all().filter(pk__in=[user.pk]).exists()
+    return user.is_player() and self.members.all().filter(pk__in=[user.pk]).exists()
 
   ##
-  # @brief Check genres and creators
+  # @brief Validate whether all members are creators or not
+  # @param members Target members
+  # @return bool Judgement result
+  # @retval True  All members are creators
+  # @retval False Some members's role is not `CREATOR`
+  @classmethod
+  def is_only_creator(cls, members):
+    return all([user.is_creator() for user in members])
+
+  ##
+  # @brief Validate whether all members are players or not
+  # @param members Target members
+  # @return bool Judgement result
+  # @retval True  All members are players
+  # @retval False Some members are not players
+  @classmethod
+  def is_only_player(cls, members):
+    return all([user.is_player() for user in members])
+
+  ##
+  # @brief Check whether request user has a update permission
+  # @return bool Judgement result
+  # @retval True  The request user can update instance
+  # @retval False The request user cannot update instance
+  def has_update_permission(self, user):
+    return self.owner.pk == user.pk or user.has_manager_role()
+
+  ##
+  # @brief Check whether request user has a delete permission
+  # @return bool Judgement result
+  # @retval True  The request user can delete instance
+  # @retval False The request user cannot delete instance
+  def has_delete_permission(self, user):
+    return self.has_update_permission(user) and not self.is_enabled
+
+  ##
+  # @brief Get all genre names
+  # @return output Joined genre names or hyphen
+  def get_genres(self):
+    names = list(self.genres.all().values_list('name', flat=True))
+    output = ','.join(names) if names else '-'
+
+    return output
+
+  ##
+  # @brief Get all creator names
+  # @return output Joined creator names or hyphen
+  def get_creators(self):
+    names = list(self.creators.all().values_list('screen_name', flat=True))
+    output = ','.join(names) if names else '-'
+
+    return output
+
+  ##
+  # @brief Check genres, creators, and members
   # @exception ValidationError Both genres and creators are not set.
+  # @exception ValidationError Some creators don't have CREATOR's role
+  # @exception ValidationError Some members are not players
   def clean(self):
+    # Check genres and creators
     if not self.genres and not self.creators:
       raise ValidationError(
         gettext_lazy('You have to assign at least one of genres and creators to the quiz room.'),
         code='invalid_assignment',
+      )
+    # Check creators
+    if self.creators and not self.is_only_creator(self.creators.all()):
+      raise ValidationError(
+        gettext_lazy('You have to assign only creators.'),
+        code='invalid_users',
+      )
+    # Check members
+    if self.members and not self.is_only_player(self.members.all()):
+      raise ValidationError(
+        gettext_lazy('You have to assign only players whose role is `Guest` or `Creator`.'),
+        code='invalid_users',
       )
 
 class QuizStatusType(models.IntegerChoices):

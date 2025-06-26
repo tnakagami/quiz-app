@@ -4,7 +4,12 @@ from django.contrib.auth.models import PermissionsMixin
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.utils.translation import gettext_lazy
 from django.core.mail import send_mail
-from utils.models import get_current_time, convert_timezone, BaseModel
+from utils.models import (
+  DualListbox,
+  get_current_time,
+  convert_timezone,
+  BaseModel,
+)
 
 def _get_code():
   current_time = get_current_time()
@@ -81,18 +86,6 @@ class CustomUserManager(BaseUserManager):
   def collect_creators(self):
     return self.get_queryset().filter(is_active=True, is_staff=False, role=RoleType.CREATOR)
 
-##
-# @brief Validate input friends
-# @exception ValidationError These friends include the users which have manager's role
-def _validate_friends(value):
-  is_valid = all([not user.has_manager_role() for user in value])
-
-  if not is_valid:
-    raise ValidationError(
-      gettext_lazy('At least, there is an user which has manager role in your friends.'),
-      code='invalid_friends',
-    )
-
 class User(AbstractBaseUser, PermissionsMixin, BaseModel):
   email = models.EmailField(
     gettext_lazy('email address'),
@@ -141,7 +134,6 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
     related_name='my_friends',
     blank=True,
     verbose_name=gettext_lazy('My friends'),
-    validators=[_validate_friends],
     symmetrical=False,
   )
   created_at = models.DateTimeField(
@@ -341,6 +333,14 @@ class IndividualGroup(BaseModel):
     return self.name
 
   ##
+  # @brief Check whether request user has a update permission
+  # @return bool Judgement result
+  # @retval True  The request user can update instance
+  # @retval False The request user cannot update instance
+  def has_update_permission(self, user):
+    return self.owner.pk == user.pk or user.is_superuser
+
+  ##
   # @brief Extract specific members are removed from user's friends or not
   # @param friends Input friends queryset (default is None)
   # @return rest_friends Rest friends in the group
@@ -366,3 +366,25 @@ class IndividualGroup(BaseModel):
     is_invalid = members.exclude(id__in=list(ids)).exists()
 
     return is_invalid
+
+  ##
+  # @brief Get relevant members
+  # @param onwer_pk Owner's primary key
+  # @param group_pk Individual group's primary key
+  # @return List of dict which includes text, pk and is_selected element
+  @classmethod
+  def get_options(cls, owner_pk, group_pk):
+    dual_listbox = DualListbox()
+    callback = dual_listbox.user_cb
+
+    try:
+      owner = User.objects.get(pk=owner_pk)
+      instance = cls.objects.get(pk=group_pk, owner=owner)
+      queryset = instance.members.all()
+    except:
+      queryset = User.objects.collect_valid_normal_users()
+    # Get options
+    items = dual_listbox.create_options(queryset, is_selected=False, callback=callback)
+    options = [dual_listbox.convertor(data) for data in items]
+
+    return options

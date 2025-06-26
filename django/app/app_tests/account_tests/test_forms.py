@@ -2,8 +2,13 @@ import pytest
 from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 from django.urls import reverse
-from app_tests import factories
+from app_tests import (
+  factories,
+  g_generate_item,
+  g_compare_options,
+)
 from account import forms, models
+import json
 
 UserModel = get_user_model()
 g_complex_passwd = 'h2o$Jax3#1Pi'
@@ -512,15 +517,17 @@ def test_validate_inputs_of_friend_form(number_of_friends):
 ], [
   ('superuser', ),
   ('manager', ),
+  ('myself', ),
 ], ids=lambda xs: str(xs))
 def test_add_invalid_user_in_friend_form(user_type):
+  user = factories.UserFactory(is_active=True)
   patterns = {
     'superuser': factories.UserFactory(is_active=True, is_staff=True, is_superuser=True),
     'manager': factories.UserFactory(is_active=True, role=models.RoleType.MANAGER),
+    'myself': user,
   }
   invalid_user = patterns[user_type]
   friends = list(factories.UserFactory.create_batch(2, is_active=True)) + [invalid_user]
-  user = factories.UserFactory()
   params = {
     'friends': friends,
   }
@@ -580,17 +587,14 @@ def test_check_options_of_friend_form(number_of_friends):
   friends = list(factories.UserFactory.create_batch(number_of_friends, is_active=True)) if number_of_friends > 0 else []
   others = factories.UserFactory.create_batch(4, is_active=True)
   user = factories.UserFactory(friends=friends)
-  _generate_item = lambda user, is_assigned: (str(user.pk), f'{user}(Code:{user.code})', is_assigned) 
   form = forms.FriendForm(user=user)
-  options = form.get_options
-  exacts_items = [_generate_item(user, True) for user in friends] + [_generate_item(user, False) for user in others]
-  _sorted = lambda arr: sorted(arr, key=lambda xs: xs[0])
+  str_options = form.get_options
+  exacts_items = g_generate_item(friends, True) + g_generate_item(others, False)
+  options = json.loads(str_options)
 
+  assert isinstance(str_options, str)
   assert len(options) == len(exacts_items)
-  assert all([
-    all([_est_val == _exact_val for _est_val, _exact_val in zip(estimated, exact)])
-    for estimated, exact in zip(_sorted(options), _sorted(exacts_items))
-  ])
+  assert g_compare_options(options, exacts_items)
 
 # =======================
 # = IndividualGroupForm =
@@ -662,11 +666,10 @@ def test_check_options_of_individual_group_form(data_type, exists_instance):
   # Define instances
   user = factories.UserFactory(friends=patterns[data_type])
   instance = factories.IndividualGroupFactory(owner=user, members=[friends[0]]) if exists_instance else None
-  _generate_item = lambda user, is_assigned: (str(user.pk), f'{user}(Code:{user.code})', is_assigned) 
   expected = {
     'no-friends': [],
-    'best-friend': [_generate_item(friends[0], True)] if exists_instance else [_generate_item(friends[0], False)],
-    'manay-friends': [_generate_item(friends[0], True), _generate_item(friends[1], False), _generate_item(friends[2], False)] if exists_instance else [_generate_item(user, False) for user in friends],
+    'best-friend': g_generate_item([friends[0]], exists_instance),
+    'manay-friends': (g_generate_item([friends[0]], True) + g_generate_item([friends[1], friends[2]], False)) if exists_instance else g_generate_item(friends, False),
   }
   params = {
     'name': 'test-group',
@@ -674,14 +677,12 @@ def test_check_options_of_individual_group_form(data_type, exists_instance):
   }
   exacts_items = expected[data_type]
   form = forms.IndividualGroupForm(user=user, data=params, instance=instance)
-  options = form.get_options
-  _sorted = lambda arr: sorted(arr, key=lambda xs: xs[0])
+  str_options = form.get_options
+  options = json.loads(str_options)
 
+  assert isinstance(str_options, str)
   assert len(options) == len(exacts_items)
-  assert all([
-    all([_est_val == _exact_val for _est_val, _exact_val in zip(estimated, exact)])
-    for estimated, exact in zip(_sorted(options), _sorted(exacts_items))
-  ])
+  assert g_compare_options(options, exacts_items)
 
 @pytest.mark.account
 @pytest.mark.form
@@ -692,16 +693,13 @@ def test_check_default_options_in_individual_group_form():
   user = factories.UserFactory(friends=friends)
   form = forms.IndividualGroupForm(user=user)
   form.instance = None
-  options = form.get_options
-  expected = [(str(user.pk), f'{user}(Code:{user.code})', False) for user in friends]
-  _sorted = lambda arr: sorted(arr, key=lambda xs: xs[0])
+  str_options = form.get_options
+  exacts_items = g_generate_item(friends, False)
+  options = json.loads(str_options)
 
-  assert len(options) == len(expected)
-  assert len(options[0]) == len(expected[0])
-  assert all([
-    all([_est_val == _exact_val for _est_val, _exact_val in zip(estimated, exact)])
-    for estimated, exact in zip(_sorted(options), _sorted(expected))
-  ])
+  assert isinstance(str_options, str)
+  assert len(options) == len(exacts_items)
+  assert g_compare_options(options, exacts_items)
 
 @pytest.mark.account
 @pytest.mark.form

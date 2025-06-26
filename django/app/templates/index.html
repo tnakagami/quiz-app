@@ -9,24 +9,46 @@
     <p>{% trans "Please login from above link or create new account." %}</p>
     {% else %}
     <div class="row row-cols-1 g-2">
-      {% if user.is_player %}
-        {# Quiz room #}
-      {% endif %}
+      {# Quiz rooms #}
+      <div class="col">
+        <a href="{% url 'quiz:room_list' %}" class="link-underline link-underline-opacity-0">
+          <div class="card custom-boxshadow">
+            <div class="card-header">{% trans "Allowed all users" %}</div>
+            <div class="card-body">
+              <p class="card-title h3">{% trans "Quiz room" %}</p>
+              <p class="card-text">{% trans "Check/Create/Update quiz room." %}</p>
+            </div>
+          </div>
+        </a>
+      </div>
       {% if user.has_creator_role %}
-        {# Check/Create/Update/Delete quizzes #}
+      {# Quizzes #}
+      <div class="col">
+        <a href="{% url 'quiz:quiz_list' %}" class="link-underline link-underline-opacity-0">
+          <div class="card custom-boxshadow">
+            <div class="card-header">{% trans "Create or manager only" %}</div>
+            <div class="card-body">
+              <p class="card-title h3">{% trans "Quiz" %}</p>
+              <p class="card-text">{% trans "Check/Create/Update quizzes." %}</p>
+            </div>
+          </div>
+        </a>
+      </div>
       {% endif %}
       {% if user.has_manager_role %}
+      {# Quiz genres #}
       <div class="col">
         <a href="{% url 'quiz:genre_list' %}" class="link-underline link-underline-opacity-0">
           <div class="card custom-boxshadow">
             <div class="card-header">{% trans "Manager only" %}</div>
             <div class="card-body">
               <p class="card-title h3">{% trans "Quiz genre" %}</p>
-              <p class="card-text">{% trans "Create/Update quiz genres." %}</p>
+              <p class="card-text">{% trans "Check/Create/Update quiz genres." %}</p>
             </div>
           </div>
         </a>
       </div>
+      {# Role change requests #}
       <div class="col">
         <a href="{% url 'account:role_change_requests' %}" class="link-underline link-underline-opacity-0">
           <div class="card custom-boxshadow">

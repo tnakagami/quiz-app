@@ -1,6 +1,23 @@
 from dataclasses import dataclass
 from . import factories
 
+def g_generate_item(users, is_selected):
+  return [
+    {"text": f'{user}({user.code})', "value": f'{user.pk}', "selected": is_selected}
+    for user in users
+  ]
+
+def g_compare_options(estimated_options, exact_options):
+  _sorted = lambda arr: sorted(arr, key=lambda _dict: _dict['text'])
+  xs = _sorted(estimated_options)
+  ys = _sorted(exact_options)
+  ret = all([
+    all([x_dict[key] == y_dict[key] for key in ['text', 'value', 'selected']])
+    for x_dict, y_dict in zip(xs, ys)
+  ])
+
+  return ret
+
 @dataclass(frozen=True)
 class _HTTP_STATUS_CODE:
   # Informational - 1xx
@@ -60,4 +77,9 @@ class _HTTP_STATUS_CODE:
 
 status = _HTTP_STATUS_CODE()
 
-__all__ = ['status', 'factories']
+__all__ = [
+  'status',
+  'factories',
+  'g_generate_item',
+  'g_compare_options',
+]

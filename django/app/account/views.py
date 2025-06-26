@@ -13,11 +13,15 @@ from django.contrib.auth.views import (
 )
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth import get_user_model
-from django.shortcuts import redirect
 from django.utils.translation import gettext_lazy
 from django.urls import reverse, reverse_lazy
-from django.http import HttpResponseBadRequest, HttpResponseRedirect
+from django.http import (
+  HttpResponseBadRequest,
+  HttpResponseRedirect,
+  JsonResponse,
+)
 from django.views.generic import (
+  View,
   TemplateView,
   ListView,
   CreateView,
@@ -25,7 +29,7 @@ from django.views.generic import (
   DetailView,
 )
 from utils.views import (
-  IsOwner,
+  CanUpdate,
   HasManagerRole,
   BaseCreateUpdateView,
   CustomDeleteView,
@@ -33,6 +37,7 @@ from utils.views import (
   DjangoBreadcrumbsMixin,
 )
 from . import models, forms, validators
+import json
 
 UserModel = get_user_model()
 
@@ -154,7 +159,7 @@ class CreateAccountPage(IsNotAuthenticated, CreateView, DjangoBreadcrumbsMixin):
       'user': user,
     }
     form.send_email(self.request, config)
-    response = redirect('account:done_account_creation')
+    response = HttpResponseRedirect(reverse('account:done_account_creation'))
 
     return response
 
@@ -430,8 +435,7 @@ class CreateIndividualGroupPage(BaseCreateUpdateView, CreateView, DjangoBreadcru
 
     return context
 
-class UpdateIndividualGroupPage(BaseCreateUpdateView, IsOwner, UpdateView, DjangoBreadcrumbsMixin):
-  owner_name = 'owner'
+class UpdateIndividualGroupPage(BaseCreateUpdateView, CanUpdate, UpdateView, DjangoBreadcrumbsMixin):
   model = models.IndividualGroup
   form_class = forms.IndividualGroupForm
   template_name = 'account/profiles/group_form.html'
@@ -444,6 +448,22 @@ class UpdateIndividualGroupPage(BaseCreateUpdateView, IsOwner, UpdateView, Djang
   )
 
 class DeleteIndividualGroup(CustomDeleteView):
-  owner_name = 'owner'
   model = models.IndividualGroup
   success_url = reverse_lazy('account:individual_group_list')
+
+class IndividualGroupAjaxResponse(View):
+  raise_exception = True
+  http_method_names = ['post']
+
+  def post(self, request, *args, **kwargs):
+    try:
+      body = request.body.decode('utf-8')
+      post_data = json.loads(body)
+      owner_pk = post_data.get('owner_pk')
+      group_pk = post_data.get('group_pk')
+      options = models.IndividualGroup.get_options(owner_pk, group_pk)
+      response = JsonResponse({'options': options})
+    except:
+      response = JsonResponse({'options': []})
+
+    return response
