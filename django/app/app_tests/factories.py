@@ -2,6 +2,7 @@ import factory
 from django.utils import timezone
 from faker import Factory as FakerFactory
 from account import models as account_models
+from quiz import models as quiz_models
 
 faker = FakerFactory.create()
 
@@ -13,6 +14,7 @@ def clip(target_name, max_length):
 
   return clipped
 
+# Account app
 class UserFactory(factory.django.DjangoModelFactory):
   class Meta:
     model = account_models.User
@@ -61,3 +63,68 @@ class IndividualGroupFactory(factory.django.DjangoModelFactory):
       targets = friends[:half_counts] if counts > 1 else friends
       self.members.add(*targets)
       self.save()
+
+# Quiz app
+class GenreFactory(factory.django.DjangoModelFactory):
+  class Meta:
+    model = quiz_models.Genre
+
+  name = factory.LazyAttribute(lambda instance: faker.pystr(min_chars=1, max_chars=128))
+  is_enabled = True
+
+class QuizFactory(factory.django.DjangoModelFactory):
+  class Meta:
+    model = quiz_models.Quiz
+
+  creator = factory.SubFactory(UserFactory)
+  genre = factory.SubFactory(GenreFactory)
+  question = factory.LazyAttribute(lambda instance: faker.pystr(min_chars=1, max_chars=1024))
+  answer = factory.LazyAttribute(lambda instance: faker.pystr(min_chars=1, max_chars=1024))
+  is_completed = False
+
+class QuizRoomFactory(factory.django.DjangoModelFactory):
+  class Meta:
+    model = quiz_models.QuizRoom
+
+  owner = factory.SubFactory(UserFactory)
+  name = factory.LazyAttribute(lambda instance: faker.pystr(min_chars=1, max_chars=128))
+  max_question = factory.LazyAttribute(lambda instance: faker.pyint(min_value=1, max_value=256, step=1))
+  is_enabled = False
+
+  @factory.post_generation
+  def genres(self, create, extracted, **kwargs):
+    if not create or not extracted:
+      # Simple build, or nothing to add, do nothing.
+      return None
+
+    # Add the iterable of groups using bulk addition
+    self.genres.add(*extracted)
+    self.save()
+
+  @factory.post_generation
+  def creators(self, create, extracted, **kwargs):
+    if not create or not extracted:
+      # Simple build, or nothing to add, do nothing.
+      return None
+
+    # Add the iterable of groups using bulk addition
+    self.creators.add(*extracted)
+    self.save()
+
+  @factory.post_generation
+  def members(self, create, extracted, **kwargs):
+    if not create or not extracted:
+      # Simple build, or nothing to add, do nothing.
+      return None
+
+    # Add the iterable of groups using bulk addition
+    self.members.add(*extracted)
+    self.save()
+
+class ScoreFactory(factory.django.DjangoModelFactory):
+  class Meta:
+    model = quiz_models.Score
+
+  room = factory.SubFactory(QuizRoomFactory)
+  count = factory.LazyAttribute(lambda instance: faker.pyint(min_value=1, max_value=256, step=1))
+  quiz = factory.SubFactory(QuizFactory)

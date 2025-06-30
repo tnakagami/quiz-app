@@ -18,5 +18,5 @@ urlpatterns = [
   path('create-room', views.CreateQuizRoomPage.as_view(), name='create_room'),
   path('update-room/<pk>', views.UpdateQuizRoomPage.as_view(), name='update_room'),
   path('delete-room/<pk>', views.DeleteQuizRoom.as_view(), name='delete_room'),
-  path('enter-room/<pk>', views.EnterQuizRoom.as_view(), name='enter_room'),
+  path('playing-room/<pk>', views.EnterQuizRoom.as_view(), name='enter_room'),
 ]

@@ -236,10 +236,10 @@ class FriendForm(forms.ModelForm):
   # @return options JSON data of option element which consists of primary-key, label-name, and selected-or-not
   @property
   def get_options(self):
-    all_friends = self.fields['friends'].queryset
+    all_users = self.fields['friends'].queryset
     selected_friends = self.user.friends.all()
     callback = self.dual_listbox.user_cb
-    options = self.dual_listbox.collect_options_of_items(all_friends, selected_friends, callback)
+    options = self.dual_listbox.collect_options_of_items(all_users, selected_friends, callback)
 
     return options
 

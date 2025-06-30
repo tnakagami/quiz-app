@@ -23,6 +23,19 @@ class RoleType(models.IntegerChoices):
   CREATOR = 2, gettext_lazy('Creator')
   GUEST   = 3, gettext_lazy('Guest')
 
+class CustomUserQuerySet(models.QuerySet):
+  ##
+  # @brief Get normal users
+  # @return Queryset which is satisfied with `is_active=True`, `is_staff=False`, and `role != RoleType.MANAGER`
+  def collect_valid_normal_users(self):
+    return self.filter(is_active=True, is_staff=False).exclude(role=RoleType.MANAGER)
+
+  ##
+  # @brief Get creators only
+  # @return Queryset which consists of creator's role
+  def collect_creators(self):
+    return self.filter(is_active=True, is_staff=False, role=RoleType.CREATOR)
+
 class CustomUserManager(BaseUserManager):
   use_in_migrations = True
 
@@ -75,16 +88,22 @@ class CustomUserManager(BaseUserManager):
     return self._create_user(email, password, **extra_fields)
 
   ##
+  # @brief Get default queryset
+  # @return Queryset based on `CustomUserQuerySet`
+  def get_queryset(self):
+    return CustomUserQuerySet(self.model, using=self._db)
+
+  ##
   # @brief Get normal users
   # @return Queryset which is satisfied with `is_active=True`, `is_staff=False`, and `role != RoleType.MANAGER`
   def collect_valid_normal_users(self):
-    return self.get_queryset().filter(is_active=True, is_staff=False).exclude(role=RoleType.MANAGER)
+    return self.get_queryset().collect_valid_normal_users()
 
   ##
   # @brief Get creators only
   # @return Queryset which consists of creator's role
   def collect_creators(self):
-    return self.get_queryset().filter(is_active=True, is_staff=False, role=RoleType.CREATOR)
+    return self.get_queryset().collect_creators()
 
 class User(AbstractBaseUser, PermissionsMixin, BaseModel):
   email = models.EmailField(

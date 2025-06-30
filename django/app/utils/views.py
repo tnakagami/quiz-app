@@ -27,6 +27,15 @@ class IsCreator(UserPassesTestMixin):
   def test_func(self):
     return self.request.user.is_creator()
 
+class IsPlayer(UserPassesTestMixin):
+  ##
+  # @brief Check whether request user can access to target page or not
+  # @return bool Judgement result
+  # @retval True Request user can access to the page
+  # @retval False Request user can access to the page except superuser
+  def test_func(self):
+    return self.request.user.is_player()
+
 class HasManagerRole(UserPassesTestMixin):
   ##
   # @brief Check whether request user can access to target page or not

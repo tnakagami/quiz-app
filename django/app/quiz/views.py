@@ -10,6 +10,7 @@ from django.views.generic import (
 from utils.views import (
   CanUpdate,
   IsCreator,
+  IsPlayer,
   HasManagerRole,
   HasCreatorRole,
   BaseCreateUpdateView,
@@ -141,16 +142,13 @@ class QuizRoomListPage(LoginRequiredMixin, ListView, DjangoBreadcrumbsMixin):
     # In the case of that user is manager or superuser
     if user.has_manager_role():
       queryset = self.model.objects.all()
-    # In the case of that user is creator
-    elif user.has_creator_role():
-      queryset = user.quiz_rooms.all()
-    # In the case of that user is guest
+    # In the case of that user is creator or guest
     else:
-      queryset = self.model.objects.collect_active_room()
+      queryset = self.model.objects.collect_relevant_rooms(user)
 
     return queryset
 
-class CreateQuizRoomPage(BaseCreateUpdateView, IsCreator, CreateView, DjangoBreadcrumbsMixin):
+class CreateQuizRoomPage(BaseCreateUpdateView, IsPlayer, CreateView, DjangoBreadcrumbsMixin):
   model = models.QuizRoom
   form_class = forms.QuizRoomForm
   template_name = 'quiz/room_form.html'

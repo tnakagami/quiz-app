@@ -1,18 +1,19 @@
 {% extends 'base.html' %}
 {% load i18n %}
+{% load custom_tags %}
 
 {% block content %}
 {% include 'breadcrumbs.html' with title=_("Quiz rooms") %}
 <div class="row justify-content-center">
   <div class="col">
     <div class="row row-cols-1 g-2">
-      {% if user.is_creator %}
+      {% if user.is_player %}
       <div class="col">
         <a
           href="{% url 'quiz:create_room' %}"
           class="btn btn-primary w-100 custom-boxshadow"
         >
-          {% trans "Create a new quiz room (creator only)" %}
+          {% trans "Create a new quiz room (player only)" %}
         </a>
       </div>
       {% endif %}
@@ -22,22 +23,15 @@
           <table class="table">
             <thead>
               <tr>
-                {% if user.has_creator_role %}
                 <th scope="col">{% trans "Room name" %}</th>
                 <th scope="col">{% trans "Number of members" %}</th>
                 <th scope="col">{% trans "Genre" %}</th>
                 <th scope="col">{% trans "Creators" %}</th>
                 <th colspan="2">{% trans "Operation" %}</th>
-                {% else %}
-                <th scope="col">{% trans "Room name" %}</th>
-                <th scope="col">{% trans "Genre" %}</th>
-                <th scope="col">{% trans "Creators" %}</th>
-                {% endif %}
               </tr>
             </thead>
             <tbody class="table-group-divider">
             {% for instance in rooms %}
-              {% if user.has_creator_role %}
               <tr>
                 {% with table_css=instance.is_enabled|yesno:',table-secondary' %}
                 <td scope="row" class="{{ table_css }}">
@@ -52,15 +46,34 @@
                 <td class="{{ table_css }}">{{ instance.get_creators }}</td>
                 {% endwith %}
                 <td>
+                  {% if instance|can_update:user %}
                   <a
                     href="{% url 'quiz:update_room' pk=instance.pk %}"
                     class="btn btn-outline-success w-100 custom-boxshadow"
                   >
                     {% trans "Edit" %}
                   </a>
+                  {% else %}
+                  <button
+                    type="button"
+                    class="btn btn-outline-success w-100 custom-boxshadow"
+                    disabled
+                  >
+                    {% trans "Edit" %}
+                  </button>
+                  {% endif %}
                 </td>
                 <td>
-                  {% if instance.is_enabled %}
+                  {% if instance|can_delete:user %}
+                  <button
+                    type="button"
+                    class="btn btn-outline-danger w-100 custom-boxshadow js-delete-room"
+                    data-name="{{ instance.name }}"
+                    data-url="{% url 'quiz:delete_room' pk=instance.pk %}"
+                  >
+                    {% trans "Delete" %}
+                  </button>
+                  {% else %}
                   <button
                     type="button"
                     class="btn btn-outline-danger w-100 custom-boxshadow"
@@ -70,31 +83,9 @@
                   >
                     {% trans "Delete" %}
                   </button>
-                  {% else %}
-                  <button
-                    type="button"
-                    class="btn btn-outline-danger w-100 custom-boxshadow js-delete-room"
-                    data-name="{{ instance.name }}"
-                    data-url="{% url 'quiz:delete_room' pk=instance.pk %}"
-                  >
-                    {% trans "Delete" %}
-                  </button>
                   {% endif %}
                 </td>
               </tr>
-              {% else %}
-              <tr>
-                <td scope="row">
-                  {% if user.is_player %}
-                  <a href="{% url 'quiz:enter_room' pk=instance.pk %}">{{ instance.name }}</a>
-                  {% else %}
-                  {{ instance.name }}
-                  {% endif %}
-                </td>
-                <td>{{ instance.get_genres }}</td>
-                <td>{{ instance.get_creators }}</td>
-              </tr>
-              {% endif %}
             {% endfor %}
             </tbody>
           </table>

@@ -185,32 +185,18 @@ class QuizRoomForm(ModelFormBasedOnUser):
     self.dual_listbox = DualListbox()
 
   ##
-  # @brief Check whether all members are creators or not
-  # @exception ValidationError Some users's role is not CREATOR
-  def clean_creators(self):
-    creators = self.cleaned_data.get('creators')
+  # @brief Check whether, at least, either genres or creators is set or not
+  # @exception ValidationError Both genres and creators are not set.
+  def clean(self):
+    super().clean()
+    genres = self.cleaned_data.get('genres', None)
+    creators = self.cleaned_data.get('creators', None)
 
-    if not self._meta.model.is_only_creator(creators):
+    if (genres is None or not genres.all()) and (creators is None or not creators.all()):
       raise forms.ValidationError(
-        gettext_lazy('You have to assign only creators.'),
-        code='invalid_users',
+        gettext_lazy('You have to assign at least one of genres and creators to the quiz room.'),
+        code='invalid_assignment',
       )
-
-    return creators
-
-  ##
-  # @brief Check whether all members are players or not
-  # @exception ValidationError Some members are not players
-  def clean_members(self):
-    members = self.cleaned_data.get('members')
-
-    if not self._meta.model.is_only_player(members):
-      raise forms.ValidationError(
-        gettext_lazy('You have to assign only players whose role is `Guest` or `Creator`.'),
-        code='invalid_users',
-      )
-
-    return members
 
   ##
   # @brief Get genre's options of select element

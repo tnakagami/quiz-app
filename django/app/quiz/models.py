@@ -15,6 +15,9 @@ class GenreQuerySet(models.QuerySet):
     return self.filter(is_enabled=True)
 
 class Genre(BaseModel):
+  class Meta:
+    ordering = ('name', '-created_at')
+
   name = models.CharField(
     gettext_lazy('Genre name'),
     max_length=128,
@@ -39,6 +42,22 @@ class Genre(BaseModel):
   def __str__(self):
     return self.name
 
+  ##
+  # @brief Check whether request user has a update permission
+  # @param user Request user
+  # @return bool Judgement result
+  # @retval True  The request user can update instance
+  # @retval False The request user cannot update instance
+  def has_update_permission(self, user):
+    return user.has_manager_role()
+
+  ##
+  # @brief Check whether request user has a delete permission
+  # @param user Request user
+  # @return False It's always False
+  def has_delete_permission(self, user):
+    return False
+
 class QuizQuerySet(models.QuerySet):
   ##
   # @brief Collect active genre
@@ -50,15 +69,15 @@ class QuizQuerySet(models.QuerySet):
     # Create condition for creators
     if creators is not None:
       if isinstance(creators, (list, models.QuerySet)):
-        conditions['creator__pk__in'] = list(creators)
+        conditions['creator__in'] = list(creators)
       else:
-        conditions['creator__pk'] = creators.pk
+        conditions['creator'] = creators
     # Create condition for genres
     if genres is not None:
       if isinstance(genres, (list, models.QuerySet)):
-        conditions['genre__pk__in'] = list(genres)
+        conditions['genre__in'] = list(genres)
       else:
-        conditions['genre__pk'] = genres.pk
+        conditions['genre'] = genres
     # In the case of existing any conditions
     if conditions:
       q_cond = models.Q()
@@ -71,6 +90,9 @@ class QuizQuerySet(models.QuerySet):
     return queryset
 
 class Quiz(BaseModel):
+  class Meta:
+    ordering = ('genre__name',)
+
   creator = models.ForeignKey(
     UserModel,
     verbose_name=gettext_lazy('Creator'),
@@ -126,13 +148,13 @@ class Quiz(BaseModel):
   # @brief Get string object for the question
   # @return text A part of a sentence
   def get_short_question(self):
-    return self._split_text(self.question)
+    return self._split_text(self.question or gettext_lazy('(Not set)'))
 
   ##
   # @brief Get string object for the answer
   # @return text A part of a sentence
   def get_short_answer(self):
-    return self._split_text(self.answer)
+    return self._split_text(self.answer or gettext_lazy('(Not set)'))
 
   ##
   # @brief Check whether request user has a update permission
@@ -144,12 +166,20 @@ class Quiz(BaseModel):
 
 class QuizRoomQuerySet(models.QuerySet):
   ##
-  # @brief Collect active quiz room
-  # @return Queryset whose `is_enabled` column is `True`
-  def collect_active_room(self):
-    return self.filter(is_enabled=True)
+  # @brief Collect relevant quiz room
+  # @return Queryset The queryset consists of room owner is user or user is included into assigned members
+  # @pre The user's role is either `GUEST` or `CREATOR`
+  def collect_relevant_rooms(self, user):
+    owner_rooms = user.quiz_rooms.all()
+    assigned_rooms = user.room_members.all().exclude(is_enabled=False)
+    queryset = (owner_rooms | assigned_rooms).order_by('pk').distinct().order_by('name', '-created_at')
+
+    return queryset
 
 class QuizRoom(BaseModel):
+  class Meta:
+    ordering = ('name', '-created_at')
+
   owner = models.ForeignKey(
     UserModel,
     verbose_name=gettext_lazy('Owner'),
@@ -211,7 +241,14 @@ class QuizRoom(BaseModel):
   # @retval True  The request user can access
   # @retval False The request user cannot access
   def is_assigned(self, user):
-    return user.is_player() and self.members.all().filter(pk__in=[user.pk]).exists()
+    return all([
+      self.is_enabled,
+      user.is_player(),
+      any([
+        self.members.all().filter(pk__in=[user.pk]).exists(),
+        self.owner.pk == user.pk
+      ])
+    ])
 
   ##
   # @brief Validate whether all members are creators or not
@@ -235,6 +272,7 @@ class QuizRoom(BaseModel):
 
   ##
   # @brief Check whether request user has a update permission
+  # @param user Request user
   # @return bool Judgement result
   # @retval True  The request user can update instance
   # @retval False The request user cannot update instance
@@ -243,6 +281,7 @@ class QuizRoom(BaseModel):
 
   ##
   # @brief Check whether request user has a delete permission
+  # @param user Request user
   # @return bool Judgement result
   # @retval True  The request user can delete instance
   # @retval False The request user cannot delete instance
@@ -253,7 +292,7 @@ class QuizRoom(BaseModel):
   # @brief Get all genre names
   # @return output Joined genre names or hyphen
   def get_genres(self):
-    names = list(self.genres.all().values_list('name', flat=True))
+    names = list(self.genres.all().order_by('name').values_list('name', flat=True))
     output = ','.join(names) if names else '-'
 
     return output
@@ -262,31 +301,27 @@ class QuizRoom(BaseModel):
   # @brief Get all creator names
   # @return output Joined creator names or hyphen
   def get_creators(self):
-    names = list(self.creators.all().values_list('screen_name', flat=True))
+    all_creators = self.creators.all().order_by('screen_name')
+    names = [str(user) for user in all_creators]
     output = ','.join(names) if names else '-'
 
     return output
 
   ##
   # @brief Check genres, creators, and members
-  # @exception ValidationError Both genres and creators are not set.
   # @exception ValidationError Some creators don't have CREATOR's role
   # @exception ValidationError Some members are not players
   def clean(self):
-    # Check genres and creators
-    if not self.genres and not self.creators:
-      raise ValidationError(
-        gettext_lazy('You have to assign at least one of genres and creators to the quiz room.'),
-        code='invalid_assignment',
-      )
+    creators = self.creators.all()
+    members = self.members.all()
     # Check creators
-    if self.creators and not self.is_only_creator(self.creators.all()):
+    if creators and not self.is_only_creator(creators):
       raise ValidationError(
         gettext_lazy('You have to assign only creators.'),
         code='invalid_users',
       )
     # Check members
-    if self.members and not self.is_only_player(self.members.all()):
+    if members and not self.is_only_player(members):
       raise ValidationError(
         gettext_lazy('You have to assign only players whose role is `Guest` or `Creator`.'),
         code='invalid_users',
@@ -303,6 +338,9 @@ class QuizStatusType(models.IntegerChoices):
   END              = 7, gettext_lazy('End')
 
 class Score(BaseModel):
+  class Meta:
+    ordering = ('room__name', '-count')
+
   room = models.ForeignKey(
     QuizRoom,
     verbose_name=gettext_lazy('Room'),
@@ -345,4 +383,4 @@ class Score(BaseModel):
   # @brief Get status label
   # @return The label of QuizStatusType
   def get_status_label(self):
-    return QuizStatusType(self.role).label
+    return QuizStatusType(self.status).label

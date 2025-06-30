@@ -286,12 +286,25 @@ def test_invalid_same_email():
 @pytest.mark.account
 @pytest.mark.model
 @pytest.mark.django_db
-def test_check_collect_valid_normal_users_of_usermodel():
-  _ = factories.UserFactory(is_active=True, is_staff=True, is_superuser=True)
-  _ = factories.UserFactory(is_active=True, is_staff=True)
-  _ = factories.UserFactory.create_batch(2, is_active=False)
-  valid_users = factories.UserFactory.create_batch(3, is_active=True)
+def test_check_collect_valid_normal_users_of_user_manager():
   queryset = models.User.objects.collect_valid_normal_users()
+  exacts = models.User.objects.filter(is_active=True, is_staff=False).exclude(role=models.RoleType.MANAGER)
+  ids = list(queryset.values_list('pk', flat=True))
+
+  assert len(queryset) == len(exacts)
+  assert all([instance.pk in ids for instance in queryset])
+
+@pytest.mark.account
+@pytest.mark.model
+@pytest.mark.django_db
+def test_check_collect_valid_normal_users_of_user_queryset():
+  valid_users = factories.UserFactory.create_batch(3, is_active=True)
+  all_users = [
+    factories.UserFactory(is_active=True, is_staff=True, is_superuser=True),
+    factories.UserFactory(is_active=True, is_staff=True),
+    *factories.UserFactory.create_batch(2, is_active=False),
+  ] + list(valid_users)
+  queryset = models.User.objects.filter(pk__in=list(map(lambda val: val.pk, all_users))).collect_valid_normal_users()
   pks = [user.pk for user in valid_users]
 
   assert queryset.count() == len(pks)
@@ -300,19 +313,33 @@ def test_check_collect_valid_normal_users_of_usermodel():
 @pytest.mark.account
 @pytest.mark.model
 @pytest.mark.django_db
-def test_check_collect_creators_of_usermodel():
+def test_check_collect_creators_of_user_manager():
+  queryset = models.User.objects.collect_creators()
+  exacts = models.User.objects.filter(is_active=True, is_staff=False, role=models.RoleType.CREATOR)
+  ids = list(queryset.values_list('pk', flat=True))
+
+  assert len(queryset) == len(exacts)
+  assert all([instance.pk in ids for instance in queryset])
+
+@pytest.mark.account
+@pytest.mark.model
+@pytest.mark.django_db
+def test_check_collect_creators_of_user_queryset():
+  all_users = []
   valid_users = []
 
   for idx, role in enumerate([models.RoleType.GUEST, models.RoleType.CREATOR, models.RoleType.MANAGER], 2):
-    _ = factories.UserFactory(is_active=True, is_staff=True, is_superuser=True, role=role)
-    _ = factories.UserFactory(is_active=True, is_staff=True, role=role)
-    _ = factories.UserFactory.create_batch(2, is_active=False, role=role)
     targets = list(factories.UserFactory.create_batch(idx, is_active=True, role=role))
+    all_users += [
+      factories.UserFactory(is_active=True, is_staff=True, is_superuser=True, role=role),
+      factories.UserFactory(is_active=True, is_staff=True, role=role),
+      *factories.UserFactory.create_batch(2, is_active=False, role=role),
+    ] + targets
 
     if role == models.RoleType.CREATOR:
       valid_users += targets
 
-  queryset = models.User.objects.collect_creators()
+  queryset = models.User.objects.filter(pk__in=list(map(lambda val: val.pk, all_users))).collect_creators()
   pks = [user.pk for user in valid_users]
 
   assert queryset.count() == len(pks)

@@ -585,8 +585,10 @@ def test_validate_clean_friends_method_of_friend_form(friends_indices, is_valid,
 ])
 def test_check_options_of_friend_form(number_of_friends):
   friends = list(factories.UserFactory.create_batch(number_of_friends, is_active=True)) if number_of_friends > 0 else []
-  others = factories.UserFactory.create_batch(4, is_active=True)
+  _ = factories.UserFactory.create_batch(4, is_active=True)
   user = factories.UserFactory(friends=friends)
+  ids_of_friends = list(map(lambda val: val.pk, friends)) + [user.pk]
+  others = UserModel.objects.collect_valid_normal_users().exclude(pk__in=ids_of_friends)
   form = forms.FriendForm(user=user)
   str_options = form.get_options
   exacts_items = g_generate_item(friends, True) + g_generate_item(others, False)

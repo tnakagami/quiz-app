@@ -79,7 +79,7 @@
           const {btnClass, formID, modalID} = args;
           const deleteBtns = document.querySelectorAll(`.${btnClass}`);
           const deleteForm = document.querySelector(`#${formID}`);
-          const targetField = document.querySelector('#target-name');
+          const targetField = document.querySelector('#dm-target-name');
 
           for (const btn of deleteBtns) {
             btn.addEventListener('click', (event) => {

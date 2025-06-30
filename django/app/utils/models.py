@@ -49,15 +49,15 @@ class DualListbox:
   # @param callback Callback function (default is None)
   # @return options JSON data converted from input data
   def collect_options_of_items(self, all_items, selected_items=None, callback=None):
-      if selected_items is not None:
-        excluded_items = all_items.exclude(pk__in=list(selected_items.values_list('pk', flat=True)))
-        selected_options = self.create_options(selected_items, is_selected=True, callback=callback)
-        not_selected_options = self.create_options(excluded_items, is_selected=False, callback=callback)
-        options = self.convert2json(selected_options + not_selected_options)
-      else:
-        options = self.convert2json(self.create_options(all_items, is_selected=False, callback=callback))
+    if selected_items is not None:
+      excluded_items = all_items.exclude(pk__in=list(selected_items.values_list('pk', flat=True)))
+      selected_options = self.create_options(selected_items, is_selected=True, callback=callback)
+      not_selected_options = self.create_options(excluded_items, is_selected=False, callback=callback)
+      options = self.convert2json(selected_options + not_selected_options)
+    else:
+      options = self.convert2json(self.create_options(all_items, is_selected=False, callback=callback))
 
-      return options
+    return options
 
 ##
 # @brief Get current time without timezone
@@ -101,6 +101,7 @@ class BaseModel(models.Model):
 
   ##
   # @brief Check whether request user has a update permission
+  # @param user Request user
   # @return bool Judgement result
   # @retval True  The request user can update instance
   # @retval False The request user cannot update instance
@@ -109,6 +110,7 @@ class BaseModel(models.Model):
 
   ##
   # @brief Check whether request user has a delete permission
+  # @param user Request user
   # @return bool Judgement result
   # @retval True  The request user can delete instance
   # @retval False The request user cannot delete instance
