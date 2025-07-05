@@ -25,6 +25,18 @@ UserModel = get_user_model()
 class LoginForm(AuthenticationForm, BaseFormWithCSS):
   username = forms.EmailField(widget=forms.EmailInput(attrs={'autofocus': True}))
 
+  ##
+  # @brief Check whether the given user has `is_staff` permission or not.
+  # @exception ValidationError The given user has `is_staff` permission.
+  def confirm_login_allowed(self, user):
+    super().confirm_login_allowed(user)
+
+    if user.is_staff:
+      raise forms.ValidationError(
+        gettext_lazy('The given user who has staff permission cannot login.'),
+        code='invalid_login',
+      )
+
 ##
 # @brief Validate input digest
 # @exception ValidationError if input digest does not match exact one

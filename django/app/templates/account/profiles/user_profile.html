@@ -66,7 +66,7 @@
     <div class="row row-cols-1 g-2">
       <div class="col">
         <a
-          href="{% url 'account:update_profile' pk=owner.pk %}"
+          href="{% url 'account:update_profile' %}"
           class="btn btn-primary w-100 custom-boxshadow"
         >
           {% trans "Update user profile" %}
@@ -83,7 +83,7 @@
       {% if owner.is_player %}
       <div class="col">
         <a
-          href="{% url 'account:update_friend' pk=user.pk %}"
+          href="{% url 'account:update_friend' %}"
           class="btn btn-success w-100 custom-boxshadow"
         >
           {% trans "Register/Unregister friends" %}

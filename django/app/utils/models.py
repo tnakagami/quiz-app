@@ -106,7 +106,7 @@ class BaseModel(models.Model):
   # @retval True  The request user can update instance
   # @retval False The request user cannot update instance
   def has_update_permission(self, user):
-    return user.is_superuser
+    raise NotImplementedError
 
   ##
   # @brief Check whether request user has a delete permission

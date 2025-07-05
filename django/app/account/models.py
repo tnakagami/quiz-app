@@ -357,7 +357,7 @@ class IndividualGroup(BaseModel):
   # @retval True  The request user can update instance
   # @retval False The request user cannot update instance
   def has_update_permission(self, user):
-    return self.owner.pk == user.pk or user.is_superuser
+    return self.owner.pk == user.pk
 
   ##
   # @brief Extract specific members are removed from user's friends or not

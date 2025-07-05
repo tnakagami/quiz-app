@@ -171,8 +171,8 @@ class QuizRoomQuerySet(models.QuerySet):
   # @pre The user's role is either `GUEST` or `CREATOR`
   def collect_relevant_rooms(self, user):
     owner_rooms = user.quiz_rooms.all()
-    assigned_rooms = user.room_members.all().exclude(is_enabled=False)
-    queryset = (owner_rooms | assigned_rooms).order_by('pk').distinct().order_by('name', '-created_at')
+    valid_assigned_rooms = user.assigned_rooms.all().exclude(is_enabled=False)
+    queryset = (owner_rooms | valid_assigned_rooms).order_by('pk').distinct().order_by('name', '-created_at')
 
     return queryset
 
@@ -207,7 +207,7 @@ class QuizRoom(BaseModel):
   )
   members = models.ManyToManyField(
     UserModel,
-    related_name='room_members',
+    related_name='assigned_rooms',
     blank=True,
     verbose_name=gettext_lazy('Room members'),
     help_text=gettext_lazy('Members assigned to the quiz room'),

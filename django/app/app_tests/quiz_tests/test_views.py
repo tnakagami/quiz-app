@@ -1,5 +1,6 @@
 import pytest
 from django.contrib.auth import get_user_model
+from django.db.models import Q
 from django.urls import reverse
 from app_tests import (
   status,
@@ -183,6 +184,13 @@ class TestQuizView(Common):
   update_view_url = lambda _self, pk: reverse('quiz:update_quiz', kwargs={'pk': pk})
   delete_view_url = lambda _self, pk: reverse('quiz:delete_quiz', kwargs={'pk': pk})
 
+  @pytest.fixture
+  def get_genres(self, django_db_blocker):
+    with django_db_blocker.unblock():
+      genres = list(factories.GenreFactory.create_batch(2, is_enabled=True))
+
+    return genres
+
   def test_get_access_to_listpage(self, get_user, client):
     exact_types = {
       'superuser': status.HTTP_200_OK,
@@ -209,14 +217,15 @@ class TestQuizView(Common):
     'is-manager',
     'is-creator',
   ])
-  def test_queryset_method_in_listpage(self, rf, role, is_staff, is_superuser):
+  def test_queryset_method_in_listpage(self, get_genres, rf, role, is_staff, is_superuser):
+    genres = get_genres
     user = factories.UserFactory(is_active=True, role=role, is_staff=is_staff, is_superuser=is_superuser)
     other_creator = factories.UserFactory(is_active=True, role=RoleType.CREATOR)
-    _ = factories.QuizFactory(creator=other_creator, is_completed=True)
-    _ = factories.QuizFactory(creator=other_creator, is_completed=False)
+    _ = factories.QuizFactory(creator=other_creator, genre=genres[0], is_completed=True)
+    _ = factories.QuizFactory(creator=other_creator, genre=genres[0], is_completed=False)
     if role == RoleType.CREATOR:
-      _ = factories.QuizFactory.create_batch(2, creator=user, is_completed=True)
-      _ = factories.QuizFactory.create_batch(3, creator=user, is_completed=False)
+      _ = factories.QuizFactory.create_batch(2, creator=user, genre=genres[0], is_completed=True)
+      _ = factories.QuizFactory.create_batch(3, creator=user, genre=genres[0], is_completed=False)
       expected_count = 5
     else:
       expected_count = len(models.Quiz.objects.all())
@@ -302,10 +311,11 @@ class TestQuizView(Common):
     'is-creator-without-own-quiz',
     'is-guest',
   ])
-  def test_get_access_to_updatepage(self, client, role, is_staff, is_superuser, is_owner, status_code):
+  def test_get_access_to_updatepage(self, get_genres, client, role, is_staff, is_superuser, is_owner, status_code):
+    genres = get_genres
     user = factories.UserFactory(is_active=True, role=role, is_staff=is_staff, is_superuser=is_superuser)
     creator = user if is_owner else factories.UserFactory(is_active=True, role=RoleType.CREATOR)
-    instance = factories.QuizFactory(creator=creator)
+    instance = factories.QuizFactory(creator=creator, genre=genres[0])
     client.force_login(user)
     response = client.get(self.update_view_url(instance.pk))
 
@@ -325,10 +335,11 @@ class TestQuizView(Common):
     'is-manager',
     'is-creator',
   ])
-  def test_post_access_to_updatepage(self, client, role, is_staff, is_superuser, is_owner):
+  def test_post_access_to_updatepage(self, get_genres, client, role, is_staff, is_superuser, is_owner):
+    genres = get_genres
     user = factories.UserFactory(is_active=True, role=role, is_staff=is_staff, is_superuser=is_superuser)
     creator = user if is_owner else factories.UserFactory(is_active=True, role=RoleType.CREATOR)
-    original = factories.QuizFactory(creator=creator, is_completed=False)
+    original = factories.QuizFactory(creator=creator, genre=genres[0], is_completed=False)
     client.force_login(user)
     url = self.update_view_url(original.pk)
     params = {
@@ -350,10 +361,11 @@ class TestQuizView(Common):
     assert instance.answer == params['answer']
     assert instance.is_completed == params['is_completed']
 
-  def test_invalid_post_request_to_updatepage(self, client):
+  def test_invalid_post_request_to_updatepage(self, get_genres, client):
+    genres = get_genres
     user = factories.UserFactory(is_active=True, role=RoleType.CREATOR)
     invalid_genre = factories.GenreFactory(is_enabled=False)
-    instance = factories.QuizFactory(creator=user)
+    instance = factories.QuizFactory(creator=user, genre=genres[0])
     client.force_login(user)
     url = self.update_view_url(instance.pk)
     params = {
@@ -375,8 +387,9 @@ class TestQuizView(Common):
     'is-owner',
     'is-not-owner',
   ])
-  def test_get_access_to_deletepage(self, get_user, client, is_owner):
+  def test_get_access_to_deletepage(self, get_genres, get_user, client, is_owner):
     key, user = get_user
+    genres = get_genres
     expected_type = {
       'superuser': status.HTTP_405_METHOD_NOT_ALLOWED,
       'manager': status.HTTP_405_METHOD_NOT_ALLOWED,
@@ -385,7 +398,7 @@ class TestQuizView(Common):
     }
     expected_status_code = expected_type[key]
     creator = user if is_owner and user.is_creator() else factories.UserFactory(is_active=True, role=RoleType.CREATOR)
-    instance = factories.QuizFactory(creator=creator)
+    instance = factories.QuizFactory(creator=creator, genre=genres[0])
     client.force_login(user)
     response = client.get(self.delete_view_url(instance.pk))
 
@@ -403,7 +416,7 @@ class TestQuizView(Common):
     'is-completed-and-other',
     'is-not-completed',
   ])
-  def test_post_access_to_deletepage(self, get_user, client, is_completed, is_owner):
+  def test_post_access_to_deletepage(self, get_genres, get_user, client, is_completed, is_owner):
     exact_types = {
       'superuser': status.HTTP_302_FOUND,
       'manager': status.HTTP_302_FOUND,
@@ -417,8 +430,9 @@ class TestQuizView(Common):
       'guest': 1,
     }
     key, user = get_user
+    genres = get_genres
     creator = user if key == 'creator' and is_owner else factories.UserFactory(is_active=True, role=RoleType.CREATOR)
-    instance = factories.QuizFactory(creator=creator, is_completed=is_completed)
+    instance = factories.QuizFactory(creator=creator, genre=genres[0], is_completed=is_completed)
     expected_status_code = exact_types[key]
     expected_count = exact_counts[key]
     client.force_login(user)
@@ -492,11 +506,9 @@ class TestQuizRoomView(Common):
     # = Get exact data =
     # ==================
     if user.is_player():
-      count_of_assigned_rooms = 1
-      count_of_owner_rooms = 3
-      expected_count = count_of_assigned_rooms + count_of_owner_rooms
+      expected_count = models.QuizRoom.objects.filter(Q(owner=user) | Q(members__pk__in=[user.pk], is_enabled=True)).order_by('pk').distinct().count()
     else:
-      expected_count = 5
+      expected_count = models.QuizRoom.objects.all().count()
 
     # Call `get_queryset` method
     request = rf.get(self.list_view_url)
@@ -520,7 +532,7 @@ class TestQuizRoomView(Common):
 
     assert response.status_code == exact_types[key]
 
-  @pytest.fixture()
+  @pytest.fixture
   def get_querysets(self, django_db_blocker, mocker):
     with django_db_blocker.unblock():
       creators = factories.UserFactory.create_batch(5, is_active=True, role=RoleType.CREATOR)

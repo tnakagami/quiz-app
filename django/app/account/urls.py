@@ -8,8 +8,8 @@ urlpatterns = [
   path('login/', views.LoginPage.as_view(), name='login'),
   path('logout/', views.LogoutPage.as_view(), name='logout'),
   # Show/Update user profile
-  path('user-profile/<pk>', views.UserProfilePage.as_view(), name='user_profile'),
-  path('update-profile/<pk>', views.UpdateUserProfilePage.as_view(), name='update_profile'),
+  path('user-profile', views.UserProfilePage.as_view(), name='user_profile'),
+  path('update-profile', views.UpdateUserProfilePage.as_view(), name='update_profile'),
   # Account registration
   path('create-account', views.CreateAccountPage.as_view(), name='create_account'),
   path('create-account/done', views.DoneAccountCreationPage.as_view(), name='done_account_creation'),
@@ -27,7 +27,7 @@ urlpatterns = [
   path('change-role', views.CreateRoleChangeRequestPage.as_view(), name='create_role_change_request'),
   path('approve-role-change/<pk>', views.UpdateRoleApproval.as_view(), name='update_role_approval'),
   # Add friend
-  path('update-friend/<pk>', views.UpdateFriendPage.as_view(), name='update_friend'),
+  path('update-friend', views.UpdateFriendPage.as_view(), name='update_friend'),
   # Check/Create/Update/Delete individual group
   path('individual-group', views.IndividualGroupListPage.as_view(), name='individual_group_list'),
   path('create-group', views.CreateIndividualGroupPage.as_view(), name='create_group'),

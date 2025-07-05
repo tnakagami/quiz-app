@@ -48,34 +48,39 @@ def test_invalid_digest_validator(mocker):
 @pytest.mark.parametrize([
   'email',
   'password',
+  'is_staff',
   'is_valid',
 ], [
-  ('hoge@example.com', 'test-hoge2pass',  True),
-  ('nobody@foo.com',   'test-hoge2pass',  False),
-  ('hoge@example.com', 'wrong-pass2word', False),
-  (              None, 'test-hoge2pass',  False),
-  ('hoge@example.com',              None, False),
+  ('hoge@example.com', 'test-hoge2pass',  False, True),
+  ('nobody@foo.com',   'test-hoge2pass',  False, False),
+  ('hoge@example.com', 'wrong-pass2word', False, False),
+  (              None, 'test-hoge2pass',  False, False),
+  ('hoge@example.com',              None, False, False),
+  ('hoge@example.com', 'test-hoge2pass',  True,  False),
 ], ids=[
   'can-login',
   'invalid-email',
   'invalid-password',
   'email-is-empty',
   'password-is-empty',
+  'is-staff-user',
 ])
-def test_check_login_form(email, password, is_valid):
+def test_check_login_form(email, password, is_staff, is_valid):
   raw_password = 'test-hoge2pass'
   user = factories.UserFactory(
     email='hoge@example.com',
     is_active=True,
+    is_staff=is_staff,
   )
   user.set_password(raw_password)
   user.save()
 
   # Create form parameters
-  params = {
-    'username': email,
-    'password': password,
-  }
+  params = {}
+  if email is not None:
+    params['username'] = email
+  if password is not None:
+    params['password'] = password
   form = forms.LoginForm(data=params)
 
   assert form.is_valid() == is_valid
