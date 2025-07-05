@@ -42,6 +42,7 @@ django-webtest = "^1.9.13"
 [tool.pytest_env]
 PYTHONPATH = "/opt/app"
 DJANGO_EXECUTABLE_TYPE = "production"
+DJANGO_LANGUAGE_CODE = "en"
 
 [tool.pytest.ini_options]
 addopts = "-vv --rootdir=/opt/app --cov=. --cov-report=xml --cov-report=html --cov-config=.coveragerc"
@@ -57,6 +58,7 @@ markers = [
   "view: mark tests as Django View",
   "utils: mark tests as utils application",
   "account: mark tests as account application",
+  "quiz: mark tests as quiz application",
   "webtest: mark tests as django-webtest",
 ]
 cache_dir = "/opt/home/.cache"

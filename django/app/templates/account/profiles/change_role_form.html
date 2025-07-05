@@ -8,7 +8,7 @@
     <div class="row">
       <div class="col">
         <div class="table-responsive">
-          <table class="table table-hover">
+          <table class="table">
             <thead>
               <tr>
                 <th scope="col">{% trans "Element" %}</th>
@@ -21,7 +21,7 @@
                 <td>{{ user }}</td>
               </tr>
               <tr>
-                <th>{% trans 'Role' %}</th>
+                <th>{% trans 'Current role' %}</th>
                 <td>{{ user.get_role_label }}</td>
               </tr>
             </tbody>
@@ -48,7 +48,7 @@
             </div>
             <div class="col">
               <a
-                href="{% url 'account:user_profile' pk=user.pk %}"
+                href="{% url 'account:user_profile' %}"
                 class="btn btn-secondary w-100 custom-boxshadow">
                 {% trans "Cancel" %}
               </a>

@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load custom_tags %}
+
+{% block content %}
+{% include 'breadcrumbs.html' with title=_("Quiz rooms") %}
+<div class="row justify-content-center">
+  <div class="col">
+    <div class="row row-cols-1 g-2">
+      {% if user.is_player %}
+      <div class="col">
+        <a
+          href="{% url 'quiz:create_room' %}"
+          class="btn btn-primary w-100 custom-boxshadow"
+        >
+          {% trans "Create a new quiz room (player only)" %}
+        </a>
+      </div>
+      {% endif %}
+      {% if rooms %}
+      <div class="col">
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr>
+                <th scope="col">{% trans "Room name" %}</th>
+                <th scope="col">{% trans "Number of members" %}</th>
+                <th scope="col">{% trans "Genre" %}</th>
+                <th scope="col">{% trans "Creators" %}</th>
+                <th colspan="2">{% trans "Operation" %}</th>
+              </tr>
+            </thead>
+            <tbody class="table-group-divider">
+            {% for instance in rooms %}
+              <tr>
+                {% with table_css=instance.is_enabled|yesno:',table-secondary' %}
+                <td scope="row" class="{{ table_css }}">
+                  {% if user.is_player %}
+                  <a href="{% url 'quiz:enter_room' pk=instance.pk %}">{{ instance.name }}</a>
+                  {% else %}
+                  {{ instance.name }}
+                  {% endif %}
+                </td>
+                <td class="{{ table_css }}">{{ instance.members.all.count }}</td>
+                <td class="{{ table_css }}">{{ instance.get_genres }}</td>
+                <td class="{{ table_css }}">{{ instance.get_creators }}</td>
+                {% endwith %}
+                <td>
+                  {% if instance|can_update:user %}
+                  <a
+                    href="{% url 'quiz:update_room' pk=instance.pk %}"
+                    class="btn btn-outline-success w-100 custom-boxshadow"
+                  >
+                    {% trans "Edit" %}
+                  </a>
+                  {% else %}
+                  <button
+                    type="button"
+                    class="btn btn-outline-success w-100 custom-boxshadow"
+                    disabled
+                  >
+                    {% trans "Edit" %}
+                  </button>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if instance|can_delete:user %}
+                  <button
+                    type="button"
+                    class="btn btn-outline-danger w-100 custom-boxshadow js-delete-room"
+                    data-name="{{ instance.name }}"
+                    data-url="{% url 'quiz:delete_room' pk=instance.pk %}"
+                  >
+                    {% trans "Delete" %}
+                  </button>
+                  {% else %}
+                  <button
+                    type="button"
+                    class="btn btn-outline-danger w-100 custom-boxshadow"
+                    data-name="{{ instance.name }}"
+                    data-url="#"
+                    disabled
+                  >
+                    {% trans "Delete" %}
+                  </button>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="col">
+      {% include "renderer/custom_pagenate.html" with page_obj=page_obj %}
+      </div>
+      {% else %}
+      <div class="col">
+        <p>{% trans "There is no quiz rooms." %}</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{# Delete modal #}
+{% include "delete_modal_form.html" with modal_id="delete-modal" form_id="delete-form" %}
+{% endblock %}
+
+{% block bodyjs %}
+{{ block.super }}
+<script>
+(function () {
+  const init = () => {
+    const helper = new HelperMethods();
+    helper.registerDeleteModalEvent({
+      btnClass: 'js-delete-room',
+      formID: 'delete-form',
+      modalID: 'delete-modal',
+    });
+  };
+  // Add DOM event
+  document.addEventListener('DOMContentLoaded', init);
+})();
+</script>
+{% endblock %}

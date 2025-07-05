@@ -13,11 +13,15 @@ from django.contrib.auth.views import (
 )
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth import get_user_model
-from django.shortcuts import redirect
 from django.utils.translation import gettext_lazy
 from django.urls import reverse, reverse_lazy
-from django.http import HttpResponseBadRequest, HttpResponseRedirect
+from django.http import (
+  HttpResponseBadRequest,
+  HttpResponseRedirect,
+  JsonResponse,
+)
 from django.views.generic import (
+  View,
   TemplateView,
   ListView,
   CreateView,
@@ -25,7 +29,8 @@ from django.views.generic import (
   DetailView,
 )
 from utils.views import (
-  IsOwner,
+  CanUpdate,
+  IsPlayer,
   HasManagerRole,
   BaseCreateUpdateView,
   CustomDeleteView,
@@ -33,6 +38,7 @@ from utils.views import (
   DjangoBreadcrumbsMixin,
 )
 from . import models, forms, validators
+import json
 
 UserModel = get_user_model()
 
@@ -77,20 +83,7 @@ class LogoutPage(LogoutView):
 # ================
 # = User profile =
 # ================
-class IsPrivate(UserPassesTestMixin):
-  ##
-  # @brief Check whether request user can access to target page or not
-  # @return bool Judgement result
-  # @retval True Request user can access to the page
-  # @retval False Request user can access to the page except superuser
-  def test_func(self):
-    user = self.request.user
-    pk = self.kwargs.get('pk')
-    is_valid = str(pk) == str(user.pk) or user.is_superuser
-
-    return is_valid
-
-class UserProfilePage(LoginRequiredMixin, IsPrivate, DetailView, DjangoBreadcrumbsMixin):
+class UserProfilePage(LoginRequiredMixin, DetailView, DjangoBreadcrumbsMixin):
   raise_exception = True
   model = UserModel
   template_name = 'account/profiles/user_profile.html'
@@ -99,26 +92,37 @@ class UserProfilePage(LoginRequiredMixin, IsPrivate, DetailView, DjangoBreadcrum
     url_name='account:user_profile',
     title=gettext_lazy('User profile'),
     parent_view_class=Index,
-    url_keys=['pk'],
   )
 
-class UpdateUserProfilePage(LoginRequiredMixin, IsPrivate, UpdateView, DjangoBreadcrumbsMixin):
+  ##
+  # @brief Get logged-in user instance
+  # @return user Instance of User model
+  def get_object(self, queryset=None):
+    user = self.request.user
+    instance = self.model.objects.get(pk=user.pk)
+
+    return instance
+
+class UpdateUserProfilePage(LoginRequiredMixin, UpdateView, DjangoBreadcrumbsMixin):
   raise_exception = True
   model = UserModel
   form_class = forms.UserProfileForm
   template_name = 'account/profiles/profile_form.html'
+  success_url = reverse_lazy('account:user_profile')
   crumbles = DjangoBreadcrumbsMixin.get_target_crumbles(
     url_name='account:update_profile',
     title=gettext_lazy('Update user profile'),
     parent_view_class=UserProfilePage,
-    url_keys=['pk'],
   )
 
   ##
-  # @brief Get the URL to come back to the previous page
-  # @return Target URL
-  def get_success_url(self):
-    return reverse('account:user_profile', kwargs={'pk': self.kwargs['pk']})
+  # @brief Get logged-in user instance
+  # @return user Instance of User model
+  def get_object(self, queryset=None):
+    user = self.request.user
+    instance = self.model.objects.get(pk=user.pk)
+
+    return instance
 
 class IsNotAuthenticated(UserPassesTestMixin):
   ##
@@ -154,7 +158,7 @@ class CreateAccountPage(IsNotAuthenticated, CreateView, DjangoBreadcrumbsMixin):
       'user': user,
     }
     form.send_email(self.request, config)
-    response = redirect('account:done_account_creation')
+    response = HttpResponseRedirect(reverse('account:done_account_creation'))
 
     return response
 
@@ -197,7 +201,7 @@ class CompleteAccountCreationPage(IsNotAuthenticated, TemplateView):
     else:
       user = validator.get_instance()
       user.activation()
-      login(request, user)
+      login(request, user, backend=settings.AUTHENTICATION_BACKENDS[0])
       response = super().get(request, **kwargs)
 
     return response
@@ -207,24 +211,13 @@ class ChangePasswordPage(LoginRequiredMixin, PasswordChangeView, DjangoBreadcrum
   form_class = forms.CustomPasswordChangeForm
   template_name = 'account/passwords/password_change_form.html'
   success_url = reverse_lazy('account:done_password_change')
-  crumbles_context_attribute = 'owner'
   crumbles = DjangoBreadcrumbsMixin.get_target_crumbles(
     url_name='account:update_password',
     title=gettext_lazy('Update password'),
     parent_view_class=UserProfilePage,
   )
 
-  ##
-  # @brief Get context data
-  # @param kwargs named arguments
-  # @return context context which is used in template file
-  def get_context_data(self, **kwargs):
-    context = super().get_context_data(**kwargs)
-    self.owner = self.request.user
-
-    return context
-
-class DonePasswordChangePage(LoginRequiredMixin, PasswordChangeView, DjangoBreadcrumbsMixin):
+class DonePasswordChangePage(LoginRequiredMixin, PasswordChangeDoneView, DjangoBreadcrumbsMixin):
   raise_exception = True
   template_name = 'account/passwords/done_password_change.html'
   crumbles = DjangoBreadcrumbsMixin.get_target_crumbles(
@@ -320,28 +313,12 @@ class CreateRoleChangeRequestPage(BaseCreateUpdateView, HasRequestPermission, Cr
   model = models.RoleApproval
   form_class = forms.RoleChangeRequestForm
   template_name = 'account/profiles/change_role_form.html'
-  crumbles_context_attribute = 'owner'
+  success_url = reverse_lazy('account:user_profile')
   crumbles = DjangoBreadcrumbsMixin.get_target_crumbles(
     url_name='account:create_role_change_request',
     title=gettext_lazy('Change role'),
     parent_view_class=UserProfilePage,
   )
-
-  ##
-  # @brief Get context data
-  # @param kwargs named arguments
-  # @return context context which is used in template file
-  def get_context_data(self, **kwargs):
-    context = super().get_context_data(**kwargs)
-    self.owner = self.request.user
-
-    return context
-
-  ##
-  # @brief Get the URL to come back to the previous page
-  # @return Target URL
-  def get_success_url(self):
-    return reverse('account:user_profile', kwargs={'pk': self.request.user.pk})
 
 class UpdateRoleApproval(BaseCreateUpdateView, HasManagerRole, UpdateView):
   model = models.RoleApproval
@@ -360,30 +337,32 @@ class UpdateRoleApproval(BaseCreateUpdateView, HasManagerRole, UpdateView):
 # ===========
 # = Friends =
 # ===========
-class UpdateFriendPage(BaseCreateUpdateView, IsPrivate, UpdateView, DjangoBreadcrumbsMixin):
+class UpdateFriendPage(BaseCreateUpdateView, IsPlayer, UpdateView, DjangoBreadcrumbsMixin):
   model = UserModel
   form_class = forms.FriendForm
   template_name = 'account/profiles/friend_form.html'
+  success_url = reverse_lazy('account:user_profile')
   crumbles = DjangoBreadcrumbsMixin.get_target_crumbles(
     url_name='account:update_friend',
     title=gettext_lazy('Register/Unregister friends'),
     parent_view_class=UserProfilePage,
-    url_keys=['pk'],
   )
 
   ##
-  # @brief Get the URL to come back to the previous page
-  # @return Target URL
-  def get_success_url(self):
-    return reverse('account:user_profile', kwargs={'pk': self.request.user.pk})
+  # @brief Get logged-in user instance
+  # @return user Instance of User model
+  def get_object(self, queryset=None):
+    user = self.request.user
+    instance = self.model.objects.get(pk=user.pk)
+
+    return instance
 
 # ====================
 # = Individual group =
 # ====================
-class IndividualGroupListPage(LoginRequiredMixin, ListView, DjangoBreadcrumbsMixin):
+class IndividualGroupListPage(LoginRequiredMixin, IsPlayer, ListView, DjangoBreadcrumbsMixin):
   model = models.IndividualGroup
   template_name = 'account/profiles/group_list.html'
-  crumbles_context_attribute = 'owner'
   paginate_by = 15
   context_object_name = 'own_groups'
   crumbles = DjangoBreadcrumbsMixin.get_target_crumbles(
@@ -398,52 +377,46 @@ class IndividualGroupListPage(LoginRequiredMixin, ListView, DjangoBreadcrumbsMix
   def get_queryset(self):
     return self.request.user.group_owners.all()
 
-  ##
-  # @brief Get context data
-  # @param kwargs named arguments
-  # @return context context which is used in template file
-  def get_context_data(self, **kwargs):
-    context = super().get_context_data(**kwargs)
-    self.owner = self.request.user
-
-    return context
-
-class CreateIndividualGroupPage(BaseCreateUpdateView, CreateView, DjangoBreadcrumbsMixin):
+class CreateIndividualGroupPage(BaseCreateUpdateView, IsPlayer, CreateView, DjangoBreadcrumbsMixin):
   model = models.IndividualGroup
   form_class = forms.IndividualGroupForm
   template_name = 'account/profiles/group_form.html'
   success_url = reverse_lazy('account:individual_group_list')
-  crumbles_context_attribute = 'owner'
   crumbles = DjangoBreadcrumbsMixin.get_target_crumbles(
     url_name='account:create_group',
-    title=gettext_lazy('Update/Edit group'),
+    title=gettext_lazy('Create/Update group'),
     parent_view_class=IndividualGroupListPage,
   )
 
-  ##
-  # @brief Get context data
-  # @param kwargs named arguments
-  # @return context context which is used in template file
-  def get_context_data(self, **kwargs):
-    context = super().get_context_data(**kwargs)
-    self.owner = self.request.user
-
-    return context
-
-class UpdateIndividualGroupPage(BaseCreateUpdateView, IsOwner, UpdateView, DjangoBreadcrumbsMixin):
-  owner_name = 'owner'
+class UpdateIndividualGroupPage(BaseCreateUpdateView, CanUpdate, UpdateView, DjangoBreadcrumbsMixin):
   model = models.IndividualGroup
   form_class = forms.IndividualGroupForm
   template_name = 'account/profiles/group_form.html'
   success_url = reverse_lazy('account:individual_group_list')
   crumbles = DjangoBreadcrumbsMixin.get_target_crumbles(
     url_name='account:update_group',
-    title=gettext_lazy('Update/Edit group'),
+    title=gettext_lazy('Create/Update group'),
     parent_view_class=IndividualGroupListPage,
     url_keys=['pk'],
   )
 
 class DeleteIndividualGroup(CustomDeleteView):
-  owner_name = 'owner'
   model = models.IndividualGroup
   success_url = reverse_lazy('account:individual_group_list')
+
+class IndividualGroupAjaxResponse(View):
+  raise_exception = True
+  http_method_names = ['post']
+
+  def post(self, request, *args, **kwargs):
+    try:
+      body = request.body.decode('utf-8')
+      post_data = json.loads(body)
+      owner_pk = post_data.get('owner_pk')
+      group_pk = post_data.get('group_pk')
+      options = models.IndividualGroup.get_options(owner_pk, group_pk)
+      response = JsonResponse({'options': options})
+    except:
+      response = JsonResponse({'options': []})
+
+    return response

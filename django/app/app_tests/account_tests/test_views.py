@@ -3,8 +3,14 @@ from dataclasses import dataclass
 from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 from django.urls import reverse
-from app_tests import status, factories
+from app_tests import (
+  status,
+  factories,
+  g_generate_item,
+  g_compare_options,
+)
 from account import views, models
+import json
 
 UserModel = get_user_model()
 
@@ -145,7 +151,7 @@ def test_logout_page(init_records, client):
 @pytest.mark.django_db
 def test_with_authentication_for_user_profile(init_records, client):
   user = init_records[0].user
-  url = reverse('account:user_profile', kwargs={'pk': user.pk})
+  url = reverse('account:user_profile')
   client.force_login(user)
   response = client.get(url)
 
@@ -156,19 +162,7 @@ def test_with_authentication_for_user_profile(init_records, client):
 @pytest.mark.django_db
 def test_without_authentication_for_user_profile(init_records, client):
   user = init_records[0].user
-  url = reverse('account:user_profile', kwargs={'pk': user.pk})
-  response = client.get(url)
-
-  assert response.status_code == status.HTTP_403_FORBIDDEN
-
-@pytest.mark.account
-@pytest.mark.view
-@pytest.mark.django_db
-def test_invalid_user_profile_page(init_records, client):
-  owner = init_records[0].user
-  other = init_records[1].user
-  url = reverse('account:user_profile', kwargs={'pk': other.pk})
-  client.force_login(owner)
+  url = reverse('account:user_profile')
   response = client.get(url)
 
   assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -178,7 +172,7 @@ def test_invalid_user_profile_page(init_records, client):
 @pytest.mark.django_db
 def test_access_to_update_user_profile_page(init_records, client):
   user = init_records[0].user
-  url = reverse('account:update_profile', kwargs={'pk': user.pk})
+  url = reverse('account:update_profile')
   client.force_login(user)
   response = client.get(url)
 
@@ -190,13 +184,13 @@ def test_access_to_update_user_profile_page(init_records, client):
 def test_update_user_profile(init_records, client):
   user = init_records[0].user
   new_name = 'new-name'
-  url = reverse('account:update_profile', kwargs={'pk': user.pk})
+  url = reverse('account:update_profile')
   client.force_login(user)
   response = client.post(url, data={'screen_name': new_name})
   modified_user = UserModel.objects.get(pk=user.pk)
 
   assert response.status_code == status.HTTP_302_FOUND
-  assert response['Location'] == reverse('account:user_profile', kwargs={'pk': user.pk})
+  assert response['Location'] == reverse('account:user_profile')
   assert modified_user.screen_name == new_name
 
 # ========================
@@ -325,7 +319,7 @@ def test_invalid_email_of_create_account_page(mocker, init_records, client, get_
 @pytest.mark.account
 @pytest.mark.view
 @pytest.mark.django_db
-def test_valid_create_account_page(mocker, mailoutbox, client, get_create_account_url):
+def test_valid_create_account_page(mocker, client, get_create_account_url):
   mocker.patch('account.forms.get_digest', return_value='hoge')
   mail_mock = mocker.patch('account.models.send_mail', return_value=None)
   url = get_create_account_url
@@ -646,7 +640,7 @@ def get_url_of_confirm_page():
   'new-password1-is-empty',
   'new-password2-is-empty',
 ])
-def test_invald_passwords_for_confirm_password_reset_page(init_records, client, get_url_of_confirm_page, params, err_msg):
+def test_invalid_passwords_for_confirm_password_reset_page(init_records, client, get_url_of_confirm_page, params, err_msg):
   user = init_records[0].user
   get_url = get_url_of_confirm_page(user)
   _ = client.get(get_url, follow=True)
@@ -816,7 +810,7 @@ def test_valid_get_request_for_create_role_change_request_page(init_records, cli
 def test_valid_post_request_for_create_role_change_request_page(init_records, client):
   user = init_records[0].user
   url = reverse('account:create_role_change_request')
-  success_url = reverse('account:user_profile', kwargs={'pk': user.pk})
+  success_url = reverse('account:user_profile')
   client.force_login(user)
   response = client.post(url)
   count = user.approvals.all().count()
@@ -931,12 +925,27 @@ def test_is_not_approve_for_update_role_approval(init_records, client):
 # ===========
 # = Friends =
 # ===========
+@pytest.fixture(params=['is-superuser', 'is-staff', 'is-manager', 'is-creator', 'is-guest'])
+def get_specific_users(django_db_blocker, request):
+  key = request.param
+  configs = {
+    'is-superuser': {'is_staff': True, 'is_superuser': True, 'role': models.RoleType.GUEST},
+    'is-staff': {'is_staff': True, 'is_superuser': False, 'role': models.RoleType.GUEST},
+    'is-manager': {'is_staff': False, 'is_superuser': False, 'role': models.RoleType.MANAGER},
+    'is-creator': {'is_staff': False, 'is_superuser': False, 'role': models.RoleType.CREATOR},
+    'is-guest': {'is_staff': False, 'is_superuser': False, 'role': models.RoleType.GUEST},
+  }
+  with django_db_blocker.unblock():
+    kwargs = configs[key]
+    user = factories.UserFactory(is_active=True, **kwargs)
+
+  return key, user
+
 @pytest.mark.account
 @pytest.mark.view
 @pytest.mark.django_db
 def test_without_authentication_for_update_friend_page(init_records, client):
-  user = init_records[0].user
-  url = reverse('account:update_friend', kwargs={'pk': user.pk})
+  url = reverse('account:update_friend')
   response = client.get(url)
 
   assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -944,25 +953,21 @@ def test_without_authentication_for_update_friend_page(init_records, client):
 @pytest.mark.account
 @pytest.mark.view
 @pytest.mark.django_db
-def test_with_authentication_for_update_friend_page(init_records, client):
-  user = init_records[0].user
-  url = reverse('account:update_friend', kwargs={'pk': user.pk})
+def test_with_authentication_for_update_friend_page(get_specific_users, client):
+  codes = {
+    'is-superuser': status.HTTP_403_FORBIDDEN,
+    'is-staff': status.HTTP_200_OK,
+    'is-manager': status.HTTP_403_FORBIDDEN,
+    'is-creator': status.HTTP_200_OK,
+    'is-guest': status.HTTP_200_OK,
+  }
+  key, user = get_specific_users
+  status_code = codes[key]
+  url = reverse('account:update_friend')
   client.force_login(user)
   response = client.get(url)
 
-  assert response.status_code == status.HTTP_200_OK
-
-@pytest.mark.account
-@pytest.mark.view
-@pytest.mark.django_db
-def test_invalid_access_by_other_user_in_update_friend_page(init_records, client):
-  user = init_records[0].user
-  other = init_records[1].user
-  url = reverse('account:update_friend', kwargs={'pk': user.pk})
-  client.force_login(other)
-  response = client.get(url)
-
-  assert response.status_code == status.HTTP_403_FORBIDDEN
+  assert response.status_code == status_code
 
 @pytest.mark.account
 @pytest.mark.view
@@ -984,7 +989,7 @@ def test_valid_access_in_update_friend_page(client, number_of_members):
   _ = factories.UserFactory(is_active=False, is_staff=False)
   candidates = list(factories.UserFactory.create_batch(number_of_members, is_active=True)) if number_of_members > 0 else []
   user = factories.UserFactory(is_active=True)
-  url = reverse('account:update_friend', kwargs={'pk': user.pk})
+  url = reverse('account:update_friend')
   client.force_login(user)
   params = {
     'friends': [str(item.pk) for item in candidates],
@@ -993,7 +998,7 @@ def test_valid_access_in_update_friend_page(client, number_of_members):
   updated_user = UserModel.objects.get(pk=user.pk)
 
   assert response.status_code == status.HTTP_302_FOUND
-  assert response['Location'] == reverse('account:user_profile', kwargs={'pk': user.pk})
+  assert response['Location'] == reverse('account:user_profile')
   assert updated_user.friends.all().count() == number_of_members
 
 # ====================
@@ -1012,13 +1017,21 @@ def test_without_authentication_for_individual_group_list_page(client):
 @pytest.mark.account
 @pytest.mark.view
 @pytest.mark.django_db
-def test_with_authentication_for_individual_group_list_page(init_records, client):
-  user = init_records[0].user
+def test_with_authentication_for_individual_group_list_page(get_specific_users, client):
+  codes = {
+    'is-superuser': status.HTTP_403_FORBIDDEN,
+    'is-staff': status.HTTP_200_OK,
+    'is-manager': status.HTTP_403_FORBIDDEN,
+    'is-creator': status.HTTP_200_OK,
+    'is-guest': status.HTTP_200_OK,
+  }
+  key, user = get_specific_users
+  status_code = codes[key]
   url = reverse('account:individual_group_list')
   client.force_login(user)
   response = client.get(url)
 
-  assert response.status_code == status.HTTP_200_OK
+  assert response.status_code == status_code
 
 @pytest.mark.account
 @pytest.mark.view
@@ -1061,13 +1074,21 @@ def test_without_authentication_for_create_individual_group_page(client):
 @pytest.mark.account
 @pytest.mark.view
 @pytest.mark.django_db
-def test_with_authentication_for_create_individual_group_page(init_records, client):
-  user = init_records[0].user
+def test_with_authentication_for_create_individual_group_page(get_specific_users, client):
+  codes = {
+    'is-superuser': status.HTTP_403_FORBIDDEN,
+    'is-staff': status.HTTP_200_OK,
+    'is-manager': status.HTTP_403_FORBIDDEN,
+    'is-creator': status.HTTP_200_OK,
+    'is-guest': status.HTTP_200_OK,
+  }
+  key, user = get_specific_users
+  status_code = codes[key]
   url = reverse('account:create_group')
   client.force_login(user)
   response = client.get(url)
 
-  assert response.status_code == status.HTTP_200_OK
+  assert response.status_code == status_code
 
 @pytest.mark.account
 @pytest.mark.view
@@ -1115,14 +1136,23 @@ def test_without_authentication_for_update_individual_group_page(init_records, c
 @pytest.mark.account
 @pytest.mark.view
 @pytest.mark.django_db
-def test_with_authentication_for_update_individual_group_page(init_records, client):
-  user = init_records[0].user
-  instance = factories.IndividualGroupFactory(owner=user)
+def test_with_authentication_for_update_individual_group_page(init_records, get_specific_users, client):
+  codes = {
+    'is-superuser': status.HTTP_403_FORBIDDEN,
+    'is-staff': status.HTTP_403_FORBIDDEN,
+    'is-manager': status.HTTP_403_FORBIDDEN,
+    'is-creator': status.HTTP_403_FORBIDDEN,
+    'is-guest': status.HTTP_200_OK, # Assumption: the target is owner
+  }
+  key, user = get_specific_users
+  status_code = codes[key]
+  owner = user if key == 'is-guest' else init_records[0].user
+  instance = factories.IndividualGroupFactory(owner=owner)
   url = reverse('account:update_group', kwargs={'pk': instance.pk})
   client.force_login(user)
   response = client.get(url)
 
-  assert response.status_code == status.HTTP_200_OK
+  assert response.status_code == status_code
 
 @pytest.mark.account
 @pytest.mark.view
@@ -1231,3 +1261,87 @@ def test_delete_record_in_delete_individual_group(client):
   assert response.status_code == status.HTTP_302_FOUND
   assert response['Location'] == success_url
   assert count == 0
+
+@pytest.mark.account
+@pytest.mark.view
+def test_get_access_to_individual_group_ajax_response(client):
+  url = reverse('account:ajax_get_options')
+  response = client.get(url)
+
+  assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
+
+@pytest.mark.account
+@pytest.mark.view
+@pytest.mark.django_db
+@pytest.mark.parametrize([
+  'is_authenticated',
+], [
+  (True, ),
+  (False, ),
+], ids=[
+  'user-is-authenticated',
+  'is-guest-user',
+])
+def test_get_access_to_individual_group_ajax_response(init_records, client, is_authenticated):
+  user = init_records[0].user
+  url = reverse('account:ajax_get_options')
+  # Execute force login or not
+  if is_authenticated:
+    client.force_login(user)
+  response = client.get(url)
+
+  assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
+
+@pytest.mark.account
+@pytest.mark.view
+@pytest.mark.django_db
+@pytest.mark.parametrize([
+  'arg_type',
+  'expected_type',
+], [
+  ('both-pairs', 'specific'),
+  ('only-owner', 'all'),
+  ('only-group', 'all'),
+  ('no-data', 'all'),
+], ids=lambda xs: str(xs))
+def test_post_access_to_individual_group_ajax_response(rf, arg_type, expected_type):
+  friends = list(factories.UserFactory.create_batch(4, is_active=True))
+  user = factories.UserFactory(is_active=True, friends=friends)
+  group = factories.IndividualGroupFactory(owner=user, members=[friends[0], friends[-1]])
+  patterns = {
+    'both-pairs': {'owner_pk': str(user.pk), 'group_pk': str(group.pk)},
+    'only-owner': {'owner_pk': str(user.pk)},
+    'only-group': {'group_pk': str(group.pk)},
+    'no-data':    {},
+  }
+  expected = {
+    'specific': g_generate_item([friends[0], friends[-1]], False),
+    'all': g_generate_item(UserModel.objects.collect_valid_normal_users(), False),
+  }
+  # Get option data
+  url = reverse('account:ajax_get_options')
+  params = patterns[arg_type]
+  exact_arr = expected[expected_type]
+  # Execute req-res
+  request = rf.post(url, data=params, content_type='application/json')
+  ajax_view = views.IndividualGroupAjaxResponse.as_view()
+  response = ajax_view(request)
+  data = json.loads(response.content)
+  options = data['options']
+
+  assert response.status_code == status.HTTP_200_OK
+  assert len(options) == len(exact_arr)
+  assert g_compare_options(options, exact_arr)
+
+@pytest.mark.account
+@pytest.mark.view
+def test_invalid_access_to_individual_group_ajax_response(client):
+  url = reverse('account:ajax_get_options')
+  params = {'owner_pk': 'abc', 'group_pk': 123}
+  # Execute req-res
+  response = client.post(url, data=params, headers={'Content-Type': 'application/json'})
+  data = json.loads(response.content)
+  options = data['options']
+
+  assert response.status_code == status.HTTP_200_OK
+  assert len(options) == 0

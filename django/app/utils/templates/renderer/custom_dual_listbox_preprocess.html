@@ -92,32 +92,3 @@
     }
   }
 </style>
-<script>
-const g_initDualListbox = (elementName, availableTitle, selectedTitle) => {
-  const dualListbox = new DualListbox(elementName, {
-    availableTitle: availableTitle,
-    selectedTitle:  selectedTitle,
-    addButtonText: '>',
-    removeButtonText: '<',
-    addAllButtonText: '>>',
-    removeAllButtonText: '<<',
-    sortable: true,
-    upButtonText: 'Up',
-    downButtonText: 'Down',
-    draggable: true,
-    options: [{% for pk, label, is_selected in options %}
-      {text: '{{ label }}', value: '{{ pk }}', selected: {% if is_selected %}true{% else %}false{% endif %}},{% endfor %}
-    ],
-  });
-  // Update css
-  dualListbox.search_left.classList.remove('dual-listbox__search');
-  dualListbox.search_left.classList.add('form-control', 'px-2');
-  dualListbox.search_right.classList.remove('dual-listbox__search');
-  dualListbox.search_right.classList.add('form-control', 'px-2');
-
-  for (const name of ['add_button', 'add_all_button', 'remove_button', 'remove_all_button']) {
-    dualListbox[name].classList.remove('dual-listbox__button');
-    dualListbox[name].classList.add('btn', 'btn-outline-dark', 'w-100', 'h-100', 'm-2');
-  }
-};
-</script>

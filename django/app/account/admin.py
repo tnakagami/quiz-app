@@ -33,7 +33,7 @@ class CustomUserAdmin(UserAdmin):
   list_display = ('email', 'screen_name', 'role', 'is_active', 'is_staff', 'is_superuser')
   list_filter = ('is_staff', 'is_superuser', 'is_active', 'groups')
   search_fields = ('email', 'screen_name', 'role')
-  ordering = ('email', 'screen_name')
+  ordering = ('created_at', 'screen_name', 'email')
 
 @admin.register(RoleApproval)
 class RoleApprovalAdmin(admin.ModelAdmin):

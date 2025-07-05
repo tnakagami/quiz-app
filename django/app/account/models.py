@@ -1,15 +1,40 @@
 from django.db import models
+from django.core.exceptions import ValidationError
 from django.contrib.auth.models import PermissionsMixin
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.utils.translation import gettext_lazy
 from django.core.mail import send_mail
-from utils.models import get_current_time, convert_timezone, BaseModel
+from utils.models import (
+  DualListbox,
+  get_current_time,
+  convert_timezone,
+  BaseModel,
+)
 
 def _get_code():
   current_time = get_current_time()
   code = convert_timezone(current_time, is_string=True, strformat='Ymd-His.u')
 
   return code
+
+class RoleType(models.IntegerChoices):
+  # [format] name = value, label
+  MANAGER = 1, gettext_lazy('Manager')
+  CREATOR = 2, gettext_lazy('Creator')
+  GUEST   = 3, gettext_lazy('Guest')
+
+class CustomUserQuerySet(models.QuerySet):
+  ##
+  # @brief Get normal users
+  # @return Queryset which is satisfied with `is_active=True`, `is_staff=False`, and `role != RoleType.MANAGER`
+  def collect_valid_normal_users(self):
+    return self.filter(is_active=True, is_staff=False).exclude(role=RoleType.MANAGER)
+
+  ##
+  # @brief Get creators only
+  # @return Queryset which consists of creator's role
+  def collect_creators(self):
+    return self.filter(is_active=True, is_staff=False, role=RoleType.CREATOR)
 
 class CustomUserManager(BaseUserManager):
   use_in_migrations = True
@@ -53,6 +78,7 @@ class CustomUserManager(BaseUserManager):
   def create_superuser(self, email, password=None, **extra_fields):
     extra_fields.setdefault('is_staff', True)
     extra_fields.setdefault('is_superuser', True)
+    extra_fields.setdefault('role', RoleType.MANAGER)
 
     if extra_fields.get('is_staff') is not True:
         raise ValueError(gettext_lazy('Superuser must have is_staff=True.'))
@@ -62,16 +88,22 @@ class CustomUserManager(BaseUserManager):
     return self._create_user(email, password, **extra_fields)
 
   ##
-  # @brief Get specific records
-  # @return Queryset which is satisfied with `is_active=True` and `is_staff=False`
-  def collect_valid_normal_users(self):
-    return self.get_queryset().filter(is_active=True, is_staff=False)
+  # @brief Get default queryset
+  # @return Queryset based on `CustomUserQuerySet`
+  def get_queryset(self):
+    return CustomUserQuerySet(self.model, using=self._db)
 
-class RoleType(models.IntegerChoices):
-  # [format] name = value, label
-  MANAGER = 1, gettext_lazy('Manager')
-  CREATOR = 2, gettext_lazy('Creator')
-  GUEST   = 3, gettext_lazy('Guest')
+  ##
+  # @brief Get normal users
+  # @return Queryset which is satisfied with `is_active=True`, `is_staff=False`, and `role != RoleType.MANAGER`
+  def collect_valid_normal_users(self):
+    return self.get_queryset().collect_valid_normal_users()
+
+  ##
+  # @brief Get creators only
+  # @return Queryset which consists of creator's role
+  def collect_creators(self):
+    return self.get_queryset().collect_creators()
 
 class User(AbstractBaseUser, PermissionsMixin, BaseModel):
   email = models.EmailField(
@@ -122,6 +154,10 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
     blank=True,
     verbose_name=gettext_lazy('My friends'),
     symmetrical=False,
+  )
+  created_at = models.DateTimeField(
+    gettext_lazy('Created time'),
+    default=get_current_time,
   )
 
   objects = CustomUserManager()
@@ -286,7 +322,7 @@ class RoleApproval(BaseModel):
 
 class IndividualGroup(BaseModel):
   class Meta:
-    ordering = ('name', )
+    ordering = ('-created_at', 'name', )
 
   owner = models.ForeignKey(
     User,
@@ -295,7 +331,7 @@ class IndividualGroup(BaseModel):
     related_name='group_owners',
   )
   name = models.CharField(
-    gettext_lazy('group name'),
+    gettext_lazy('Group name'),
     max_length=128,
     help_text=gettext_lazy('Required. 128 characters or fewer.'),
   )
@@ -304,12 +340,24 @@ class IndividualGroup(BaseModel):
     related_name='group_members',
     verbose_name=gettext_lazy('Group members'),
   )
+  created_at = models.DateTimeField(
+    gettext_lazy('Created time'),
+    default=get_current_time,
+  )
 
   ##
   # @brief Get string object when the instance is called as `str(instance)`
   # @return Group name
   def __str__(self):
     return self.name
+
+  ##
+  # @brief Check whether request user has a update permission
+  # @return bool Judgement result
+  # @retval True  The request user can update instance
+  # @retval False The request user cannot update instance
+  def has_update_permission(self, user):
+    return self.owner.pk == user.pk
 
   ##
   # @brief Extract specific members are removed from user's friends or not
@@ -337,3 +385,25 @@ class IndividualGroup(BaseModel):
     is_invalid = members.exclude(id__in=list(ids)).exists()
 
     return is_invalid
+
+  ##
+  # @brief Get relevant members
+  # @param onwer_pk Owner's primary key
+  # @param group_pk Individual group's primary key
+  # @return List of dict which includes text, pk and is_selected element
+  @classmethod
+  def get_options(cls, owner_pk, group_pk):
+    dual_listbox = DualListbox()
+    callback = dual_listbox.user_cb
+
+    try:
+      owner = User.objects.get(pk=owner_pk)
+      instance = cls.objects.get(pk=group_pk, owner=owner)
+      queryset = instance.members.all()
+    except:
+      queryset = User.objects.collect_valid_normal_users()
+    # Get options
+    items = dual_listbox.create_options(queryset, is_selected=False, callback=callback)
+    options = [dual_listbox.convertor(data) for data in items]
+
+    return options

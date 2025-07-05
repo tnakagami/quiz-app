@@ -2,7 +2,11 @@ import pytest
 from django.core.exceptions import ValidationError
 from django.db.utils import IntegrityError, DataError
 from datetime import datetime, timezone
-from app_tests import factories
+from app_tests import (
+  factories,
+  g_generate_item,
+  g_compare_options,
+)
 from account import models
 
 wrapper_pystr = factories.faker.pystr
@@ -282,12 +286,60 @@ def test_invalid_same_email():
 @pytest.mark.account
 @pytest.mark.model
 @pytest.mark.django_db
-def test_queryset_of_usermodel():
-  _ = factories.UserFactory(is_active=True, is_staff=True, is_superuser=True)
-  _ = factories.UserFactory(is_active=True, is_staff=True)
-  _ = factories.UserFactory.create_batch(2, is_active=False)
-  valid_users = factories.UserFactory.create_batch(3, is_active=True)
+def test_check_collect_valid_normal_users_of_user_manager():
   queryset = models.User.objects.collect_valid_normal_users()
+  exacts = models.User.objects.filter(is_active=True, is_staff=False).exclude(role=models.RoleType.MANAGER)
+  ids = list(queryset.values_list('pk', flat=True))
+
+  assert len(queryset) == len(exacts)
+  assert all([instance.pk in ids for instance in queryset])
+
+@pytest.mark.account
+@pytest.mark.model
+@pytest.mark.django_db
+def test_check_collect_valid_normal_users_of_user_queryset():
+  valid_users = factories.UserFactory.create_batch(3, is_active=True)
+  all_users = [
+    factories.UserFactory(is_active=True, is_staff=True, is_superuser=True),
+    factories.UserFactory(is_active=True, is_staff=True),
+    *factories.UserFactory.create_batch(2, is_active=False),
+  ] + list(valid_users)
+  queryset = models.User.objects.filter(pk__in=list(map(lambda val: val.pk, all_users))).collect_valid_normal_users()
+  pks = [user.pk for user in valid_users]
+
+  assert queryset.count() == len(pks)
+  assert all([queryset.filter(pk=pk).exists() for pk in pks])
+
+@pytest.mark.account
+@pytest.mark.model
+@pytest.mark.django_db
+def test_check_collect_creators_of_user_manager():
+  queryset = models.User.objects.collect_creators()
+  exacts = models.User.objects.filter(is_active=True, is_staff=False, role=models.RoleType.CREATOR)
+  ids = list(queryset.values_list('pk', flat=True))
+
+  assert len(queryset) == len(exacts)
+  assert all([instance.pk in ids for instance in queryset])
+
+@pytest.mark.account
+@pytest.mark.model
+@pytest.mark.django_db
+def test_check_collect_creators_of_user_queryset():
+  all_users = []
+  valid_users = []
+
+  for idx, role in enumerate([models.RoleType.GUEST, models.RoleType.CREATOR, models.RoleType.MANAGER], 2):
+    targets = list(factories.UserFactory.create_batch(idx, is_active=True, role=role))
+    all_users += [
+      factories.UserFactory(is_active=True, is_staff=True, is_superuser=True, role=role),
+      factories.UserFactory(is_active=True, is_staff=True, role=role),
+      *factories.UserFactory.create_batch(2, is_active=False, role=role),
+    ] + targets
+
+    if role == models.RoleType.CREATOR:
+      valid_users += targets
+
+  queryset = models.User.objects.filter(pk__in=list(map(lambda val: val.pk, all_users))).collect_creators()
   pks = [user.pk for user in valid_users]
 
   assert queryset.count() == len(pks)
@@ -456,7 +508,7 @@ def test_invalid_members_of_individual_group():
   ([0, 2, 3], 1),
 ], ids=[
   'vaild-friends',
-  'invaild-friends',
+  'invalid-friends',
 ])
 def test_invalid_friends_of_individual_group(friend_indices, rest_count):
   friends = list(factories.UserFactory.create_batch(5, is_active=True))
@@ -466,3 +518,50 @@ def test_invalid_friends_of_individual_group(friend_indices, rest_count):
   rest_friends = instance.extract_invalid_friends()
 
   assert rest_friends.count() == rest_count
+
+@pytest.mark.account
+@pytest.mark.model
+@pytest.mark.django_db
+@pytest.mark.parametrize([
+  'call_type',
+  'expected_type',
+], [
+  ('valid-pattern', 'specific'),
+  ('invalid-owner-pk', 'all'),
+  ('not-exist-owner', 'all'),
+  ('invalid-group-pk', 'all'),
+  ('not-exist-group', 'all'),
+], ids=lambda xs: str(xs))
+def test_check_get_options_method_in_individual_group(call_type, expected_type):
+  _ = factories.UserFactory(is_active=True, is_staff=True, is_superuser=True)
+  _ = factories.UserFactory(is_active=True, is_staff=True)
+  _ = factories.UserFactory(is_active=True, role=models.RoleType.MANAGER)
+  _ = factories.UserFactory(is_active=True, role=models.RoleType.CREATOR)
+  nobody = factories.UserFactory(is_active=True)
+  members = list(factories.UserFactory.create_batch(3, is_active=True))
+  user = factories.UserFactory(is_active=True, friends=members)
+  group = factories.IndividualGroupFactory(owner=user, members=[members[0], members[-1]])
+  someone = list(factories.UserFactory.create_batch(2, is_active=True))
+  other = factories.UserFactory(is_active=True, friends=someone)
+  _other_group = factories.IndividualGroupFactory(owner=other, members=[someone[0]])
+  not_exist_group = factories.IndividualGroupFactory(owner=other, members=someone)
+  nobody.delete()
+  not_exist_group.delete()
+
+  patterns = {
+    'valid-pattern':    {'owner_pk': user.pk,   'group_pk': group.pk},
+    'invalid-owner-pk': {'owner_pk': nobody.pk, 'group_pk': group.pk},
+    'not-exist-owner':  {'owner_pk': user.pk,   'group_pk': _other_group.pk},
+    'invalid-group-pk': {'owner_pk': user.pk,   'group_pk': not_exist_group.pk},
+    'not-exist-group':  {'owner_pk': other.pk,  'group_pk': group.pk},
+  }
+  expected = {
+    'specific': g_generate_item([members[0], members[-1]], False),
+    'all': g_generate_item(models.User.objects.collect_valid_normal_users(), False),
+  }
+  # Get arguments
+  kwargs = patterns[call_type]
+  options = models.IndividualGroup.get_options(**kwargs)
+  exact_arr = expected[expected_type]
+
+  assert g_compare_options(options, exact_arr)

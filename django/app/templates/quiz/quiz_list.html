@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block content %}
+{% include 'breadcrumbs.html' with title=_("Quizzes") %}
+<div class="row justify-content-center">
+  <div class="col">
+    <div class="row row-cols-1 g-2">
+      {% if user.is_creator %}
+      <div class="col">
+        <a
+          href="{% url 'quiz:create_quiz' %}"
+          class="btn btn-primary w-100 custom-boxshadow"
+        >
+          {% trans "Create a new quiz (creator only)" %}
+        </a>
+      </div>
+      {% endif %}
+      {% if quizzes %}
+      <div class="col">
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr>
+                <th scope="col">{% trans "Creator" %}</th>
+                <th scope="col">{% trans "Genre" %}</th>
+                <th scope="col">{% trans "Question" %}</th>
+                <th scope="col">{% trans "Answer" %}</th>
+                <th colspan="2">{% trans "Operation" %}</th>
+              </tr>
+            </thead>
+            <tbody class="table-group-divider">
+            {% for instance in quizzes %}
+              <tr>
+                {% with table_css=instance.is_completed|yesno:',table-secondary' %}
+                <td scope="row" class="{{ table_css }}">{{ instance.creator|stringformat:"s" }}</td>
+                <td class="{{ table_css }}">{{ instance.genre|stringformat:"s" }}</td>
+                <td class="{{ table_css }}">{{ instance.get_short_question }}</td>
+                <td class="{{ table_css }}">{{ instance.get_short_answer }}</td>
+                {% endwith %}
+                <td>
+                  <a
+                    href="{% url 'quiz:update_quiz' pk=instance.pk %}"
+                    class="btn btn-outline-success w-100 custom-boxshadow"
+                  >
+                    {% trans "Edit" %}
+                  </a>
+                </td>
+                <td>
+                  <button
+                    type="button"
+                    class="btn btn-outline-danger w-100 custom-boxshadow js-delete-quiz"
+                    data-name="{{ instance.name }}"
+                    data-url="{% url 'quiz:delete_quiz' pk=instance.pk %}"
+                  >
+                    {% trans "Delete" %}
+                  </button>
+                </td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="col">
+      {% include "renderer/custom_pagenate.html" with page_obj=page_obj %}
+      </div>
+      {% else %}
+      <div class="col">
+        <p>{% trans "There is no quizzes." %}</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{# Delete modal #}
+{% include "delete_modal_form.html" with modal_id="delete-modal" form_id="delete-form" %}
+{% endblock %}
+
+{% block bodyjs %}
+{{ block.super }}
+<script>
+(function () {
+  const init = () => {
+    const helper = new HelperMethods();
+    helper.registerDeleteModalEvent({
+      btnClass: 'js-delete-quiz',
+      formID: 'delete-form',
+      modalID: 'delete-modal',
+    });
+  };
+  // Add DOM event
+  document.addEventListener('DOMContentLoaded', init);
+})();
+</script>
+{% endblock %}
