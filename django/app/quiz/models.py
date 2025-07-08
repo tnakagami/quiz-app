@@ -14,6 +14,13 @@ class GenreQuerySet(models.QuerySet):
   def collect_active_genres(self):
     return self.filter(is_enabled=True)
 
+  ##
+  # @brief Collect active genres
+  # @return Queryset that `is_enabled` column is `True` and the number of `quizzes` is greater than 0
+  def collect_valid_genres(self):
+    return self.annotate(quiz_counts=models.Count('quizzes', filter=models.Q(quizzes__is_completed=True))) \
+               .filter(quiz_counts__gt=0, is_enabled=True)
+
 class Genre(BaseModel):
   class Meta:
     ordering = ('name', '-created_at')
@@ -60,11 +67,16 @@ class Genre(BaseModel):
 
 class QuizQuerySet(models.QuerySet):
   ##
-  # @brief Collect active genre
+  # @brief Collect active quiz
+  # @param queryset Input queryset
+  # @param creators Input creators
+  # @param genres Input genres
+  # @parma is_and_op As using the "AND" operator, it is `True`
   # @return Queryset which consists of some creators, some genres, or both of them
   # @pre The variable type of creators and genres consists of one of `model instance`, `list`, and `QuerySet`.
-  def collect_quizzes(self, creators=None, genres=None):
-    queryset = self.filter(is_completed=True)
+  def collect_quizzes(self, queryset=None, creators=None, genres=None, is_and_op=False):
+    if queryset is None:
+      queryset = self.filter(is_completed=True)
     conditions = {}
     # Create condition for creators
     if creators is not None:
@@ -80,10 +92,11 @@ class QuizQuerySet(models.QuerySet):
         conditions['genre'] = genres
     # In the case of existing any conditions
     if conditions:
+      cond_op = models.Q.AND if is_and_op else models.Q.OR
       q_cond = models.Q()
       # Create query condition
       for key, val in conditions.items():
-        q_cond.add(models.Q(**{key: val}), models.Q.OR)
+        q_cond.add(models.Q(**{key: val}), cond_op)
       # Filtering
       queryset = queryset.filter(q_cond)
 

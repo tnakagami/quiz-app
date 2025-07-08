@@ -2,7 +2,7 @@
 {% load i18n %}
 
 {% block content %}
-{% include 'breadcrumbs.html' with title=_("Genres") %}
+{% include 'breadcrumbs.html' with title=_("Genre list") %}
 <div class="row justify-content-center">
   <div class="col">
     <div class="row row-cols-1 g-2">
@@ -35,7 +35,7 @@
                 <td>
                   <a
                     href="{% url 'quiz:update_genre' pk=instance.pk %}"
-                    class="btn btn-outline-success w-100 custom-boxshadow"
+                    class="btn btn-outline-success w-100 custom-boxshadow text-nowrap"
                   >
                     {% trans "Edit" %}
                   </a>

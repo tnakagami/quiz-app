@@ -48,6 +48,127 @@ class GenreForm(forms.ModelForm):
     help_text=gettext_lazy('Describes whether this genre is enabled or not.'),
   )
 
+class QuizSearchForm(forms.Form):
+  dual_listbox_template_name = 'renderer/custom_dual_listbox_preprocess.html'
+  template_name = 'renderer/custom_form.html'
+  field_order = ('genres', 'creators', 'is_and_op')
+
+  genres = forms.MultipleChoiceField(
+    label=gettext_lazy('Genre'),
+    choices=[],
+    required=False,
+    widget=forms.SelectMultiple(attrs={
+      'id': 'genreList',
+      'data-available': gettext_lazy('Available genres (The number of quizzes)'),
+      'data-selected': gettext_lazy('Assigned genres (The number of quizzes)'),
+      'class': 'custom-multi-selectbox',
+    }),
+  )
+  creators = forms.MultipleChoiceField(
+    label=gettext_lazy('Creator'),
+    choices=[],
+    required=False,
+    widget=forms.SelectMultiple(attrs={
+      'id': 'creatorList',
+      'data-available': gettext_lazy('Available creators (The number of quizzes, Code)'),
+      'data-selected': gettext_lazy('Assigned creators (The number of quizzes, Code)'),
+      'class': 'custom-multi-selectbox',
+    }),
+  )
+
+  is_and_op = forms.TypedChoiceField(
+    label=gettext_lazy('Search condition'),
+    coerce=bool_converter,
+    initial=False,
+    empty_value=False,
+    choices=(
+      (True, gettext_lazy('AND')),
+      (False, gettext_lazy('OR')),
+    ),
+    widget=CustomRadioSelect(attrs={
+      'class': 'form-check form-check-inline',
+      'input-class': 'form-check-input',
+      'label-class': 'form-check-label',
+    }),
+    help_text=gettext_lazy('Describes whether the search condition is "OR" or not.'),
+  )
+
+  ##
+  # @brief Constructor of QuizSearchForm
+  # @param args Positional arguments
+  # @param kwargs Named arguments
+  def __init__(self, user, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+    self.user = user
+    # Set genre's choices
+    self.fields['genres'].choices = [
+      (str(instance.pk), f'{instance}({instance.quizzes.all().count()})')
+      for instance in models.Genre.objects.collect_active_genres()
+    ]
+    # Set creator's choices
+    if self.user.has_manager_role():
+      self.fields['creators'].choices = [
+        (str(instance.pk), f'{instance}({instance.quizzes.all().count()},{instance.code})')
+        for instance in UserModel.objects.collect_creators()
+      ]
+    else:
+      self.fields['creators'].choices = [(str(self.user.pk), str(self.user))]
+      self.fields['creators'].widget = forms.HiddenInput()
+    self.dual_listbox = DualListbox()
+
+  ##
+  # @brief Filtering queryset
+  # @param queryset Input queryset
+  # @return queryset Filtered queryset based on genres and creators
+  def filtering(self, queryset):
+    if self.is_valid():
+      genres = self.cleaned_data.get('genres') or None
+      creators = self.cleaned_data.get('creators') or None
+      is_and_op = self.cleaned_data.get('is_and_op')
+      queryset = models.Quiz.objects.collect_quizzes(
+        queryset=queryset,
+        creators=creators,
+        genres=genres,
+        is_and_op=is_and_op,
+      )
+
+    return queryset
+
+  ##
+  # @brief Get options of select element
+  # @return options JSON data of option element which consists of primary-key, label-name, and selected-or-not
+  @property
+  def get_genre_options(self):
+    all_genres = models.Genre.objects.collect_active_genres()
+
+    if self.user.has_manager_role():
+      callback = lambda item: item.quizzes.all().count()
+    else:
+      callback = lambda item: item.quizzes.all().filter(creator=self.user).count()
+    options = self.dual_listbox.collect_options_of_items(all_genres, callback=callback)
+
+    return options
+
+  ##
+  # @brief Get options of select element
+  # @return options JSON data of option element which consists of primary-key, label-name, and selected-or-not
+  @property
+  def get_creator_options(self):
+    callback = lambda creator: f'{creator.quizzes.all().count()},{creator.code}'
+
+    if self.user.has_manager_role():
+      # In the case of that the request user has manager role (e.g., MANAGER or superuser)
+      all_creators = UserModel.objects.collect_creators()
+      selected_ones = None
+    else:
+      # In the case of that the request user is a quiz owner
+      all_creators = UserModel.objects.filter(pk__in=[self.user.pk])
+      selected_ones = all_creators
+    # Collect option data based on all creators and selected ones
+    options = self.dual_listbox.collect_options_of_items(all_creators, selected_ones, callback=callback)
+
+    return options
+
 class QuizForm(ModelFormBasedOnUser):
   owner_name = 'creator'
 
@@ -109,6 +230,27 @@ class QuizForm(ModelFormBasedOnUser):
         code='invalid_role',
       )
 
+class QuizRoomSearchForm(forms.Form):
+  name = forms.CharField(
+    label=gettext_lazy('name'),
+    max_length=128,
+    required=False,
+    widget=forms.TextInput(attrs={
+      'class': 'form-control',
+    }),
+  )
+
+  ##
+  # @brief Filtering queryset
+  # @param queryset Input queryset
+  # @return queryset Filtered queryset based on input name
+  def filtering(self, queryset):
+    if self.is_valid():
+      name = self.cleaned_data.get('name', '')
+      queryset = queryset.filter(name__contains=name)
+
+    return queryset
+
 class QuizRoomForm(ModelFormBasedOnUser):
   dual_listbox_template_name = 'renderer/custom_dual_listbox_preprocess.html'
   owner_name = 'owner'
@@ -123,14 +265,14 @@ class QuizRoomForm(ModelFormBasedOnUser):
       }),
       'genres': forms.SelectMultiple(attrs={
         'id': 'genreList',
-        'data-available': gettext_lazy('Available genres'),
-        'data-selected': gettext_lazy('Assigned genres'),
+        'data-available': gettext_lazy('Available genres (The number of quizzes)'),
+        'data-selected': gettext_lazy('Assigned genres (The number of quizzes)'),
         'class': 'custom-multi-selectbox',
       }),
       'creators': forms.SelectMultiple(attrs={
         'id': 'creatorList',
-        'data-available': gettext_lazy('Available creators'),
-        'data-selected': gettext_lazy('Assigned creators'),
+        'data-available': gettext_lazy('Available creators (The number of quizzes, Code)'),
+        'data-selected': gettext_lazy('Assigned creators (The number of quizzes, Code)'),
         'class': 'custom-multi-selectbox',
       }),
       'members': forms.SelectMultiple(attrs={
@@ -178,9 +320,9 @@ class QuizRoomForm(ModelFormBasedOnUser):
   # @param kwargs Named arguments
   def __init__(self, *args, **kwargs):
     super().__init__(*args, **kwargs)
-    self.fields['genres'].queryset = models.Genre.objects.collect_active_genres()
-    self.fields['creators'].queryset = UserModel.objects.collect_creators()
-    self.fields['members'].queryset = UserModel.objects.collect_valid_normal_users()
+    self.fields['genres'].queryset = models.Genre.objects.collect_valid_genres()
+    self.fields['creators'].queryset = UserModel.objects.collect_valid_creators()
+    self.fields['members'].queryset = UserModel.objects.collect_valid_normal_users(self.user)
     self.fields['groups'].queryset = self.user.group_owners.all()
     self.dual_listbox = DualListbox()
 
@@ -205,7 +347,8 @@ class QuizRoomForm(ModelFormBasedOnUser):
   def get_genre_options(self):
     all_genres = self.fields['genres'].queryset
     selected_genres = self.instance.genres.all() if self.instance else None
-    options = self.dual_listbox.collect_options_of_items(all_genres, selected_genres)
+    callback = lambda genre: genre.quizzes.all().count()
+    options = self.dual_listbox.collect_options_of_items(all_genres, selected_genres, callback=callback)
 
     return options
 
@@ -216,7 +359,7 @@ class QuizRoomForm(ModelFormBasedOnUser):
   def get_creator_options(self):
     all_creators = self.fields['creators'].queryset
     selected_creators = self.instance.creators.all() if self.instance else None
-    callback = self.dual_listbox.user_cb
+    callback = lambda creator: f'{creator.quizzes.all().count()},{creator.code}'
     options = self.dual_listbox.collect_options_of_items(all_creators, selected_creators, callback)
 
     return options

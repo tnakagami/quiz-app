@@ -26,15 +26,28 @@ class RoleType(models.IntegerChoices):
 class CustomUserQuerySet(models.QuerySet):
   ##
   # @brief Get normal users
+  # @param user Target user
   # @return Queryset which is satisfied with `is_active=True`, `is_staff=False`, and `role != RoleType.MANAGER`
-  def collect_valid_normal_users(self):
-    return self.filter(is_active=True, is_staff=False).exclude(role=RoleType.MANAGER)
+  def collect_valid_normal_users(self, user=None):
+    queryset = self.filter(is_active=True, is_staff=False).exclude(role=RoleType.MANAGER)
+
+    if user is not None:
+      queryset = queryset.exclude(pk__in=[user.pk])
+
+    return queryset
 
   ##
   # @brief Get creators only
   # @return Queryset which consists of creator's role
   def collect_creators(self):
     return self.filter(is_active=True, is_staff=False, role=RoleType.CREATOR)
+
+  ##
+  # @brief Get creators who have at least one quiz
+  # @return Queryset which consists of creator's role
+  def collect_valid_creators(self):
+    return self.annotate(quiz_counts=models.Count('quizzes', filter=models.Q(quizzes__is_completed=True))) \
+               .filter(is_active=True, is_staff=False, role=RoleType.CREATOR, quiz_counts__gt=0)
 
 class CustomUserManager(BaseUserManager):
   use_in_migrations = True
@@ -95,15 +108,22 @@ class CustomUserManager(BaseUserManager):
 
   ##
   # @brief Get normal users
+  # @param user Target user
   # @return Queryset which is satisfied with `is_active=True`, `is_staff=False`, and `role != RoleType.MANAGER`
-  def collect_valid_normal_users(self):
-    return self.get_queryset().collect_valid_normal_users()
+  def collect_valid_normal_users(self, user=None):
+    return self.get_queryset().collect_valid_normal_users(user)
 
   ##
   # @brief Get creators only
   # @return Queryset which consists of creator's role
   def collect_creators(self):
     return self.get_queryset().collect_creators()
+
+  ##
+  # @brief Get creators only
+  # @return Queryset which consists of creator's role
+  def collect_valid_creators(self):
+    return self.get_queryset().collect_valid_creators()
 
 class User(AbstractBaseUser, PermissionsMixin, BaseModel):
   email = models.EmailField(

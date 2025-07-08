@@ -240,7 +240,7 @@ class FriendForm(forms.ModelForm):
   def __init__(self, user, *args, **kwargs):
     super().__init__(*args, **kwargs)
     self.user = user
-    self.fields['friends'].queryset = UserModel.objects.collect_valid_normal_users().exclude(pk__in=[self.user.pk])
+    self.fields['friends'].queryset = UserModel.objects.collect_valid_normal_users(self.user)
     self.dual_listbox = DualListbox()
 
   ##

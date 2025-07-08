@@ -1,6 +1,7 @@
 import pytest
 from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
+from django.db.models import Q
 from app_tests import factories, g_compare_options
 from account.models import RoleType, IndividualGroup
 from quiz import forms, models
@@ -65,12 +66,228 @@ class TestGenreForm:
     assert form.is_valid() == is_valid
 
 @pytest.fixture
-def get_genres(django_db_blocker):
+def get_each_types_of_genre(django_db_blocker, get_genres):
   with django_db_blocker.unblock():
-    valid_genre = factories.GenreFactory(is_enabled=True)
+    valid_genres = get_genres
     invalid_genre = factories.GenreFactory(is_enabled=False)
 
-  return valid_genre, invalid_genre
+  return valid_genres, invalid_genre
+
+# ==================
+# = QuizSearchForm =
+# ==================
+@pytest.mark.quiz
+@pytest.mark.form
+@pytest.mark.django_db
+class TestQuizSearchForm:
+  pk_convertor = lambda _self, xs: [val.pk for val in xs]
+  callback_user = lambda _self, item: f'{item.quizzes.all().count()},{item.code}'
+
+  @pytest.mark.parametrize([
+    'input_type',
+    'has_manager_role',
+  ], [
+    ('genre', False),
+    ('creator', True),
+    ('creaotr', False),
+  ], ids=lambda xs: str(xs))
+  def test_invalid_patterns(self, input_type, has_manager_role):
+    invalid_genre = factories.GenreFactory(is_enabled=False)
+    creators = factories.UserFactory.create_batch(2, is_active=True, role=RoleType.CREATOR)
+    user = creators[0] if not has_manager_role else factories.UserFactory(is_active=True, role=RoleType.MANAGER)
+
+    if input_type == 'genre':
+      params = {
+        'genres': [invalid_genre.pk],
+      }
+    else:
+      if has_manager_role:
+        params = {
+          'creators': [user.pk]
+        }
+      else:
+        params = {
+          'creators': [creators[1].pk],
+        }
+    form = forms.QuizSearchForm(user=user, data=params)
+
+    assert not form.is_valid()
+
+  @pytest.mark.parametrize([
+    'data_type',
+    'has_manager_role',
+    'is_and_op',
+  ], [
+    ('only-genre', True, False),
+    ('only-genre', False, False),
+    ('only-creator', True, False),
+    ('only-creator', False, False),
+    ('both-data', True, False),
+    ('both-data', False, False),
+    ('both-data', True, True),
+    ('both-data', False, True),
+  ], ids=[
+    'only-genre-by-manager',
+    'only-genre-by-creator',
+    'only-creator-by-manager',
+    'only-creator-by-creator',
+    'both-data-by-manager-with-or-op',
+    'both-data-by-creator-with-or-op',
+    'both-data-by-manager-with-and-op',
+    'both-data-by-creator-with-and-op',
+  ])
+  def test_check_filtering(self, get_genres, data_type, has_manager_role, is_and_op):
+    genres = get_genres[:4]
+    genres = models.Genre.objects.filter(pk__in=self.pk_convertor(genres)).order_by('-pk')
+    creators = factories.UserFactory.create_batch(3, is_active=True, role=RoleType.CREATOR)
+    creators = UserModel.objects.filter(pk__in=self.pk_convertor(creators)).order_by('-pk')
+    user = creators[0] if not has_manager_role else factories.UserFactory(is_active=True, role=RoleType.MANAGER)
+    instances = []
+
+    for genre in genres:
+      instances += [factories.QuizFactory(creator=creators[0], genre=genre, is_completed=False)]
+
+      for creator in creators:
+        instances += [factories.QuizFactory(creator=creator, genre=genre, is_completed=True)]
+    all_quizzes = models.Quiz.objects.filter(pk__in=self.pk_convertor(instances))
+    input_qs = all_quizzes if has_manager_role else all_quizzes.filter(creator=user)
+
+    if data_type == 'only-genre':
+      params = {
+        'genres': [genres[2].pk, genres[3].pk],
+        'is_and_op': False,
+      }
+      if has_manager_role:
+        expected = input_qs.filter(genre__pk__in=params['genres'])
+      else:
+        expected = input_qs.filter(creator=user, genre__pk__in=params['genres'])
+    elif data_type == 'only-creator':
+      if has_manager_role:
+        params = {
+          'creators': [creators[0].pk, creators[1].pk],
+          'is_and_op': False,
+        }
+        expected = input_qs.filter(creator__pk__in=params['creators'])
+      else:
+        params = {
+          'creators': [user.pk],
+          'is_and_op': False,
+        }
+        expected = input_qs.filter(creator=user)
+    else:
+      if has_manager_role:
+        params = {
+          'genres': [genres[2].pk, genres[3].pk],
+          'creators': [creators[0].pk, creators[1].pk],
+          'is_and_op': is_and_op,
+        }
+        if is_and_op:
+          expected = input_qs.filter(genre__pk__in=params['genres'], creator__pk__in=params['creators'])
+        else:
+          expected = input_qs.filter(Q(genre__pk__in=params['genres']) | Q(creator__pk__in=params['creators']))
+      else:
+        params = {
+          'genres': [genres[2].pk, genres[3].pk],
+          'creators': [user.pk],
+          'is_and_op': is_and_op,
+        }
+        if is_and_op:
+          expected = input_qs.filter(genre__pk__in=params['genres'], creator__pk__in=params['creators'])
+        else:
+          expected = input_qs.filter(Q(genre__pk__in=params['genres']) | Q(creator__pk__in=params['creators']))
+    # Create form instance
+    form = forms.QuizSearchForm(user=user, data=params)
+    is_valid = form.is_valid()
+    queryset = form.filtering(input_qs)
+
+    assert is_valid
+    assert queryset.count() == expected.count()
+    assert all([est.pk == exact.pk for est, exact in zip(queryset.order_by('pk'), expected.order_by('pk'))])
+
+  def test_invalid_filtering_condition(self, get_genres):
+    genres = get_genres[:4]
+    genres = models.Genre.objects.filter(pk__in=self.pk_convertor(genres)).order_by('-pk')
+    creators = factories.UserFactory.create_batch(3, is_active=True, role=RoleType.CREATOR)
+    creators = UserModel.objects.filter(pk__in=self.pk_convertor(creators)).order_by('-pk')
+    user = factories.UserFactory(is_active=True, role=RoleType.MANAGER)
+    all_quizzes = [factories.QuizFactory(creator=creators[0], genre=genre, is_completed=False) for genre in genres]
+    all_quizzes = models.Quiz.objects.filter(pk__in=self.pk_convertor(all_quizzes))
+    params = {}
+    form = forms.QuizSearchForm(user=user, data=params)
+    queryset = form.filtering(all_quizzes)
+
+    assert queryset.count() == all_quizzes.count()
+    assert all([est.pk == exact.pk for est, exact in zip(queryset.order_by('pk'), all_quizzes.order_by('pk'))])
+
+  @pytest.mark.parametrize([
+    'role',
+  ], [
+    (RoleType.CREATOR, ),
+    (RoleType.MANAGER, ),
+  ], ids=[
+    'is-creator',
+    'is-manager',
+  ])
+  def test_check_genre_options(self, mocker, get_genres, role):
+    user = factories.UserFactory(is_active=True, role=role)
+    creator = factories.UserFactory(is_active=True, role=RoleType.CREATOR)
+    genres = get_genres
+    genres = models.Genre.objects.filter(pk__in=self.pk_convertor(genres)).order_by('-pk')
+    # Create quiz
+    for genre in genres:
+      _ = factories.QuizFactory.create_batch(2, creator=creator, genre=genre)
+    if user.is_creator():
+      _ = factories.QuizFactory(creator=user, genre=genre)
+    # Mock
+    mocker.patch('quiz.models.GenreQuerySet.collect_active_genres', return_value=genres)
+    form = forms.QuizSearchForm(user=user)
+    str_options = form.get_genre_options
+    options = json.loads(str_options)
+
+    if user.has_manager_role():
+      callback = lambda item: item.quizzes.all().count()
+    else:
+      callback = lambda item: item.quizzes.all().filter(creator=user).count()
+    exacts = [
+      {"text": f'{item}({callback(item)})', "value": str(item.pk), "selected": False} for item in genres
+    ]
+
+    assert isinstance(str_options, str)
+    assert len(options) == len(exacts)
+    assert g_compare_options(options, exacts)
+
+  @pytest.mark.parametrize([
+    'has_manager_role',
+  ], [
+    (True, ),
+    (False, ),
+  ], ids=[
+    'by-manager',
+    'by-creator',
+  ])
+  def test_check_creator_options(self, mocker, has_manager_role):
+    creators = factories.UserFactory.create_batch(3, is_active=True, role=RoleType.CREATOR)
+    creators = UserModel.objects.filter(pk__in=self.pk_convertor(creators)).order_by('-pk')
+    user = creators[0] if not has_manager_role else factories.UserFactory(is_active=True, role=RoleType.MANAGER)
+    # Mock
+    mocker.patch('account.models.CustomUserManager.collect_creators', return_value=creators)
+    form = forms.QuizSearchForm(user=user)
+    str_options = form.get_creator_options
+    options = json.loads(str_options)
+
+    if has_manager_role:
+      exacts = [
+        {"text": f'{item}({self.callback_user(item)})', "value": str(item.pk), "selected": False} for item in creators
+      ]
+    else:
+      selected_items = UserModel.objects.filter(pk__in=[user.pk])
+      exacts = [
+        {"text": f'{item}({self.callback_user(item)})', "value": str(item.pk), "selected": True} for item in selected_items
+      ]
+
+    assert isinstance(str_options, str)
+    assert len(options) == len(exacts)
+    assert g_compare_options(options, exacts)
 
 # ============
 # = QuizForm =
@@ -89,12 +306,12 @@ class TestQuizForm:
     ('without-genre', False),
     ('invalid-genre', False),
   ], ids=lambda xs: str(xs))
-  def test_validate_inputs(self, get_genres, input_type, is_valid):
+  def test_validate_inputs(self, get_each_types_of_genre, input_type, is_valid):
     user = factories.UserFactory(is_active=True, role=RoleType.CREATOR)
-    valid_genre, invalid_genre = get_genres
+    valid_genres, invalid_genre = get_each_types_of_genre
     # Define default param
     params = {
-      'genre': str(valid_genre.pk),
+      'genre': str(valid_genres[0].pk),
       'question': 'hoge',
       'answer': 'foo',
       'is_completed': False,
@@ -132,11 +349,11 @@ class TestQuizForm:
     'is-creator',
     'is-guest',
   ])
-  def test_check_user_role(self, get_genres, role, is_valid, err_msg):
+  def test_check_user_role(self, get_each_types_of_genre, role, is_valid, err_msg):
     user = factories.UserFactory(is_active=True, role=role)
-    valid_genre, _ = get_genres
+    valid_genres, _ = get_each_types_of_genre
     params = {
-      'genre': str(valid_genre.pk),
+      'genre': str(valid_genres[0].pk),
       'question': 'hoge',
       'answer': 'foo',
       'is_completed': True,
@@ -146,6 +363,86 @@ class TestQuizForm:
     assert form.is_valid() == is_valid
     assert err_msg in str(form.errors)
 
+# ======================
+# = QuizRoomSearchForm =
+# ======================
+@pytest.mark.quiz
+@pytest.mark.form
+@pytest.mark.django_db
+class TestQuizRoomSearchForm:
+  pk_convertor = lambda _self, xs: [val.pk for val in xs]
+
+  @pytest.mark.parametrize([
+    'name',
+    'is_valid',
+  ], [
+    ('hoge-room', True),
+    ('1'*129, False),
+  ], ids=[
+    'valid-pattern',
+    'invalid-pattern',
+  ])
+  def test_check_validation(self, name, is_valid):
+    params = {
+      'name': name,
+    }
+    form = forms.QuizRoomSearchForm(data=params)
+
+    assert form.is_valid() == is_valid
+
+  @pytest.mark.parametrize([
+    'name',
+    'count',
+  ], [
+    ('hoge-room', 1),
+    ('room', 2),
+    ('no-room', 0),
+  ], ids=[
+    'only-one-room',
+    'two-rooms',
+    'no-rooms',
+  ])
+  def test_check_filtering(self, get_genres, name, count):
+    user = factories.UserFactory(is_active=True, role=RoleType.GUEST)
+    other = factories.UserFactory(is_active=True, role=RoleType.GUEST)
+    genres = get_genres
+    genres = models.Genre.objects.filter(pk__in=self.pk_convertor(genres)).order_by('-pk')
+    rooms = [
+      factories.QuizRoomFactory(owner=user, name='hoge-room', genres=genres, members=[]),
+      factories.QuizRoomFactory(owner=other, name='foo-room', genres=genres, members=[user]),
+    ]
+    _ = factories.QuizRoomFactory(owner=user, name='not-relevant-instance', genres=genres, members=[])
+    _ = factories.QuizRoomFactory(owner=other, name='ignore-instance', genres=genres, members=[user])
+    input_qs = models.QuizRoom.objects.filter(pk__in=self.pk_convertor(rooms)).order_by('pk')
+    params = {
+      'name': name,
+    }
+    form = forms.QuizRoomSearchForm(data=params)
+    is_valid = form.is_valid()
+    queryset = form.filtering(input_qs)
+
+    assert is_valid
+    assert queryset.count() == count
+
+  def test_invalid_filtering_condition(self, get_genres):
+    user = factories.UserFactory(is_active=True, role=RoleType.GUEST)
+    other = factories.UserFactory(is_active=True, role=RoleType.GUEST)
+    genres = get_genres
+    genres = models.Genre.objects.filter(pk__in=self.pk_convertor(genres)).order_by('-pk')
+    rooms = [
+      factories.QuizRoomFactory(owner=user, name='something', genres=genres, members=[]),
+      factories.QuizRoomFactory(owner=other, name='anything', genres=genres, members=[user])
+    ]
+    input_qs = models.QuizRoom.objects.filter(pk__in=self.pk_convertor(rooms)).order_by('pk')
+    params = {
+      'name': '1'*129,
+    }
+    form = forms.QuizRoomSearchForm(data=params)
+    queryset = form.filtering(input_qs).order_by('pk')
+
+    assert queryset.count() == input_qs.count()
+    assert all([val.pk == exact.pk for val, exact in zip(queryset, input_qs)])
+
 # ================
 # = QuizRoomForm =
 # ================
@@ -154,6 +451,7 @@ class TestQuizForm:
 @pytest.mark.django_db
 class TestQuizRoomForm:
   pk_convertor = lambda _self, xs: [val.pk for val in xs]
+  callback_user = lambda _self, item: f'{item.quizzes.all().count()},{item.code}'
 
   @pytest.mark.parametrize([
     'input_type',
@@ -172,17 +470,18 @@ class TestQuizRoomForm:
     ('includes-invalid-genre', False),
     ('includes-invalid-creator', False),
   ], ids=lambda xs: str(xs).lower())
-  def test_validate_inputs(self, mocker, get_genres, input_type, is_valid):
-    valid_genre, invalid_genre = get_genres
-    other_genre = factories.GenreFactory(is_enabled=True)
+  def test_validate_inputs(self, mocker, get_each_types_of_genre, input_type, is_valid):
+    _valid_genres, invalid_genre = get_each_types_of_genre
+    valid_genre = _valid_genres[0]
+    other_genre = _valid_genres[1]
     genres = models.Genre.objects.filter(pk__in=self.pk_convertor([valid_genre, other_genre])).order_by('-pk')
     creators = factories.UserFactory.create_batch(2, is_active=True, role=RoleType.CREATOR)
     creators = UserModel.objects.filter(pk__in=self.pk_convertor(creators)).order_by('-pk')
     members = factories.UserFactory.create_batch(5, is_active=True, role=RoleType.GUEST)
     members = UserModel.objects.filter(pk__in=self.pk_convertor(members)).order_by('-pk')
     # Mock
-    mocker.patch('quiz.models.GenreQuerySet.collect_active_genres', return_value=genres)
-    mocker.patch('account.models.CustomUserManager.collect_creators', return_value=creators)
+    mocker.patch('quiz.models.GenreQuerySet.collect_valid_genres', return_value=genres)
+    mocker.patch('account.models.CustomUserManager.collect_valid_creators', return_value=creators)
     mocker.patch('account.models.CustomUserManager.collect_valid_normal_users', return_value=members)
     # Define room owner
     owner = factories.UserFactory(is_active=True, role=RoleType.GUEST, friends=list(members))
@@ -229,7 +528,6 @@ class TestQuizRoomForm:
 
     # Define form instance
     form = forms.QuizRoomForm(user=owner, data=params)
-    print(form.errors)
 
     assert form.is_valid() == is_valid
     assert err_msg in str(form.errors)
@@ -238,13 +536,13 @@ class TestQuizRoomForm:
   def get_instance_type(self, request):
     yield request.param
 
-  def test_check_genre_options(self, mocker, get_instance_type):
+  def test_check_genre_options(self, mocker, get_genres, get_instance_type):
     instance_type = get_instance_type
     owner = factories.UserFactory(is_active=True)
-    genres = factories.GenreFactory.create_batch(3, is_enabled=True)
+    genres = get_genres
     genres = models.Genre.objects.filter(pk__in=self.pk_convertor(genres)).order_by('-pk')
     # Mock
-    mocker.patch('quiz.models.GenreQuerySet.collect_active_genres', return_value=genres)
+    mocker.patch('quiz.models.GenreQuerySet.collect_valid_genres', return_value=genres)
     # Set params
     if instance_type == 'none':
       params = {}
@@ -259,17 +557,18 @@ class TestQuizRoomForm:
       form.instance = None
     str_options = form.get_genre_options
     options = json.loads(str_options)
+    callback = lambda item: item.quizzes.all().count()
     if form.instance is not None:
       selected_items = form.instance.genres.all()
       rest_items = genres.exclude(pk__in=self.pk_convertor(selected_items))
       exacts = [
-        {"text": str(item), "value": str(item.pk), "selected": False} for item in rest_items
+        {"text": f'{item}({callback(item)})', "value": str(item.pk), "selected": False} for item in rest_items
       ] + [
-        {"text": str(item), "value": str(item.pk), "selected": True} for item in selected_items
+        {"text": f'{item}({callback(item)})', "value": str(item.pk), "selected": True} for item in selected_items
       ]
     else:
       exacts = [
-        {"text": str(item), "value": str(item.pk), "selected": False} for item in genres
+        {"text": f'{item}({callback(item)})', "value": str(item.pk), "selected": False} for item in genres
       ]
 
     assert isinstance(str_options, str)
@@ -282,7 +581,7 @@ class TestQuizRoomForm:
     creators = factories.UserFactory.create_batch(3, is_active=True, role=RoleType.CREATOR)
     creators = UserModel.objects.filter(pk__in=self.pk_convertor(creators)).order_by('-pk')
     # Mock
-    mocker.patch('account.models.CustomUserManager.collect_creators', return_value=creators)
+    mocker.patch('account.models.CustomUserManager.collect_valid_creators', return_value=creators)
     # Set params
     if instance_type == 'none':
       params = {}
@@ -301,23 +600,23 @@ class TestQuizRoomForm:
       selected_items = form.instance.creators.all()
       rest_items = creators.exclude(pk__in=self.pk_convertor(selected_items))
       exacts = [
-        {"text": f'{item}({item.code})', "value": str(item.pk), "selected": False} for item in rest_items
+        {"text": f'{item}({self.callback_user(item)})', "value": str(item.pk), "selected": False} for item in rest_items
       ] + [
-        {"text": f'{item}({item.code})', "value": str(item.pk), "selected": True} for item in selected_items
+        {"text": f'{item}({self.callback_user(item)})', "value": str(item.pk), "selected": True} for item in selected_items
       ]
     else:
       exacts = [
-        {"text": f'{item}({item.code})', "value": str(item.pk), "selected": False} for item in creators
+        {"text": f'{item}({self.callback_user(item)})', "value": str(item.pk), "selected": False} for item in creators
       ]
 
     assert isinstance(str_options, str)
     assert len(options) == len(exacts)
     assert g_compare_options(options, exacts)
 
-  def test_check_member_options(self, mocker, get_instance_type):
+  def test_check_member_options(self, mocker, get_genres, get_instance_type):
     instance_type = get_instance_type
     owner = factories.UserFactory(is_active=True)
-    genre = factories.GenreFactory(is_enabled=True)
+    genre = get_genres[0]
     members = factories.UserFactory.create_batch(3, is_active=True)
     members = UserModel.objects.filter(pk__in=self.pk_convertor(members)).order_by('-pk')
     # Mock
@@ -354,17 +653,17 @@ class TestQuizRoomForm:
     assert len(options) == len(exacts)
     assert g_compare_options(options, exacts)
 
-  def test_check_postprocess(self, mocker):
+  def test_check_postprocess(self, mocker, get_genres):
     owner = factories.UserFactory(is_active=True)
-    one_genre = factories.GenreFactory(is_enabled=True)
+    one_genre = get_genres[0]
     genres = models.Genre.objects.filter(pk__in=self.pk_convertor([one_genre])).order_by('-pk')
     creators = factories.UserFactory.create_batch(2, is_active=True, role=RoleType.CREATOR)
     creators = UserModel.objects.filter(pk__in=self.pk_convertor(creators)).order_by('-pk')
     members = factories.UserFactory.create_batch(5, is_active=True, role=RoleType.GUEST)
     members = UserModel.objects.filter(pk__in=self.pk_convertor(members)).order_by('-pk')
     # Mock
-    mocker.patch('quiz.models.GenreQuerySet.collect_active_genres', return_value=genres)
-    mocker.patch('account.models.CustomUserManager.collect_creators', return_value=creators)
+    mocker.patch('quiz.models.GenreQuerySet.collect_valid_genres', return_value=genres)
+    mocker.patch('account.models.CustomUserManager.collect_valid_creators', return_value=creators)
     mocker.patch('account.models.CustomUserManager.collect_valid_normal_users', return_value=members)
 
     if len(members) > 5:

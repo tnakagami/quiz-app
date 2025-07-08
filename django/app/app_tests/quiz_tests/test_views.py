@@ -15,6 +15,9 @@ import uuid
 UserModel = get_user_model()
 
 class Common:
+  pk_convertor = lambda _self, xs: [item.pk for item in xs]
+  compare_qs = lambda _self, qs, exacts: all([val.pk == exact.pk for val, exact in zip(qs, exacts)])
+
   @pytest.fixture(scope='module', params=['superuser', 'manager', 'creator', 'guest'])
   def get_user(self, django_db_blocker, request):
     patterns = {
@@ -133,7 +136,7 @@ class TestGenreView(Common):
     assert response.status_code == status.HTTP_200_OK
     assert err_msg in str(form.errors)
 
-  def test_get_access_to_updatepage(self, get_user, client):
+  def test_get_access_to_updatepage(self, get_genres, get_user, client):
     exact_types = {
       'superuser': status.HTTP_200_OK,
       'manager': status.HTTP_200_OK,
@@ -142,7 +145,7 @@ class TestGenreView(Common):
     }
     key, user = get_user
     client.force_login(user)
-    instance = factories.GenreFactory()
+    instance = get_genres[0]
     response = client.get(self.update_view_url(instance.pk))
 
     assert response.status_code == exact_types[key]
@@ -183,13 +186,7 @@ class TestQuizView(Common):
   create_view_url = reverse('quiz:create_quiz')
   update_view_url = lambda _self, pk: reverse('quiz:update_quiz', kwargs={'pk': pk})
   delete_view_url = lambda _self, pk: reverse('quiz:delete_quiz', kwargs={'pk': pk})
-
-  @pytest.fixture
-  def get_genres(self, django_db_blocker):
-    with django_db_blocker.unblock():
-      genres = list(factories.GenreFactory.create_batch(2, is_enabled=True))
-
-    return genres
+  paginate_by = 15
 
   def test_get_access_to_listpage(self, get_user, client):
     exact_types = {
@@ -228,7 +225,7 @@ class TestQuizView(Common):
       _ = factories.QuizFactory.create_batch(3, creator=user, genre=genres[0], is_completed=False)
       expected_count = 5
     else:
-      expected_count = len(models.Quiz.objects.all())
+      expected_count = models.Quiz.objects.all().count()
     # Call `get_queryset` method
     request = rf.get(self.list_view_url)
     request.user = user
@@ -236,7 +233,91 @@ class TestQuizView(Common):
     view.setup(request)
     queryset = view.get_queryset()
 
-    assert len(queryset) == expected_count
+    assert queryset.count() == expected_count
+
+  @pytest.mark.parametrize([
+    'has_manager_role',
+  ], [
+    (False, ),
+    (True, ),
+  ], ids=[
+    'is-creator',
+    'is-manager',
+  ])
+  def test_post_reqeust_to_extract_queryset(self, get_genres, client, has_manager_role):
+    genres = get_genres[:3]
+    creators = factories.UserFactory.create_batch(3, is_active=True, role=RoleType.CREATOR)
+    creators = UserModel.objects.filter(pk__in=self.pk_convertor(creators))
+    user = creators[0] if not has_manager_role else factories.UserFactory(is_active=True, role=RoleType.MANAGER)
+    # Create instance
+    instances = []
+    for genre in genres:
+      instances += [factories.QuizFactory(creator=creators[0], genre=genre, is_completed=False)]
+
+      for creator in creators:
+        instances += [
+          factories.QuizFactory(creator=creator, genre=genre, is_completed=True),
+          factories.QuizFactory(creator=creator, genre=genre, is_completed=False),
+        ]
+    # Create parameters
+    all_queryset = models.Quiz.objects.filter(pk__in=self.pk_convertor(instances))
+    params = {
+      'genres': [str(genres[1].pk), str(genres[2].pk)],
+      'creators': [str(creators[1].pk), str(creators[2].pk)] if has_manager_role else [],
+      'is_and_op': True
+    }
+    if has_manager_role:
+      expected = all_queryset.filter(
+        creator__pk__in=params['creators'],
+        genre__pk__in=params['genres'],
+      ).order_by('pk')
+    else:
+      expected = all_queryset.filter(
+        creator__pk__in=[creators[0].pk],
+        genre__pk__in=params['genres'],
+      ).order_by('pk')
+    # Check output
+    client.force_login(user)
+    response = client.post(self.list_view_url, data=params, follow=True)
+    quizzes = response.context['quizzes']
+    estimated = models.Quiz.objects.filter(pk__in=[_quiz.pk for _quiz in quizzes]).order_by('pk')
+
+    assert response.status_code == status.HTTP_200_OK
+    assert estimated.count() == expected.count()
+    assert self.compare_qs(estimated, expected)
+
+  def test_invalid_post_reqeust_to_extract_queryset(self, get_genres, mocker, client):
+    genres = get_genres[:3]
+    creators = factories.UserFactory.create_batch(3, is_active=True, role=RoleType.CREATOR)
+    creators = UserModel.objects.filter(pk__in=self.pk_convertor(creators))
+    user = factories.UserFactory(is_active=True, role=RoleType.MANAGER)
+    # Create instance
+    instances = []
+    for genre in genres:
+      instances += [factories.QuizFactory(creator=creators[0], genre=genre, is_completed=False)]
+
+      for creator in creators:
+        instances += [
+          factories.QuizFactory(creator=creator, genre=genre, is_completed=True),
+          factories.QuizFactory(creator=creator, genre=genre, is_completed=False),
+        ]
+    # Create parameters
+    all_queryset = models.Quiz.objects.filter(pk__in=self.pk_convertor(instances)).order_by('pk')
+    mocker.patch('quiz.models.Quiz.objects.all', return_value=all_queryset)
+    params = {
+      'genres': [str(genres[1].pk), str(genres[2].pk)],
+      'creators': [str(creators[1].pk), str(creators[2].pk)],
+    }
+    # Check output
+    client.force_login(user)
+    response = client.post(self.list_view_url, data=params, follow=True)
+    quizzes = response.context['quizzes']
+    estimated = models.Quiz.objects.filter(pk__in=[_quiz.pk for _quiz in quizzes]).order_by('pk')
+    expected = all_queryset[:self.paginate_by] if len(all_queryset) > self.paginate_by else all_queryset
+
+    assert response.status_code == status.HTTP_200_OK
+    assert estimated.count() == len(expected)
+    assert self.compare_qs(estimated, expected)
 
   def test_get_access_to_createpage(self, get_user, client):
     exact_types = {
@@ -440,7 +521,7 @@ class TestQuizView(Common):
     queryset = models.Quiz.objects.filter(pk__in=[instance.pk])
 
     assert response.status_code == expected_status_code
-    assert len(queryset) == expected_count
+    assert queryset.count() == expected_count
 
 # ================
 # = QuizRoomView =
@@ -449,8 +530,6 @@ class TestQuizView(Common):
 @pytest.mark.view
 @pytest.mark.django_db
 class TestQuizRoomView(Common):
-  pk_convertor = lambda _self, xs: [val.pk for val in xs]
-  compare_qs = lambda _self, qs, exacts: all([val.pk == exact.pk for val, exact in zip(qs, exacts)])
   list_view_url = reverse('quiz:room_list')
   create_view_url = reverse('quiz:create_room')
   update_view_url = lambda _self, pk: reverse('quiz:update_room', kwargs={'pk': pk})
@@ -517,7 +596,64 @@ class TestQuizRoomView(Common):
     view.setup(request)
     queryset = view.get_queryset()
 
-    assert len(queryset) == expected_count
+    assert queryset.count() == expected_count
+
+  @pytest.mark.parametrize([
+    'name',
+    'is_player',
+    'count',
+  ], [
+    ('hoge-room', True, 1),
+    ('hoge-room', False, 1),
+    ('room', True, 2),
+    ('room', False, 3),
+    ('no-room', True, 0),
+    ('no-room', False, 0),
+  ], ids=[
+    'only-one-room-and-player',
+    'only-one-room-and-not-player',
+    'two-rooms-and-player',
+    'two-rooms-and-not-player',
+    'no-rooms-and-player',
+    'no-rooms-and-not-player',
+  ])
+  def test_filtering_method_in_listpage(self, get_genres, mocker, client, name, is_player, count):
+    if is_player:
+      user = factories.UserFactory(is_active=True, role=RoleType.GUEST)
+      player = user
+    else:
+      user = factories.UserFactory(is_active=True, role=RoleType.MANAGER)
+      player = factories.UserFactory(is_active=True, role=RoleType.GUEST)
+    others = factories.UserFactory.create_batch(2, is_active=True, role=RoleType.GUEST)
+    genres = get_genres
+    genres = models.Genre.objects.filter(pk__in=self.pk_convertor(genres)).order_by('-pk')
+    player_rooms = [
+      factories.QuizRoomFactory(owner=player, name='hoge-room', genres=genres, members=[]),
+      factories.QuizRoomFactory(owner=others[0], name='foo-room', genres=genres, members=[player]),
+      factories.QuizRoomFactory(owner=player, name='not-relevant-instance', genres=genres, members=[]),
+      factories.QuizRoomFactory(owner=others[0], name='ignore-instance', genres=genres, members=[player]),
+    ]
+    rest_rooms = [
+      factories.QuizRoomFactory(owner=others[1], name='bar-room', genres=genres, members=[others[0]]),
+      factories.QuizRoomFactory(owner=others[1], name='not-target-player', genres=genres, members=[others[0]]),
+    ]
+    all_queryset = models.QuizRoom.objects.filter(pk__in=self.pk_convertor(player_rooms+rest_rooms))
+    if is_player:
+      target_qs = models.QuizRoom.objects.filter(pk__in=self.pk_convertor(player_rooms))
+      mocker.patch('quiz.models.QuizRoom.objects.collect_relevant_rooms', return_value=target_qs)
+    else:
+      mocker.patch('quiz.models.QuizRoom.objects.all', return_value=all_queryset)
+    query_string = {
+      'name': name,
+    }
+    # Send request
+    client.force_login(user)
+    response = client.get(self.list_view_url, query_params=query_string)
+    output_rooms = response.context['rooms']
+    estimated = models.QuizRoom.objects.filter(pk__in=[_room.pk for _room in output_rooms])
+
+    assert response.status_code == status.HTTP_200_OK
+    assert estimated.count() == count
 
   def test_get_access_to_createpage(self, get_user, client):
     exact_types = {
@@ -542,8 +678,8 @@ class TestQuizRoomView(Common):
       genres = factories.GenreFactory.create_batch(2, is_enabled=True)
       genres = models.Genre.objects.filter(pk__in=self.pk_convertor(genres)).order_by('pk')
     # Mock
-    mocker.patch('quiz.models.GenreQuerySet.collect_active_genres', return_value=genres)
-    mocker.patch('account.models.CustomUserManager.collect_creators', return_value=creators)
+    mocker.patch('quiz.models.GenreQuerySet.collect_valid_genres', return_value=genres)
+    mocker.patch('account.models.CustomUserManager.collect_valid_creators', return_value=creators)
     mocker.patch('account.models.CustomUserManager.collect_valid_normal_users', return_value=members)
 
     return genres, creators, members
@@ -585,11 +721,11 @@ class TestQuizRoomView(Common):
 
     assert response.status_code == status.HTTP_302_FOUND
     assert response['Location'] == self.list_view_url
-    assert len(all_genres) == len(genres)
+    assert all_genres.count() == genres.count()
     assert self.compare_qs(all_genres, genres.order_by('pk'))
-    assert len(all_creators) == len(creators)
+    assert all_creators.count() == creators.count()
     assert self.compare_qs(all_creators, creators.order_by('pk'))
-    assert len(all_members) == len(members)
+    assert all_members.count() == members.count()
     assert self.compare_qs(all_members, members.order_by('pk'))
 
   @pytest.mark.parametrize([
@@ -657,9 +793,9 @@ class TestQuizRoomView(Common):
     assert response['Location'] == self.list_view_url
     assert instance.owner.pk == original.owner.pk
     assert instance.name == params['name']
-    assert len(all_genres) == 0
-    assert len(all_creators) == len(params['creators'])
-    assert len(all_members) == len(params['members'])
+    assert all_genres.count() == 0
+    assert all_creators.count() == len(params['creators'])
+    assert all_members.count() == len(params['members'])
     assert self.compare_qs(all_creators, UserModel.objects.filter(pk__in=params['creators']).order_by('pk'))
     assert self.compare_qs(all_members, members)
     assert instance.max_question == params['max_question']
@@ -789,7 +925,7 @@ class TestQuizRoomView(Common):
     queryset = models.QuizRoom.objects.filter(pk__in=[instance.pk])
 
     assert response.status_code == expected_status_code
-    assert len(queryset) == expected_count
+    assert queryset.count() == expected_count
 
   @pytest.mark.parametrize([
     'is_owner',
@@ -810,7 +946,7 @@ class TestQuizRoomView(Common):
     'is-assigned-and-cannot-access',
     'invalid-user',
   ])
-  def test_get_access_to_detailpage(self, get_user, client, is_owner, is_assigned, is_enabled):
+  def test_get_access_to_detailpage(self, get_genres, get_user, client, is_owner, is_assigned, is_enabled):
     can_access = (is_owner or is_assigned) and is_enabled
     expected_type = {
       'superuser': status.HTTP_403_FORBIDDEN,
@@ -819,7 +955,7 @@ class TestQuizRoomView(Common):
       'guest': status.HTTP_200_OK if can_access else status.HTTP_403_FORBIDDEN,
     }
     key, user = get_user
-    genres = factories.GenreFactory.create_batch(2, is_enabled=True)
+    genres = get_genres[:3]
     genres = models.Genre.objects.filter(pk__in=self.pk_convertor(genres)).order_by('pk')
     creators = factories.UserFactory.create_batch(5, is_active=True, role=RoleType.CREATOR)
     creators = UserModel.objects.filter(pk__in=self.pk_convertor(creators)).order_by('pk')

@@ -3,7 +3,7 @@
 {% load custom_tags %}
 
 {% block content %}
-{% include 'breadcrumbs.html' with title=_("Quiz rooms") %}
+{% include 'breadcrumbs.html' with title=_("Quiz room list") %}
 <div class="row justify-content-center">
   <div class="col">
     <div class="row row-cols-1 g-2">
@@ -17,6 +17,17 @@
         </a>
       </div>
       {% endif %}
+      <div class="col">
+        <button
+          type="button"
+          id="room-search"
+          class="btn btn-success w-100 custom-boxshadow"
+          data-bs-toggle="modal"
+          data-bs-target="#room-search-modal"
+        >
+          {% trans "Search room (Shift + f)" %}
+        </button>
+      </div>
       {% if rooms %}
       <div class="col">
         <div class="table-responsive">
@@ -36,9 +47,9 @@
                 {% with table_css=instance.is_enabled|yesno:',table-secondary' %}
                 <td scope="row" class="{{ table_css }}">
                   {% if user.is_player %}
-                  <a href="{% url 'quiz:enter_room' pk=instance.pk %}">{{ instance.name }}</a>
+                  <a href="{% url 'quiz:enter_room' pk=instance.pk %}">{{ instance.name }}({{ instance.owner|stringformat:"s" }})</a>
                   {% else %}
-                  {{ instance.name }}
+                  {{ instance.name }}({{ instance.owner|stringformat:"s" }})
                   {% endif %}
                 </td>
                 <td class="{{ table_css }}">{{ instance.members.all.count }}</td>
@@ -49,14 +60,14 @@
                   {% if instance|can_update:user %}
                   <a
                     href="{% url 'quiz:update_room' pk=instance.pk %}"
-                    class="btn btn-outline-success w-100 custom-boxshadow"
+                    class="btn btn-outline-success w-100 custom-boxshadow text-nowrap"
                   >
                     {% trans "Edit" %}
                   </a>
                   {% else %}
                   <button
                     type="button"
-                    class="btn btn-outline-success w-100 custom-boxshadow"
+                    class="btn btn-outline-success w-100 custom-boxshadow text-nowrap"
                     disabled
                   >
                     {% trans "Edit" %}
@@ -67,7 +78,7 @@
                   {% if instance|can_delete:user %}
                   <button
                     type="button"
-                    class="btn btn-outline-danger w-100 custom-boxshadow js-delete-room"
+                    class="btn btn-outline-danger w-100 custom-boxshadow text-nowrap js-delete-room"
                     data-name="{{ instance.name }}"
                     data-url="{% url 'quiz:delete_room' pk=instance.pk %}"
                   >
@@ -76,7 +87,7 @@
                   {% else %}
                   <button
                     type="button"
-                    class="btn btn-outline-danger w-100 custom-boxshadow"
+                    class="btn btn-outline-danger w-100 custom-boxshadow text-nowrap"
                     data-name="{{ instance.name }}"
                     data-url="#"
                     disabled
@@ -103,6 +114,39 @@
   </div>
 </div>
 
+<div class="modal" id="room-search-modal" tabindex="-1" aria-labelledby="room-search-label" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <p class="modal-title fs-5" id="room-search-label">{% trans "Filtering rooms" %}</p>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>{% trans "Enter the room name (partial match search possible)" %}</p>
+      </div>
+      <div class="modal-footer">
+        <form method="GET" action="{% url 'quiz:room_list' %}" id="room-search-form" class="w-100">
+
+          {{ form }}
+
+          <div class="mt-1 row g-2">
+            <div class="col-12 col-md-6">
+              <button type="submit" class="btn btn-primary w-100 custom-boxshadow">
+                {% trans "Search (Enter)" %}
+              </button>
+            </div>
+            <div class="col-12 col-md-6">
+              <button type="button" class="btn btn-secondary w-100 custom-boxshadow" data-bs-dismiss="modal">
+                {% trans "Cancel" %}
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
 {# Delete modal #}
 {% include "delete_modal_form.html" with modal_id="delete-modal" form_id="delete-form" %}
 {% endblock %}
@@ -118,6 +162,21 @@
       formID: 'delete-form',
       modalID: 'delete-modal',
     });
+    // Add key event
+    const searchButton = document.querySelector('#room-search');
+    const searchForm = document.querySelector('#room-search-form');
+    document.addEventListener('keyup', (event) => {
+      if (event.key === 'F') {
+        /* F := Sfhit + f */
+        searchButton.click();
+      }
+      else if (event.key === 'Enter') {
+        form.submit();
+      }
+    });
+    {% if form.errors %}
+    searchButton.click();
+    {% endif %}
   };
   // Add DOM event
   document.addEventListener('DOMContentLoaded', init);

@@ -34,6 +34,22 @@ class Common:
 
     return key, user
 
+  @pytest.fixture(params=['superuser', 'manager', 'creator', 'guest'], scope='module')
+  def get_users(self, django_db_blocker, request):
+    patterns = {
+      'superuser': {'is_active': True, 'is_staff': True, 'is_superuser': True, 'role': RoleType.GUEST},
+      'manager': {'is_active': True, 'role': RoleType.MANAGER},
+      'creator': {'is_active': True, 'role': RoleType.CREATOR},
+      'guest': {'is_active': True, 'role': RoleType.GUEST},
+    }
+    key = request.param
+    kwargs = patterns[key]
+    # Get user instance
+    with django_db_blocker.unblock():
+      user = factories.UserFactory(**kwargs)
+
+    return key, user
+
 # ======================
 # = Index/Login/Logout =
 # ======================

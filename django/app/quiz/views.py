@@ -26,12 +26,12 @@ from . import models, forms
 class GenreListPage(LoginRequiredMixin, HasManagerRole, ListView, DjangoBreadcrumbsMixin):
   model = models.Genre
   template_name = 'quiz/genre_list.html'
-  paginate_by = 15
+  paginate_by = 50
   queryset = models.Genre.objects.all()
   context_object_name = 'genres'
   crumbles = DjangoBreadcrumbsMixin.get_target_crumbles(
     url_name='quiz:genre_list',
-    title=gettext_lazy('Genres'),
+    title=gettext_lazy('Genre list'),
     parent_view_class=Index,
   )
 
@@ -65,24 +65,49 @@ class QuizListPage(LoginRequiredMixin, HasCreatorRole, ListView, DjangoBreadcrum
   model = models.Quiz
   template_name = 'quiz/quiz_list.html'
   paginate_by = 15
+  form_class = forms.QuizSearchForm
   context_object_name = 'quizzes'
+  http_method_names = ['get', 'post']
   crumbles = DjangoBreadcrumbsMixin.get_target_crumbles(
     url_name='quiz:quiz_list',
-    title=gettext_lazy('Quizzes'),
+    title=gettext_lazy('Quiz list'),
     parent_view_class=Index,
   )
 
+  ##
+  # @breif Get queryset
+  # @return queryset Fitered queryset
   def get_queryset(self):
     user = self.request.user
-
     # In the case of that user is manager or superuser
     if user.has_manager_role():
-      queryset = self.model.objects.all()
+      queryset = models.Quiz.objects.all()
     # In the case of that user is creator
     else:
       queryset = user.quizzes.all()
 
     return queryset
+
+  def post(self, request, *args, **kwargs):
+    params = self.request.POST.copy() or {}
+    self.form = self.form_class(user=self.request.user, data=params)
+    # Update object list in POST request
+    self.object_list = self.form.filtering(self.get_queryset())
+    context = self.get_context_data(form=self.form)
+
+    return self.render_to_response(context)
+
+  ##
+  # @brief Get context data
+  # @param kwargs named arguments
+  # @return context context which is used in template file
+  def get_context_data(self, **kwargs):
+    context = super().get_context_data(**kwargs)
+    # In the case of calling GET method
+    if 'form' not in context.keys():
+      context['form'] = self.form_class(user=self.request.user)
+
+    return context
 
 class CreateQuizPage(BaseCreateUpdateView, IsCreator, CreateView, DjangoBreadcrumbsMixin):
   model = models.Quiz
@@ -130,9 +155,10 @@ class QuizRoomListPage(LoginRequiredMixin, ListView, DjangoBreadcrumbsMixin):
   template_name = 'quiz/room_list.html'
   paginate_by = 15
   context_object_name = 'rooms'
+  form_class = forms.QuizRoomSearchForm
   crumbles = DjangoBreadcrumbsMixin.get_target_crumbles(
     url_name='quiz:room_list',
-    title=gettext_lazy('Quiz rooms'),
+    title=gettext_lazy('Quiz room list'),
     parent_view_class=Index,
   )
 
@@ -145,8 +171,22 @@ class QuizRoomListPage(LoginRequiredMixin, ListView, DjangoBreadcrumbsMixin):
     # In the case of that user is creator or guest
     else:
       queryset = self.model.objects.collect_relevant_rooms(user)
+    # Filtering queryset
+    params = self.request.GET.copy() or {}
+    self.form = self.form_class(data=params)
+    queryset = self.form.filtering(queryset)
 
     return queryset
+
+  ##
+  # @brief Get context data
+  # @param kwargs named arguments
+  # @return context context which is used in template file
+  def get_context_data(self, **kwargs):
+    context = super().get_context_data(**kwargs)
+    context['form'] = self.form
+
+    return context
 
 class CreateQuizRoomPage(BaseCreateUpdateView, IsPlayer, CreateView, DjangoBreadcrumbsMixin):
   model = models.QuizRoom

@@ -95,31 +95,61 @@ class TestGenre(Common):
     'is-creator',
     'is-guest',
   ])
-  def test_check_update_permission_based_on_role(self, role, is_valid):
+  def test_check_update_permission_based_on_role(self, get_genres, role, is_valid):
     user = factories.UserFactory(is_active=True, role=role)
-    instance = factories.GenreFactory()
+    instance = get_genres[0]
 
     assert instance.has_update_permission(user) == is_valid
 
-  def test_check_update_permission_from_user_pattern(self, get_user):
+  def test_check_update_permission_from_user_pattern(self, get_genres, get_user):
     _, user = get_user
-    instance = factories.GenreFactory()
+    instance = get_genres[0]
 
     assert not instance.has_delete_permission(user)
 
   def test_check_active_genres(self):
-    instances = factories.GenreFactory.create_batch(6, is_enabled=False)
-    instances[2].is_enabled = True
-    instances[2].save()
-    instances[4].is_enabled = True
-    instances[4].save()
-    queryset = models.Genre.objects.filter(pk__in=list(map(lambda val: val.pk, instances))).collect_active_genres()
-    pk2 = instances[2].pk
-    pk4 = instances[4].pk
+    genres = factories.GenreFactory.create_batch(4, is_enabled=False)
+    genres[1].is_enabled = True
+    genres[1].save()
+    genres[2].is_enabled = True
+    genres[2].save()
+    queryset = models.Genre.objects.filter(pk__in=list(map(lambda val: val.pk, genres))).collect_active_genres()
+    pk1 = genres[1].pk
+    pk2 = genres[2].pk
 
-    assert len(queryset) == 2
+    assert queryset.count() == 2
+    assert queryset.filter(pk__in=[pk1]).exists()
     assert queryset.filter(pk__in=[pk2]).exists()
-    assert queryset.filter(pk__in=[pk4]).exists()
+
+  @pytest.mark.parametrize([
+    'is_completed',
+    'count',
+    'callback',
+  ], [
+    (True, 2, lambda qs, exacts: all([qs.filter(pk__in=[pk]).exists() for pk in exacts])),
+    (False, 0, lambda qs, exacts: True),
+  ], ids=[
+    'completed-quiz',
+    'not-completed-quiz',
+  ])
+  def test_check_valid_genres(self, is_completed, count, callback):
+    creator = factories.UserFactory(is_active=True, role=RoleType.CREATOR)
+    genres = factories.GenreFactory.create_batch(4, is_enabled=False)
+    genres[1].is_enabled = True
+    genres[1].save()
+    genres[2].is_enabled = True
+    genres[2].save()
+
+    for genre in genres:
+      _ = factories.QuizFactory(creator=creator, genre=genre, is_completed=is_completed)
+    queryset = models.Genre.objects.filter(pk__in=list(map(lambda val: val.pk, genres))).collect_valid_genres()
+    exacts = [
+      genres[1].pk,
+      genres[2].pk,
+    ]
+
+    assert queryset.count() == count
+    assert callback(queryset, exacts)
 
 # ========
 # = Quiz =
@@ -148,7 +178,7 @@ class TestQuiz(Common):
     'too-long-quiz',
     'not-set',
   ])
-  def test_create_instance(self, question, answer, is_completed, short_question, short_answer):
+  def test_create_instance(self, get_genres, question, answer, is_completed, short_question, short_answer):
     kwargs = {
       'question': question,
       'answer': answer,
@@ -166,7 +196,7 @@ class TestQuiz(Common):
       exact_answer = answer
     # Create instance
     user = factories.UserFactory(is_active=True, role=RoleType.CREATOR)
-    genre = factories.GenreFactory()
+    genre = get_genres[0]
     instance = models.Quiz.objects.create(
       creator=user,
       genre=genre,
@@ -204,10 +234,10 @@ class TestQuiz(Common):
     assert out == expected
 
   @pytest.fixture(scope='class')
-  def get_quizzes_info(self, django_db_blocker):
+  def get_quizzes_info(self, django_db_blocker, get_genres):
     with django_db_blocker.unblock():
       creators = factories.UserFactory.create_batch(3, is_active=True, role=RoleType.CREATOR)
-      genres = factories.GenreFactory.create_batch(4, is_enabled=True)
+      genres = get_genres[:4]
       # Create quiz
       for creator in creators:
         for genre in genres:
