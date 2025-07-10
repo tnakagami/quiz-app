@@ -81,7 +81,7 @@ class QuizListPage(LoginRequiredMixin, HasCreatorRole, ListView, DjangoBreadcrum
     user = self.request.user
     # In the case of that user is manager or superuser
     if user.has_manager_role():
-      queryset = models.Quiz.objects.all()
+      queryset = models.Quiz.objects.select_related('creator', 'genre').all()
     # In the case of that user is creator
     else:
       queryset = user.quizzes.all()
@@ -167,7 +167,7 @@ class QuizRoomListPage(LoginRequiredMixin, ListView, DjangoBreadcrumbsMixin):
 
     # In the case of that user is manager or superuser
     if user.has_manager_role():
-      queryset = self.model.objects.all()
+      queryset = self.model.objects.select_related('owner').prefetch_related('genres', 'creators', 'members').all()
     # In the case of that user is creator or guest
     else:
       queryset = self.model.objects.collect_relevant_rooms(user)

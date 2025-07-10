@@ -288,7 +288,7 @@ class RoleChangeRequestListPage(LoginRequiredMixin, HasManagerRole, ListView, Dj
   # @brief Get queryset
   # @return Queryset of role approval records
   def get_queryset(self):
-    return self.model.objects.collect_targets()
+    return self.model.objects.select_related('user').collect_targets()
 
   ##
   # @brief Get context data

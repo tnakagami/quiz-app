@@ -112,6 +112,8 @@ class QuizSearchForm(forms.Form):
         for instance in UserModel.objects.collect_creators()
       ]
     else:
+      ##
+      # If the request user's role is `CREATOR`, then this system hides the `creators` field.
       self.fields['creators'].choices = [(str(self.user.pk), str(self.user))]
       self.fields['creators'].widget = forms.HiddenInput()
     self.dual_listbox = DualListbox()
@@ -327,17 +329,29 @@ class QuizRoomForm(ModelFormBasedOnUser):
     self.dual_listbox = DualListbox()
 
   ##
-  # @brief Check whether, at least, either genres or creators is set or not
-  # @exception ValidationError Both genres and creators are not set.
+  # @brief Check the relationship of relevant variables
+  # @exception ValidationError Both `genres` and `creators` are not set.
+  # @exception ValidationError The `max_question` is greater than the maximum number of quizzes.
   def clean(self):
     super().clean()
     genres = self.cleaned_data.get('genres', None)
     creators = self.cleaned_data.get('creators', None)
-
-    if (genres is None or not genres.all()) and (creators is None or not creators.all()):
+    max_question = self.cleaned_data.get('max_question', 0)
+    # Check combination of both genres and creators
+    if (genres is None or genres.count() == 0) and (creators is None or creators.count() == 0):
       raise forms.ValidationError(
         gettext_lazy('You have to assign at least one of genres and creators to the quiz room.'),
         code='invalid_assignment',
+      )
+    # Check the number of quizzes this system can collect
+    all_relevant_quizzes = models.Quiz.objects.collect_quizzes(creators=creators, genres=genres)
+    max_count = all_relevant_quizzes.count()
+    # In the case of that there are not enough quizzes.
+    if max_count < max_question:
+      raise forms.ValidationError(
+        gettext_lazy('The number of quizzes this system can set is %(max_count)s, but the requested value is %(max_question)s. Please check the condition.'),
+        code='invalid_assignment',
+        params={'max_question': str(max_question), 'max_count': str(max_count)},
       )
 
   ##
@@ -347,7 +361,7 @@ class QuizRoomForm(ModelFormBasedOnUser):
   def get_genre_options(self):
     all_genres = self.fields['genres'].queryset
     selected_genres = self.instance.genres.all() if self.instance else None
-    callback = lambda genre: genre.quizzes.all().count()
+    callback = lambda genre: genre.quizzes.all().filter(is_completed=True).count()
     options = self.dual_listbox.collect_options_of_items(all_genres, selected_genres, callback=callback)
 
     return options
@@ -359,7 +373,7 @@ class QuizRoomForm(ModelFormBasedOnUser):
   def get_creator_options(self):
     all_creators = self.fields['creators'].queryset
     selected_creators = self.instance.creators.all() if self.instance else None
-    callback = lambda creator: f'{creator.quizzes.all().count()},{creator.code}'
+    callback = lambda creator: f'{creator.quizzes.all().filter(is_completed=True).count()},{creator.code}'
     options = self.dual_listbox.collect_options_of_items(all_creators, selected_creators, callback)
 
     return options

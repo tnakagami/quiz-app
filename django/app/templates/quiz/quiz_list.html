@@ -139,17 +139,19 @@
       modalID: 'delete-modal',
     });
     (() => {
-      const availableTitle = '{% trans "All genres" %}';
-      const selectedTitle = '{% trans "Assigned genres" %}';
+      const element = document.querySelector('#genreList');
+      const availableTitle = element.dataset.available;
+      const selectedTitle = element.dataset.selected;
       const options = '{{ form.get_genre_options|safe }}';
-      helper.initDualListbox('#genreList', availableTitle, selectedTitle, options);
+      helper.initDualListbox(element, availableTitle, selectedTitle, options);
     })();
     {% if user.has_manager_role %}
     (() => {
-      const availableTitle = '{% trans "All creators" %}';
-      const selectedTitle = '{% trans "Assigned creators" %}';
+      const element = document.querySelector('#creatorList');
+      const availableTitle = element.dataset.available;
+      const selectedTitle = element.dataset.selected;
       const options = '{{ form.get_creator_options|safe }}';
-      helper.initDualListbox('#creatorList', availableTitle, selectedTitle, options);
+      helper.initDualListbox(element, availableTitle, selectedTitle, options);
     })();
     {% endif %}
     // Add key event

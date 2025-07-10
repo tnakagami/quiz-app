@@ -98,7 +98,7 @@ class QuizQuerySet(models.QuerySet):
       for key, val in conditions.items():
         q_cond.add(models.Q(**{key: val}), cond_op)
       # Filtering
-      queryset = queryset.filter(q_cond)
+      queryset = queryset.filter(q_cond).order_by('pk')
 
     return queryset
 

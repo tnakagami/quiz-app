@@ -237,14 +237,19 @@ class TestQuizView(Common):
 
   @pytest.mark.parametrize([
     'has_manager_role',
+    'is_and_op',
   ], [
-    (False, ),
-    (True, ),
+    (False, True),
+    (False, False),
+    (True, True),
+    (True, False),
   ], ids=[
-    'is-creator',
-    'is-manager',
+    'is-creator-and-condition',
+    'is-creator-or-condition',
+    'is-manager-and-condition',
+    'is-manager-or-condition',
   ])
-  def test_post_reqeust_to_extract_queryset(self, get_genres, client, has_manager_role):
+  def test_post_reqeust_to_extract_queryset(self, get_genres, mocker, client, has_manager_role, is_and_op):
     genres = get_genres[:3]
     creators = factories.UserFactory.create_batch(3, is_active=True, role=RoleType.CREATOR)
     creators = UserModel.objects.filter(pk__in=self.pk_convertor(creators))
@@ -261,29 +266,36 @@ class TestQuizView(Common):
         ]
     # Create parameters
     all_queryset = models.Quiz.objects.filter(pk__in=self.pk_convertor(instances))
+    mocker.patch('quiz.models.Quiz.objects.all', return_value=all_queryset)
     params = {
       'genres': [str(genres[1].pk), str(genres[2].pk)],
       'creators': [str(creators[1].pk), str(creators[2].pk)] if has_manager_role else [],
-      'is_and_op': True
+      'is_and_op': is_and_op,
     }
     if has_manager_role:
-      expected = all_queryset.filter(
-        creator__pk__in=params['creators'],
-        genre__pk__in=params['genres'],
-      ).order_by('pk')
+      selected_qs = models.Quiz.objects.collect_quizzes(
+        queryset=all_queryset,
+        creators=params['creators'],
+        genres=params['genres'],
+        is_and_op=is_and_op,
+      )
     else:
-      expected = all_queryset.filter(
-        creator__pk__in=[creators[0].pk],
-        genre__pk__in=params['genres'],
-      ).order_by('pk')
+      del params['creators']
+      selected_qs = models.Quiz.objects.collect_quizzes(
+        queryset=all_queryset.filter(creator=creators[0]),
+        genres=params['genres'],
+        is_and_op=is_and_op,
+      )
     # Check output
     client.force_login(user)
     response = client.post(self.list_view_url, data=params, follow=True)
     quizzes = response.context['quizzes']
     estimated = models.Quiz.objects.filter(pk__in=[_quiz.pk for _quiz in quizzes]).order_by('pk')
+    expected = selected_qs[:self.paginate_by] if len(selected_qs) > self.paginate_by else selected_qs
+    expected = models.Quiz.objects.filter(pk__in=self.pk_convertor(expected)).order_by('pk')
 
     assert response.status_code == status.HTTP_200_OK
-    assert estimated.count() == expected.count()
+    assert estimated.count() == len(expected)
     assert self.compare_qs(estimated, expected)
 
   def test_invalid_post_reqeust_to_extract_queryset(self, get_genres, mocker, client):
@@ -303,7 +315,7 @@ class TestQuizView(Common):
         ]
     # Create parameters
     all_queryset = models.Quiz.objects.filter(pk__in=self.pk_convertor(instances)).order_by('pk')
-    mocker.patch('quiz.models.Quiz.objects.all', return_value=all_queryset)
+    mocker.patch('quiz.views.QuizListPage.get_queryset', return_value=all_queryset)
     params = {
       'genres': [str(genres[1].pk), str(genres[2].pk)],
       'creators': [str(creators[1].pk), str(creators[2].pk)],
@@ -677,6 +689,11 @@ class TestQuizRoomView(Common):
       members = UserModel.objects.filter(pk__in=self.pk_convertor(list(creators) + guests)).order_by('pk')
       genres = factories.GenreFactory.create_batch(2, is_enabled=True)
       genres = models.Genre.objects.filter(pk__in=self.pk_convertor(genres)).order_by('pk')
+      # Make quiz
+      for genre in genres:
+        _ = factories.QuizFactory(creator=creators[0], genre=genre, is_completed=True)
+        _ = factories.QuizFactory(creator=creators[1], genre=genre, is_completed=True)
+        _ = factories.QuizFactory(creator=creators[2], genre=genre, is_completed=True)
     # Mock
     mocker.patch('quiz.models.GenreQuerySet.collect_valid_genres', return_value=genres)
     mocker.patch('account.models.CustomUserManager.collect_valid_creators', return_value=creators)
@@ -702,7 +719,7 @@ class TestQuizRoomView(Common):
       'genres': self.pk_convertor(genres),
       'creators': self.pk_convertor(creators),
       'members': self.pk_convertor(members),
-      'max_question': 123,
+      'max_question': 4,
       'is_enabled': True,
     }
     client.force_login(user)
@@ -777,7 +794,7 @@ class TestQuizRoomView(Common):
       'name': 'updated-name',
       'creators': [str(creators[0].pk), str(creators[1].pk)],
       'members': [str(user.pk) for user in members],
-      'max_question': 10,
+      'max_question': 3,
       'is_enabled': True,
     }
     response = client.post(url, data=params)
@@ -832,7 +849,7 @@ class TestQuizRoomView(Common):
       'genres': [str(genres[0].pk)],
       'creators': [str(creators[0].pk)],
       'members': [str(members[0].pk)],
-      'max_question': 10,
+      'max_question': 3,
       'is_enabled': True,
     }
     if data_type == 'both-genres-and-creators-are-none':

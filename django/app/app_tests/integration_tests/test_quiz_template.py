@@ -295,7 +295,7 @@ class TestQuiz(Common):
     creator, _, all_queryset = create_quizzes
     user = get_managers
     app = csrf_exempt_django_app
-    mocker.patch('quiz.models.Quiz.objects.all', return_value=all_queryset)
+    mocker.patch('quiz.views.QuizListPage.get_queryset', return_value=all_queryset)
     response = app.get(self.quiz_list_url, user=user)
     quizzes = response.context['quizzes']
     estimated = models.Quiz.objects.filter(pk__in=[_quiz.pk for _quiz in quizzes])
@@ -321,7 +321,7 @@ class TestQuiz(Common):
     genres = get_genres
     creator, _, all_queryset = create_quizzes
     user = get_managers
-    mocker.patch('quiz.models.Quiz.objects.all', return_value=all_queryset)
+    mocker.patch('quiz.views.QuizListPage.get_queryset', return_value=all_queryset)
     app = csrf_exempt_django_app
     forms = app.get(self.quiz_list_url, user=user).forms
     form = forms['quiz-search-form']
@@ -666,10 +666,10 @@ class TestQuizRoom(Common):
     form['creators'] = creator_ids
     form['genres'] = genre_ids
     form['members'] = member_ids
-    form['max_question'] = 3
+    form['max_question'] = 2
     form['is_enabled'] = False
     response = form.submit().follow()
-    instance = models.QuizRoom.objects.get(owner=user, max_question=3)
+    instance = models.QuizRoom.objects.get(owner=user, max_question=2)
 
     assert response.status_code == status.HTTP_200_OK
     assert get_current_path(response) == self.room_list_url
@@ -686,7 +686,7 @@ class TestQuizRoom(Common):
     form = forms['room-form']
     form['name'] = 'test-room'
     form['members'] = self.pk_str_convertor([guests[0], guests[1]])
-    form['max_question'] = 3
+    form['max_question'] = 1
     form['is_enabled'] = True
     response = form.submit()
     errors = response.context['form'].errors
@@ -755,8 +755,15 @@ class TestQuizRoom(Common):
         # The user is an owner
         {'owner': user, 'creators': [creators[1].pk], 'members': self.pk_convertor(creators), 'is_enabled': False},
       ]
+      _ = factories.QuizFactory(creator=creators[0], genre=genres[0], is_completed=True)
+      _ = factories.QuizFactory(creator=creators[0], genre=genres[1], is_completed=True)
+      _ = factories.QuizFactory(creator=creators[1], genre=genres[0], is_completed=True)
+      _ = factories.QuizFactory(creator=creators[1], genre=genres[1], is_completed=True)
+      if user.is_creator():
+        _ = factories.QuizFactory(creator=user, genre=genres[0], is_completed=True)
+        _ = factories.QuizFactory(creator=user, genre=genres[1], is_completed=True)
       for kwargs in configs:
-        _ = factories.QuizRoomFactory(max_question=10, **kwargs)
+        _ = factories.QuizRoomFactory(max_question=2, **kwargs)
 
     return user, creators[0]
 
@@ -772,7 +779,7 @@ class TestQuizRoom(Common):
     form = forms['room-form']
     creator_ids = self.pk_str_convertor([creators[0], creators[2]])
     form['creators'] = creator_ids
-    form['max_question'] = 11
+    form['max_question'] = 2
     form['is_enabled'] = True
     response = form.submit().follow()
     instance = models.QuizRoom.objects.get(pk=target.pk)
@@ -784,7 +791,7 @@ class TestQuizRoom(Common):
     assert all([pk in creator_ids for pk in self.pk_str_convertor(instance.creators.all())])
     assert all([pk in genres_ids for pk in self.pk_str_convertor(instance.genres.all())])
     assert all([pk in members_ids for pk in self.pk_str_convertor(instance.members.all())])
-    assert instance.max_question == 11
+    assert instance.max_question == 2
     assert instance.is_enabled
 
   def test_update_room_for_manager(self, csrf_exempt_django_app, create_members, get_being_able_to_modify_rooms, get_managers):
@@ -800,7 +807,7 @@ class TestQuizRoom(Common):
     form = forms['room-form']
     creator_ids = self.pk_str_convertor([creators[0], creators[2]])
     form['creators'] = creator_ids
-    form['max_question'] = 11
+    form['max_question'] = 2
     form['is_enabled'] = True
     response = form.submit().follow()
     instance = models.QuizRoom.objects.get(pk=target.pk)
@@ -812,7 +819,7 @@ class TestQuizRoom(Common):
     assert all([pk in creator_ids for pk in self.pk_str_convertor(instance.creators.all())])
     assert all([pk in genres_ids for pk in self.pk_str_convertor(instance.genres.all())])
     assert all([pk in members_ids for pk in self.pk_str_convertor(instance.members.all())])
-    assert instance.max_question == 11
+    assert instance.max_question == 2
     assert instance.is_enabled
 
   def test_cannot_access_to_delete_page(self, csrf_exempt_django_app, get_being_able_to_modify_rooms, get_users):

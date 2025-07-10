@@ -81,7 +81,7 @@ def get_each_types_of_genre(django_db_blocker, get_genres):
 @pytest.mark.django_db
 class TestQuizSearchForm:
   pk_convertor = lambda _self, xs: [val.pk for val in xs]
-  callback_user = lambda _self, item: f'{item.quizzes.all().count()},{item.code}'
+  callback_user = lambda _self, item: f'{item.quizzes.all().filter(is_completed=True).count()},{item.code}'
 
   @pytest.mark.parametrize([
     'input_type',
@@ -273,16 +273,17 @@ class TestQuizSearchForm:
     mocker.patch('account.models.CustomUserManager.collect_creators', return_value=creators)
     form = forms.QuizSearchForm(user=user)
     str_options = form.get_creator_options
+    callback = lambda item: f'{item.quizzes.all().count()},{item.code}'
     options = json.loads(str_options)
 
     if has_manager_role:
       exacts = [
-        {"text": f'{item}({self.callback_user(item)})', "value": str(item.pk), "selected": False} for item in creators
+        {"text": f'{item}({callback(item)})', "value": str(item.pk), "selected": False} for item in creators
       ]
     else:
       selected_items = UserModel.objects.filter(pk__in=[user.pk])
       exacts = [
-        {"text": f'{item}({self.callback_user(item)})', "value": str(item.pk), "selected": True} for item in selected_items
+        {"text": f'{item}({callback(item)})', "value": str(item.pk), "selected": True} for item in selected_items
       ]
 
     assert isinstance(str_options, str)
@@ -469,6 +470,7 @@ class TestQuizRoomForm:
     ('max-question-is-empty', False),
     ('includes-invalid-genre', False),
     ('includes-invalid-creator', False),
+    ('set-invalid-max-question', False),
   ], ids=lambda xs: str(xs).lower())
   def test_validate_inputs(self, mocker, get_each_types_of_genre, input_type, is_valid):
     _valid_genres, invalid_genre = get_each_types_of_genre
@@ -479,6 +481,9 @@ class TestQuizRoomForm:
     creators = UserModel.objects.filter(pk__in=self.pk_convertor(creators)).order_by('-pk')
     members = factories.UserFactory.create_batch(5, is_active=True, role=RoleType.GUEST)
     members = UserModel.objects.filter(pk__in=self.pk_convertor(members)).order_by('-pk')
+    # Make quiz
+    _ = factories.QuizFactory(creator=creators[0], genre=valid_genre, is_completed=True)
+    _ = factories.QuizFactory(creator=creators[1], genre=valid_genre, is_completed=True)
     # Mock
     mocker.patch('quiz.models.GenreQuerySet.collect_valid_genres', return_value=genres)
     mocker.patch('account.models.CustomUserManager.collect_valid_creators', return_value=creators)
@@ -491,7 +496,7 @@ class TestQuizRoomForm:
       'genres': genres,
       'creators': creators,
       'members': members,
-      'max_question': 10,
+      'max_question': 1,
       'is_enabled': False,
     }
     err_msg = ''
@@ -525,6 +530,9 @@ class TestQuizRoomForm:
       other = factories.UserFactory(is_active=True, role=RoleType.GUEST)
       params['creators'] = UserModel.objects.filter(pk__in=self.pk_convertor(list(creators) + [other])).order_by('-pk')
       err_msg = f'Select a valid choice. {other.pk} is not one of the available choices.'
+    elif input_type == 'set-invalid-max-question':
+      params['max_question'] = 256
+      err_msg = 'The number of quizzes this system can set is 2, but the requested value is {}. Please check the condition.'.format(params['max_question'])
 
     # Define form instance
     form = forms.QuizRoomForm(user=owner, data=params)
@@ -557,7 +565,7 @@ class TestQuizRoomForm:
       form.instance = None
     str_options = form.get_genre_options
     options = json.loads(str_options)
-    callback = lambda item: item.quizzes.all().count()
+    callback = lambda item: item.quizzes.all().filter(is_completed=True).count()
     if form.instance is not None:
       selected_items = form.instance.genres.all()
       rest_items = genres.exclude(pk__in=self.pk_convertor(selected_items))
@@ -661,6 +669,8 @@ class TestQuizRoomForm:
     creators = UserModel.objects.filter(pk__in=self.pk_convertor(creators)).order_by('-pk')
     members = factories.UserFactory.create_batch(5, is_active=True, role=RoleType.GUEST)
     members = UserModel.objects.filter(pk__in=self.pk_convertor(members)).order_by('-pk')
+    # Make quiz
+    _ = factories.QuizFactory(creator=creators[1], genre=one_genre, is_completed=True)
     # Mock
     mocker.patch('quiz.models.GenreQuerySet.collect_valid_genres', return_value=genres)
     mocker.patch('account.models.CustomUserManager.collect_valid_creators', return_value=creators)
@@ -673,7 +683,7 @@ class TestQuizRoomForm:
       'genres': genres,
       'creators': creators,
       'members': members,
-      'max_question': 10,
+      'max_question': 1,
       'is_enabled': False,
     }
     form = forms.QuizRoomForm(user=owner, data=params)
