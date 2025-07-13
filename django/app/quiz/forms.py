@@ -1,23 +1,34 @@
 from django import forms
+from django.conf import settings
+from django.core.validators import FileExtensionValidator
 from django.contrib.auth import get_user_model
+from django.db import transaction
+from django.db.utils import IntegrityError
 from django.utils.translation import gettext_lazy
-from utils.models import DualListbox
+from utils.models import (
+  DualListbox,
+  get_current_time,
+  convert_timezone,
+  bool_converter,
+)
 from utils.forms import (
   BaseFormWithCSS,
   ModelFormBasedOnUser,
 )
 from utils.widgets import CustomRadioSelect
-from . import models
+from functools import partial
+from . import models, validators
 
 UserModel = get_user_model()
 
 ##
-# @brief Judge whether input value is true or not.
-# @return bool Judgement result
-# @retval True  The value is `True` in python.
-# @retval False The value is `False` in python.
-def bool_converter(value):
-  return value not in ['False', 'false', '0']
+# @brief Generate filename based on current tile
+# @return filename Generated filename
+def generate_default_filename():
+  current_time = get_current_time()
+  filename = convert_timezone(current_time, is_string=True, strformat='Ymd-His')
+
+  return filename
 
 class GenreForm(forms.ModelForm):
   template_name = 'renderer/custom_form.html'
@@ -48,6 +59,39 @@ class GenreForm(forms.ModelForm):
     help_text=gettext_lazy('Describes whether this genre is enabled or not.'),
   )
 
+class GenreDownloadForm(forms.Form):
+  template_name = 'renderer/custom_form.html'
+
+  filename = forms.CharField(
+    label=gettext_lazy('CSV filename'),
+    max_length=128,
+    required=True,
+    widget=forms.TextInput(attrs={
+      'class': 'form-control',
+    }),
+    help_text=gettext_lazy('You don’t have to enter the extention.'),
+  )
+
+  ##
+  # @brief Constructor of GenreDownloadForm
+  # @param args Positional arguments
+  # @param kwargs Named arguments
+  def __init__(self, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+    self.fields['filename'].initial = generate_default_filename()
+
+  ##
+  # @brief Create response data
+  # @return kwargs Dictionary data
+  def create_response_kwargs(self):
+    filename = self.cleaned_data.get('filename', '').replace('.csv', '')
+    # Check filename
+    if not filename:
+      filename = generate_default_filename()
+    kwargs = models.Genre.get_response_kwargs(filename)
+
+    return kwargs
+
 class QuizSearchForm(forms.Form):
   dual_listbox_template_name = 'renderer/custom_dual_listbox_preprocess.html'
   template_name = 'renderer/custom_form.html'
@@ -59,19 +103,20 @@ class QuizSearchForm(forms.Form):
     required=False,
     widget=forms.SelectMultiple(attrs={
       'id': 'genreList',
-      'data-available': gettext_lazy('Available genres (The number of quizzes)'),
-      'data-selected': gettext_lazy('Assigned genres (The number of quizzes)'),
+      'data-available': gettext_lazy('Available genres (#Quizzes)'),
+      'data-selected': gettext_lazy('Assigned genres (#Quizzes)'),
       'class': 'custom-multi-selectbox',
     }),
   )
+
   creators = forms.MultipleChoiceField(
     label=gettext_lazy('Creator'),
     choices=[],
     required=False,
     widget=forms.SelectMultiple(attrs={
       'id': 'creatorList',
-      'data-available': gettext_lazy('Available creators (The number of quizzes, Code)'),
-      'data-selected': gettext_lazy('Assigned creators (The number of quizzes, Code)'),
+      'data-available': gettext_lazy('Available creators (#Quizzes, Code)'),
+      'data-selected': gettext_lazy('Assigned creators (#Quizzes, Code)'),
       'class': 'custom-multi-selectbox',
     }),
   )
@@ -95,6 +140,7 @@ class QuizSearchForm(forms.Form):
 
   ##
   # @brief Constructor of QuizSearchForm
+  # @param user Instance of UserModel
   # @param args Positional arguments
   # @param kwargs Named arguments
   def __init__(self, user, *args, **kwargs):
@@ -170,6 +216,194 @@ class QuizSearchForm(forms.Form):
     options = self.dual_listbox.collect_options_of_items(all_creators, selected_ones, callback=callback)
 
     return options
+
+##
+# @brief Check csv filesize
+# @exception ValidationError Input file size is larger than `MAX_CSV_FILESIZE`
+def check_filesize(value):
+  max_size = settings.MAX_CSV_FILESIZE
+  mega_byte = max_size // 1024 // 1024
+
+  if value.size > max_size:
+    raise forms.ValidationError(
+      gettext_lazy('Input filesize is too large. Max filesize: %(size)d MB'),
+      code='invalid_file',
+      params={'size': mega_byte}
+    )
+
+  return value
+
+class QuizUploadForm(forms.Form):
+  template_name = 'renderer/custom_form.html'
+
+  encoding = forms.ChoiceField(
+    label=gettext_lazy('Encoding'),
+    choices=(
+      ('utf-8', 'UTF-8'),
+      ('shift_jis', 'Shift-JIS'),
+      ('cp932', 'CP932 (Windows)'),
+    ),
+    initial='shift_jis',
+    required=True,
+    widget=forms.Select(attrs={
+      'class': 'form-select',
+    }),
+    help_text=gettext_lazy('In general, please select "Shift-JIS" in Windows OS, "UTF-8" in Linux like OS.'),
+  )
+
+  csv_file = forms.FileField(
+    label=gettext_lazy('CSV file'),
+    required=True,
+    widget=forms.FileInput(attrs={
+      'class': 'form-control',
+    }),
+    validators=[
+      FileExtensionValidator(
+        allowed_extensions=['csv'],
+        message=gettext_lazy('The extention has to be ".csv".'),
+      ),
+      check_filesize,
+    ],
+    help_text=gettext_lazy('The extention is ".csv" only.'),
+  )
+
+  header = forms.TypedChoiceField(
+    label=gettext_lazy('With header/Without header'),
+    coerce=bool_converter,
+    initial=True,
+    empty_value=True,
+    choices=(
+      (True, gettext_lazy('With header')),
+      (False, gettext_lazy('Without header')),
+    ),
+    widget=CustomRadioSelect(attrs={
+      'class': 'form-check form-check-inline',
+      'input-class': 'form-check-input',
+      'label-class': 'form-check-label',
+    }),
+    help_text=gettext_lazy('Describes whether the csv file has header or not.'),
+  )
+
+  ##
+  # @brief Constructor of QuizUploadForm
+  # @param user Instance of UserModel
+  # @param args Positional arguments
+  # @param kwargs Named arguments
+  def __init__(self, user, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+    self.validator = validators.CustomCSVFileValidator(
+      length_checker=models.Quiz.length_checker,
+      record_checker=partial(models.Quiz.record_checker, user=user),
+      extractor=models.Quiz.record_extractor,
+    )
+
+  ##
+  # @brief Check data
+  # @exception ValidationError Format is invalid, Failed to decode, or Raise exception
+  def clean(self):
+    super().clean()
+    csv_file = self.cleaned_data.get('csv_file')
+    encoding = self.cleaned_data.get('encoding')
+    header = self.cleaned_data.get('header')
+    self.validator.validate(csv_file, encoding, header)
+
+  ##
+  # @brief Register the items based on input csv file
+  # @return instances Instances of created quiz
+  # @exception IntegrityError Add the error to `non_field_errors`
+  # @pre Assume that `self.clean` method is called.
+  def register_quizzes(self):
+    csv_file = self.cleaned_data.get('csv_file')
+    encoding = self.cleaned_data.get('encoding')
+    instances = []
+    # Register items
+    try:
+      enabled_items = [
+        models.Quiz.get_instance_from_list(row)
+        for row in self.validator.get_record(csv_file, encoding)
+      ]
+      # Store relevant items to database
+      with transaction.atomic():
+        instances = models.Quiz.objects.bulk_create(enabled_items)
+    except IntegrityError as ex:
+      error = forms.ValidationError(
+        gettext_lazy('Include invalid records. Please check the detail: %(ex)s.'),
+        code='invalid_quizzes',
+        params={'ex': str(ex)},
+      )
+      self.add_error(None, error)
+
+    return instances
+
+class CustomMultipleChoiceField(forms.MultipleChoiceField):
+  def valid_value(self, value):
+    return True
+
+class QuizDownloadForm(forms.Form):
+  template_name = 'renderer/custom_form.html'
+
+  filename = forms.CharField(
+    label=gettext_lazy('CSV filename'),
+    max_length=128,
+    required=True,
+    widget=forms.TextInput(attrs={
+      'class': 'form-control',
+    }),
+    help_text=gettext_lazy('You don’t have to enter the extention.'),
+  )
+
+  quizzes = CustomMultipleChoiceField(
+    label='',
+    choices=[],
+    required=False,
+    widget=forms.SelectMultiple(attrs={
+      'id': 'quizList',
+      'style': 'display: none;',
+    }),
+  )
+
+  ##
+  # @brief Constructor of QuizDownloadForm
+  # @param user Instance of UserModel
+  # @param args Positional arguments
+  # @param kwargs Named arguments
+  def __init__(self, user, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+    self.user = user
+    self.fields['filename'].initial = generate_default_filename()
+
+  ##
+  # @brief Check requested quizzes data
+  # @return value Filtered quizzes
+  def clean_quizzes(self):
+    ids = self.cleaned_data.get('quizzes')
+
+    if ids:
+      kwargs = {
+        'pk__in': ids,
+      }
+      # Add creator's pk
+      if not self.user.has_manager_role():
+        kwargs['creator__pk'] = str(self.user.pk)
+      value = models.Quiz.objects.filter(**kwargs).values_list('pk', flat=True)
+    else:
+      value = []
+
+    return value
+
+  ##
+  # @brief Create response data
+  # @return kwargs Dictionary data
+  def create_response_kwargs(self):
+    filename = self.cleaned_data.get('filename', '').replace('.csv', '')
+    # Check filename
+    if not filename:
+      filename = generate_default_filename()
+    # Get kwargs to create response
+    ids = self.cleaned_data.get('quizzes')
+    kwargs = models.Quiz.get_response_kwargs(filename, ids)
+
+    return kwargs
 
 class QuizForm(ModelFormBasedOnUser):
   owner_name = 'creator'
@@ -267,14 +501,14 @@ class QuizRoomForm(ModelFormBasedOnUser):
       }),
       'genres': forms.SelectMultiple(attrs={
         'id': 'genreList',
-        'data-available': gettext_lazy('Available genres (The number of quizzes)'),
-        'data-selected': gettext_lazy('Assigned genres (The number of quizzes)'),
+        'data-available': gettext_lazy('Available genres (#Quizzes)'),
+        'data-selected': gettext_lazy('Assigned genres (#Quizzes)'),
         'class': 'custom-multi-selectbox',
       }),
       'creators': forms.SelectMultiple(attrs={
         'id': 'creatorList',
-        'data-available': gettext_lazy('Available creators (The number of quizzes, Code)'),
-        'data-selected': gettext_lazy('Assigned creators (The number of quizzes, Code)'),
+        'data-available': gettext_lazy('Available creators (#Quizzes, Code)'),
+        'data-selected': gettext_lazy('Assigned creators (#Quizzes, Code)'),
         'class': 'custom-multi-selectbox',
       }),
       'members': forms.SelectMultiple(attrs={

@@ -64,20 +64,24 @@
         <div class="card">
           <div class="card-header">{% trans "Manager only" %}</div>
           <div class="card-body">
-            <p class="card-title h3">{% trans "Today&apos;s hash value" %}</p>
+            <p class="card-title">
+              <div class="d-flex flex-row">
+                <span class=" h3">{% trans "Today&apos;s hash value" %}</span>
+                <a
+                  id="copy-hash-value"
+                  tabindex="0"
+                  role="button"
+                  class="btn btn-outline-primary px-1 py-0 mx-3 custom-boxshadow position-absolute end-0"
+                  data-bs-toggle="popover"
+                  data-bs-trigger="focus"
+                  data-bs-placement="bottom"
+                  data-bs-content="{% trans 'Copied!' %}"
+                >
+                  <i class="fas fa-copy fa-sm"></i>
+                </a>
+              </div>
+            </p>
             <p class="card-text" id="hash-value">{{ hash_value|safe }}</p>
-            <a
-              id="copy-hash-value"
-              tabindex="0"
-              role="button"
-              class="btn btn-outline-primary custom-boxshadow"
-              data-bs-toggle="popover"
-              data-bs-trigger="focus"
-              data-bs-placement="right"
-              data-bs-content="{% trans 'Copied!' %}"
-            >
-              {% trans "Copy to clipboard" %}
-            </a>
           </div>
         </div>
       </div>

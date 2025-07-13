@@ -134,6 +134,20 @@
 
           return dualListbox;
         }
+        downloadStatusChecker(key, value, callback=undefined, interval=1000) {
+          const target = `${key}=${value}`
+          const timerId = window.setInterval(() => {
+            // Check whether targetCookieValue exists or not
+            if (document.cookie.includes(target)) {
+              window.clearInterval(timerId);
+              document.cookie = `${key}=; max-age=0; path=/; Secure`;
+              // Call callback function if it's set
+              if (callback) {
+                callback();
+              }
+            }
+          }, interval);
+        }
       }
     </script>
     {% endblock %}

@@ -96,12 +96,9 @@ class UserProfilePage(LoginRequiredMixin, DetailView, DjangoBreadcrumbsMixin):
 
   ##
   # @brief Get logged-in user instance
-  # @return user Instance of User model
+  # @return Instance of User model
   def get_object(self, queryset=None):
-    user = self.request.user
-    instance = self.model.objects.get(pk=user.pk)
-
-    return instance
+    return self.request.user
 
 class UpdateUserProfilePage(LoginRequiredMixin, UpdateView, DjangoBreadcrumbsMixin):
   raise_exception = True
@@ -117,12 +114,9 @@ class UpdateUserProfilePage(LoginRequiredMixin, UpdateView, DjangoBreadcrumbsMix
 
   ##
   # @brief Get logged-in user instance
-  # @return user Instance of User model
+  # @return Instance of User model
   def get_object(self, queryset=None):
-    user = self.request.user
-    instance = self.model.objects.get(pk=user.pk)
-
-    return instance
+    return self.request.user
 
 class IsNotAuthenticated(UserPassesTestMixin):
   ##
@@ -350,12 +344,9 @@ class UpdateFriendPage(BaseCreateUpdateView, IsPlayer, UpdateView, DjangoBreadcr
 
   ##
   # @brief Get logged-in user instance
-  # @return user Instance of User model
+  # @return Instance of User model
   def get_object(self, queryset=None):
-    user = self.request.user
-    instance = self.model.objects.get(pk=user.pk)
-
-    return instance
+    return self.request.user
 
 # ====================
 # = Individual group =
@@ -404,7 +395,7 @@ class DeleteIndividualGroup(CustomDeleteView):
   model = models.IndividualGroup
   success_url = reverse_lazy('account:individual_group_list')
 
-class IndividualGroupAjaxResponse(View):
+class IndividualGroupAjaxResponse(LoginRequiredMixin, View):
   raise_exception = True
   http_method_names = ['post']
 

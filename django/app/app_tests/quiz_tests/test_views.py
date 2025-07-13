@@ -290,9 +290,9 @@ class TestQuizView(Common):
     client.force_login(user)
     response = client.post(self.list_view_url, data=params, follow=True)
     quizzes = response.context['quizzes']
-    estimated = models.Quiz.objects.filter(pk__in=[_quiz.pk for _quiz in quizzes]).order_by('pk')
+    estimated = models.Quiz.objects.filter(pk__in=[_quiz.pk for _quiz in quizzes]).order_by('genre__name')
     expected = selected_qs[:self.paginate_by] if len(selected_qs) > self.paginate_by else selected_qs
-    expected = models.Quiz.objects.filter(pk__in=self.pk_convertor(expected)).order_by('pk')
+    expected = models.Quiz.objects.filter(pk__in=self.pk_convertor(expected)).order_by('genre__name')
 
     assert response.status_code == status.HTTP_200_OK
     assert estimated.count() == len(expected)

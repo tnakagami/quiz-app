@@ -19,4 +19,10 @@ urlpatterns = [
   path('update-room/<pk>', views.UpdateQuizRoomPage.as_view(), name='update_room'),
   path('delete-room/<pk>', views.DeleteQuizRoom.as_view(), name='delete_room'),
   path('playing-room/<pk>', views.EnterQuizRoom.as_view(), name='enter_room'),
+  # Download/Upload
+  path('download/genres', views.DownloadGenrePage.as_view(), name='download_genre'),
+  path('upload/quiz', views.UploadQuizPage.as_view(), name='upload_quiz'),
+  path('download/quiz', views.DownloadQuizPage.as_view(), name='download_quiz'),
+  # Ajax
+  path('ajax/get-quizzes', views.QuizAjaxResponse.as_view(), name='ajax_get_quizzes'),
 ]

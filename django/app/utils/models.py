@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
 from django.utils import timezone, dateformat
+import csv
 import hashlib
 import uuid
 import json
@@ -58,6 +59,39 @@ class DualListbox:
       options = self.convert2json(self.create_options(all_items, is_selected=False, callback=callback))
 
     return options
+
+class _EchoBuffer:
+  ##
+  # @brief Write the value by returning it, instead of storing in a buffer.
+  # @param value Input data
+  # @param value Output data
+  def write(self, value):
+    return value
+
+##
+# @brief Streaming CSV file based on row data
+# @param rows Input row data
+# @param header Header data
+def streaming_csv_file(rows, header=None):
+  pseudo_buffer = _EchoBuffer()
+
+  # Write UTF-8 BOM to open this csv file as UTF-8 format in Excel
+  yield pseudo_buffer.write(b'\xEF\xBB\xBF')
+  # Create writer
+  writer = csv.writer(pseudo_buffer)
+  # Write each data
+  if header is not None:
+    yield writer.writerow(header)
+  for record in rows:
+    yield writer.writerow(record)
+
+##
+# @brief Judge whether input value is true or not.
+# @return bool Judgement result
+# @retval True  The value is `True` in python.
+# @retval False The value is `False` in python.
+def bool_converter(value):
+  return value not in ['False', 'false', '0']
 
 ##
 # @brief Get current time without timezone

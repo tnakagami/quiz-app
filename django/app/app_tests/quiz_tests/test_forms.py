@@ -1,11 +1,15 @@
 import pytest
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, NON_FIELD_ERRORS
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.contrib.auth import get_user_model
 from django.db.models import Q
+from django.db.utils import IntegrityError
 from app_tests import factories, g_compare_options
 from account.models import RoleType, IndividualGroup
 from quiz import forms, models
+from datetime import datetime, timezone
 import json
+import tempfile
 
 UserModel = get_user_model()
 
@@ -14,28 +18,80 @@ UserModel = get_user_model()
 # ====================
 @pytest.mark.quiz
 @pytest.mark.form
-@pytest.mark.parametrize([
-  'value',
-  'expected',
-], [
-  ('True', True),
-  ('true', True),
-  ('1', True),
-  ('False', False),
-  ('false', False),
-  ('0', False),
-], ids=[
-  'python-style-true',
-  'javascript-style-true',
-  'number-style-true',
-  'python-style-false',
-  'javascript-style-false',
-  'number-style-false',
-])
-def test_bool_converter(value, expected):
-  estimated = forms.bool_converter(value)
+def test_generate_default_filename(mocker):
+  mocker.patch(
+    'quiz.forms.get_current_time',
+    return_value=datetime(2021,7,3,11,7,48,microsecond=123456,tzinfo=timezone.utc),
+  )
+  expected = '20210703-200748'
+  filename = forms.generate_default_filename()
 
-  assert estimated == expected
+  assert filename == expected
+
+class DummyFile:
+  def __init__(self, val):
+    self.size = val
+
+class DummySettings:
+  def __init__(self, val):
+    self.MAX_CSV_FILESIZE = val
+
+@pytest.fixture
+def mock_csv_filesize(mocker):
+  mocker.patch('quiz.forms.settings', new=DummySettings(3 * 1024 * 1024))
+
+  return mocker
+
+@pytest.mark.quiz
+@pytest.mark.form
+@pytest.mark.parametrize([
+  'input_value',
+], [
+  (0, ),
+  (1, ),
+  (3 * 1024 * 1024, ),
+], ids=[
+  'is-zero',
+  'is-one',
+  'maximum-value',
+])
+def test_valid_check_filesize_function(mock_csv_filesize, input_value):
+  _ = mock_csv_filesize
+  instance = DummyFile(input_value)
+
+  try:
+    _ = forms.check_filesize(instance)
+  except ValidationError as ex:
+    pytest.fail(f'Unexpected Error: {ex}')
+
+@pytest.mark.quiz
+@pytest.mark.form
+def test_invalid_check_filesize_function(mock_csv_filesize):
+  _ = mock_csv_filesize
+  instance = DummyFile(3 * 1024 * 1024 + 1)
+  err_msg = 'Input filesize is too large. Max filesize: 3 MB'
+
+  with pytest.raises(ValidationError) as ex:
+    forms.check_filesize(instance)
+
+  assert err_msg in str(ex.value)
+
+class Common:
+  pk_convertor = lambda _self, xs: [val.pk for val in xs]
+
+  @pytest.fixture(params=['is-creator', 'is-manager'], scope='module')
+  def get_quiz_accounts(self, request, django_db_blocker):
+    config = {
+      'is-creator': {'is_active': True, 'role': RoleType.CREATOR},
+      'is-manager': {'is_active': True, 'role': RoleType.MANAGER},
+    }
+    key = request.param
+    # Create account
+    with django_db_blocker.unblock():
+      kwargs = config[key]
+      user = factories.UserFactory(**kwargs)
+
+    return user
 
 # =============
 # = GenreForm =
@@ -43,7 +99,7 @@ def test_bool_converter(value, expected):
 @pytest.mark.quiz
 @pytest.mark.form
 @pytest.mark.django_db
-class TestGenreForm:
+class TestGenreForm(Common):
   @pytest.mark.parametrize([
     'params',
     'is_valid',
@@ -73,14 +129,68 @@ def get_each_types_of_genre(django_db_blocker, get_genres):
 
   return valid_genres, invalid_genre
 
+# =====================
+# = GenreDownloadForm =
+# =====================
+@pytest.mark.quiz
+@pytest.mark.form
+@pytest.mark.django_db
+class TestGenreDownloadForm(Common):
+  @pytest.fixture
+  def set_custom_mock(self, mocker):
+    mocker.patch(
+      'quiz.forms.get_current_time',
+      return_value=datetime(2022,7,3,10,58,3,microsecond=123456,tzinfo=timezone.utc),
+    )
+    mocker.patch('quiz.models.Genre.get_response_kwargs',
+      side_effect=lambda name: {'filename': f'genre-{name}.csv'},
+    )
+
+    return mocker
+
+  @pytest.mark.parametrize([
+    'name',
+    'expected',
+  ], [
+    ('hoge', 'genre-hoge.csv'),
+    ('foo.csv', 'genre-foo.csv'),
+    ('foo.txt', 'genre-foo.txt.csv'),
+    ('.csv', 'genre-20220703-195803.csv'),
+  ], ids=[
+    'norma-pattern',
+    'with-extention',
+    'with-other-extention',
+    'only-extension',
+  ])
+  def test_valid_get_response_kwargs(self, set_custom_mock, name, expected):
+    _ = set_custom_mock
+    params = {
+      'filename': name,
+    }
+    form = forms.GenreDownloadForm(data=params)
+    is_valid = form.is_valid()
+    kwargs = form.create_response_kwargs()
+
+    assert is_valid
+    assert kwargs['filename'] == expected
+
+  def test_invalid_params(self, set_custom_mock):
+    _ = set_custom_mock
+    params = {
+      'filename': '1'*129,
+    }
+    form = forms.GenreDownloadForm(data=params)
+    is_valid = form.is_valid()
+
+    assert not is_valid
+
 # ==================
 # = QuizSearchForm =
 # ==================
 @pytest.mark.quiz
 @pytest.mark.form
 @pytest.mark.django_db
-class TestQuizSearchForm:
-  pk_convertor = lambda _self, xs: [val.pk for val in xs]
+class TestQuizSearchForm(Common):
   callback_user = lambda _self, item: f'{item.quizzes.all().filter(is_completed=True).count()},{item.code}'
 
   @pytest.mark.parametrize([
@@ -290,13 +400,210 @@ class TestQuizSearchForm:
     assert len(options) == len(exacts)
     assert g_compare_options(options, exacts)
 
+# ==================
+# = QuizUploadForm =
+# ==================
+@pytest.mark.quiz
+@pytest.mark.form
+@pytest.mark.django_db
+class TestQuizUploadForm(Common):
+  @pytest.fixture
+  def get_form_params_with_fds(self):
+    def inner(encoding, suffix='.csv'):
+      # Setup temporary file
+      tmp_fp = tempfile.NamedTemporaryFile(mode='r+', encoding=encoding, suffix=suffix)
+      with open(tmp_fp.name, encoding=encoding, mode='w') as csv_file:
+        csv_file.writelines(['Creator.pk,Genre,Question,Answer,IsCompleted\n', 'a,b,c,d,True\n', 'a,b,c,d,False\n'])
+        csv_file.flush()
+      with open(tmp_fp.name, encoding=encoding, mode='r') as fin:
+        csv_file = SimpleUploadedFile(fin.name, bytes(fin.read(), encoding=fin.encoding))
+        # Create form data
+        params = {
+          'encoding': encoding,
+          'header': True,
+        }
+        files = {
+          'csv_file': csv_file,
+        }
+
+      return tmp_fp, csv_file, params, files
+
+    return inner
+
+  @pytest.fixture(params=['utf-8-encoding', 'sjis-encoding', 'cp932-encoding'])
+  def get_valid_form_param(self, request, get_form_params_with_fds):
+    encoding = 'utf-8'
+    # Define encoding
+    if request.param == 'utf-8-encoding':
+      encoding = 'utf-8'
+    elif request.param == 'sjis-encoding':
+      encoding = 'shift_jis'
+    elif request.param == 'cp932-encoding':
+      encoding = 'cp932'
+    # Setup temporary file
+    tmp_fp, csv_file, params, files = get_form_params_with_fds(encoding)
+
+    yield params, files
+
+    # Post-process
+    csv_file.close()
+    tmp_fp.close()
+
+  def test_valid_input_pattern(self, mocker, get_quiz_accounts, get_valid_form_param):
+    user = get_quiz_accounts
+    params, files = get_valid_form_param
+    form = forms.QuizUploadForm(user=user, data=params, files=files)
+    mocker.patch.object(form.validator, 'validate', return_value=None)
+    is_valid = form.is_valid()
+
+    assert is_valid
+
+  @pytest.fixture(params=['without-encoding', 'without-csvfile', 'without-header'])
+  def get_invalid_form_param(self, request, get_form_params_with_fds):
+    # Setup temporary file
+    tmp_fp, csv_file, params, files = get_form_params_with_fds('utf-8')
+    err_msg = 'This field is required'
+    # Setup form data
+    if request.param == 'without-encoding':
+      del params['encoding']
+    elif request.param == 'without-csvfile':
+      del files['csv_file']
+    elif request.param == 'without-header':
+      del params['header']
+
+    yield params, files, err_msg
+
+    # Post-process
+    csv_file.close()
+    tmp_fp.close()
+
+  def test_invalid_field_data(self, mocker, get_quiz_accounts, get_invalid_form_param):
+    user = get_quiz_accounts
+    params, files, err_msg = get_invalid_form_param
+    form = forms.QuizUploadForm(user=user, data=params, files=files)
+    mocker.patch.object(form.validator, 'validate', return_value=None)
+    is_valid = form.is_valid()
+
+    assert not is_valid
+    assert err_msg in str(form.errors)
+
+  @pytest.fixture
+  def get_params_for_register_method(self, get_form_params_with_fds):
+    tmp_fp, csv_file, params, files = get_form_params_with_fds('utf-8')
+
+    yield params, files
+
+    # Post-process
+    csv_file.close()
+    tmp_fp.close()
+
+  def test_check_register_quizzes(self, mocker, get_genres, get_quiz_accounts, get_params_for_register_method):
+    genres = get_genres
+    user = get_quiz_accounts
+    creator = user if user.is_creator() else factories.UserFactory(is_active=True, role=RoleType.CREATOR)
+    records = [
+      [str(creator.pk), str(genres[0].pk), 'quiz-hogehoge', 'foofoo', True],
+      [str(creator.pk), str(genres[1].pk), 'quiz-text1', 'ans1', False],
+      [str(creator.pk), str(genres[1].pk), 'quiz-text2', 'ans2', True],
+      [str(creator.pk), str(genres[2].pk), 'quiz-bar', 'nugar', False],
+    ]
+    # Create form
+    params, files = get_params_for_register_method
+    form = forms.QuizUploadForm(user=user, data=params, files=files)
+    mocker.patch.object(form.validator, 'validate', return_value=None)
+    mocker.patch.object(form.validator, 'get_record', return_value=records)
+    is_valid = form.is_valid()
+    instances = form.register_quizzes()
+    counts = models.Quiz.objects.filter(pk__in=self.pk_convertor(instances)).count()
+
+    assert is_valid
+    assert not form.has_error(NON_FIELD_ERRORS)
+    assert counts == len(records)
+
+  def test_raise_exception_in_bulk_create(self, get_genres, mocker, get_quiz_accounts, get_params_for_register_method):
+    genre = get_genres[0]
+    user = get_quiz_accounts
+    creator = user if user.is_creator() else factories.UserFactory(is_active=True, role=RoleType.CREATOR)
+    err_msg = 'Include invalid records. Please check the detail:'
+    # Create form
+    params, files = get_params_for_register_method
+    form = forms.QuizUploadForm(user=user, data=params, files=files)
+    mocker.patch.object(form.validator, 'validate', return_value=None)
+    mocker.patch.object(form.validator, 'get_record', return_value=[[1], [2], [3]])
+    mocker.patch('quiz.models.Quiz.get_instance_from_list', side_effect=lambda row: factories.QuizFactory.build(creator=creator, genre=genre))
+    mocker.patch('quiz.models.Quiz.objects.bulk_create', side_effect=IntegrityError('Invalid data'))
+    is_valid = form.is_valid()
+    instances = form.register_quizzes()
+
+    assert is_valid
+    assert form.has_error(NON_FIELD_ERRORS)
+    assert err_msg in str(form.non_field_errors())
+    assert len(instances) == 0
+
+# ====================
+# = QuizDownloadForm =
+# ====================
+@pytest.mark.quiz
+@pytest.mark.form
+@pytest.mark.django_db
+class TestQuizDownloadForm(Common):
+  @pytest.fixture
+  def set_custom_mock(self, mocker):
+    mocker.patch(
+      'quiz.forms.get_current_time',
+      return_value=datetime(2022,7,3,11,58,3,microsecond=123456,tzinfo=timezone.utc),
+    )
+    mocker.patch('quiz.models.Genre.get_response_kwargs',
+      side_effect=lambda name: {'filename': f'genre-{name}.csv'},
+    )
+
+    return mocker
+
+  @pytest.mark.parametrize([
+    'name',
+    'expected',
+  ], [
+    ('hoge', 'quiz-hoge.csv'),
+    ('foo.csv', 'quiz-foo.csv'),
+    ('foo.txt', 'quiz-foo.txt.csv'),
+    ('.csv', 'quiz-20220703-205803.csv'),
+  ], ids=[
+    'norma-pattern',
+    'with-extention',
+    'with-other-extention',
+    'only-extension',
+  ])
+  def test_valid_get_response_kwargs(self, set_custom_mock, get_quiz_accounts, name, expected):
+    _ = set_custom_mock
+    user = get_quiz_accounts
+    params = {
+      'filename': name,
+    }
+    form = forms.QuizDownloadForm(user=user, data=params)
+    is_valid = form.is_valid()
+    kwargs = form.create_response_kwargs()
+
+    assert is_valid
+    assert kwargs['filename'] == expected
+
+  def test_invalid_params(self, set_custom_mock, get_quiz_accounts):
+    _ = set_custom_mock
+    user = get_quiz_accounts
+    params = {
+      'filename': '1'*129,
+    }
+    form = forms.QuizDownloadForm(user=user, data=params)
+    is_valid = form.is_valid()
+
+    assert not is_valid
+
 # ============
 # = QuizForm =
 # ============
 @pytest.mark.quiz
 @pytest.mark.form
 @pytest.mark.django_db
-class TestQuizForm:
+class TestQuizForm(Common):
   @pytest.mark.parametrize([
     'input_type',
     'is_valid',
@@ -370,9 +677,7 @@ class TestQuizForm:
 @pytest.mark.quiz
 @pytest.mark.form
 @pytest.mark.django_db
-class TestQuizRoomSearchForm:
-  pk_convertor = lambda _self, xs: [val.pk for val in xs]
-
+class TestQuizRoomSearchForm(Common):
   @pytest.mark.parametrize([
     'name',
     'is_valid',
@@ -450,8 +755,7 @@ class TestQuizRoomSearchForm:
 @pytest.mark.quiz
 @pytest.mark.form
 @pytest.mark.django_db
-class TestQuizRoomForm:
-  pk_convertor = lambda _self, xs: [val.pk for val in xs]
+class TestQuizRoomForm(Common):
   callback_user = lambda _self, item: f'{item.quizzes.all().count()},{item.code}'
 
   @pytest.mark.parametrize([

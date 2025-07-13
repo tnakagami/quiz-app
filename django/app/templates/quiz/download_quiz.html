@@ -1,0 +1,211 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block header %}
+<link href="https://cdn.datatables.net/v/bs5/jq-3.7.0/dt-2.3.2/fh-4.0.3/sb-1.8.3/sp-2.3.3/sl-3.0.1/datatables.min.css" rel="stylesheet"
+      integrity="sha384-latD9vjSL4mLm9Se2YpOQEvz4kKMA3PdAtVLMWSH4g2e32lz6FHzKyScWdacU5b7" crossorigin="anonymous">
+{% endblock %}
+
+{% block content %}
+{% include 'breadcrumbs.html' with title=_("Download quiz") %}
+<div class="row justify-content-center">
+  <div class="col">
+    <div class="row row-cols-1 g-2">
+      <div class="col">
+        <form method="POST" id="quiz-download-form">
+          {% csrf_token %}
+
+          {{ form }}
+
+          <div class="mt-1 row row-cols-1 row-cols-md-2 g-2">
+            <div class="col">
+              <button
+                type="submit"
+                id="download-btn"
+                class="btn btn-primary w-100 custom-boxshadow"
+              >
+                {% trans "Download" %}
+              </button>
+            </div>
+            <div class="col">
+              <a
+                href="{% url 'quiz:quiz_list' %}"
+                class="btn btn-secondary w-100 custom-boxshadow">
+                {% trans "Cancel" %}
+              </a>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="col">
+        <hr />
+      </div>
+      <div class="col">
+        <div class="table-responsive">
+          <table class="table" id="all-quizzes">
+            <thead>
+              <tr>
+                <th scope="col"></th>
+                <th scope="col">{% trans "Creator" %}</th>
+                <th scope="col">{% trans "Genre" %}</th>
+                <th scope="col">{% trans "Question" %}</th>
+                <th scope="col">{% trans "Answer" %}</th>
+                <th scope="col">{% trans "Status" %}</th>
+              </tr>
+            </thead>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block bodyjs %}
+<script src="https://cdn.datatables.net/v/bs5/jq-3.7.0/dt-2.3.2/fh-4.0.3/sb-1.8.3/sp-2.3.3/sl-3.0.1/datatables.min.js"
+        integrity="sha384-KtsA21O237D9lIE7ZeEBTOGqpJa3ec6YnZK63LNBuZzTd1aZWGgzAJrp6ZJc0S/P" crossorigin="anonymous"></script>
+{{ block.super }}
+<script>
+(function () {
+  const init = () => {
+    const helper = new HelperMethods();
+    //
+    // Setup configuration of DataTable
+    //
+    const config = {
+      processing: true,
+      ajax: {
+        url: "{% url 'quiz:ajax_get_quizzes' %}",
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': helper.getCookie('csrftoken'),
+        },
+        dataType: 'json',
+        data: { user_pk: '{{ user.pk }}' },
+        dataSrc: (json) => json.quizzes, // or dataSrc: 'quizzes',
+      },
+      createdRow: (row, data, index) => {
+        if (!data.is_completed) {
+          const cssName = 'table-secondary';
+          row.classList.add(cssName);
+          row.addEventListener('click', () => {
+            row.classList.toggle(cssName);
+          }, false);
+        }
+      },
+      columnDefs: [
+        {
+          orderable: false,
+          targets: 0,
+          data: 'pk',
+          defaultContent: '',
+          className: '',
+          render: DataTable.render.select(),
+          searchPanes: {
+            show: true,
+            options: [
+              {
+                label: '{% trans "Checked" %}',
+                value: function (rowData, rowIdx) {
+                  return this.row(rowIdx, { selected: true }).any();
+                },
+              },
+              {
+                label: '{% trans "Un-checked" %}',
+                value: function (rowData, rowIdx) {
+                  return this.row(rowIdx, { selected: true }).any() === false;
+                },
+              },
+            ],
+          },
+        },
+        {
+          targets: 1,
+          data: 'creator',
+          searchPanes: {
+            show: true,
+            options: []
+          }
+        },
+        {
+          targets: 2,
+          data: 'genre',
+        },
+        {
+          targets: 3,
+          data: 'question',
+        },
+        {
+          targets: 4,
+          data: 'answer',
+        },
+        {
+          targets: 5,
+          data: 'is_completed',
+          render: (data) => {
+            const created = '{% trans "Created" %}';
+            const creating = '{% trans "Creating" %}';
+            const ret = data ? created : creating;
+
+            return ret;
+          },
+        },
+      ],
+      order: [
+        [1, 'asc'],
+        [2, 'desc'],
+      ],
+      paging: true,
+      displayLength: 50,
+      lengthMenu: [10, 25, 50, 100, 150, 200],
+      select: {
+        style: 'multi',
+        selector: 'td:first-child',
+        headerCheckbox: true,
+        blurable: false,
+      },
+      layout: {
+        top1: {
+          searchPanes: {
+            viewTotal: true,
+            columns: [0, 1, 2]
+          },
+        },
+      },
+    };
+    // Create DataTable instance
+    const table = new DataTable('#all-quizzes', config);
+    table.on('select.dt', () => {
+      table.searchPanes.rebuildPane(0, true);
+    });
+    table.on('deselect.dt', () => {
+      table.searchPanes.rebuildPane(0, true);
+    });
+    //
+    // Setup form
+    //
+    const form = document.querySelector('#quiz-download-form');    
+    form.addEventListener('submit', (event) => {
+      // Set event when submit button is clicked
+      const btn = document.querySelector('#download-btn');
+      btn.disabled = true;
+      // Setup data
+      const quizList = document.querySelector('#quizList');
+      const selectedData = table.rows({ selected: true }).data();
+      Array.from(selectedData).forEach((item) => {
+        const option = document.createElement('option');
+        option.value = item.pk;
+        option.label = item.creator;
+        option.selected = true;
+        quizList.appendChild(option);
+      });
+      helper.downloadStatusChecker('quiz_download_status', 'completed', () => {
+        window.location.href = "{% url 'quiz:quiz_list' %}";
+      });
+    });
+  };
+  // Add DOM event
+  document.addEventListener('DOMContentLoaded', init);
+})();
+</script>
+{% endblock %}

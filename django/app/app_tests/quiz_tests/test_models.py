@@ -13,6 +13,8 @@ from quiz import models
 UserModel = get_user_model()
 
 class Common:
+  pk_convertor = lambda _self, xs: [item.pk for item in xs]
+
   @pytest.fixture(scope='module', params=[
     'superuser-manager',
     'superuser-creator',
@@ -113,7 +115,7 @@ class TestGenre(Common):
     genres[1].save()
     genres[2].is_enabled = True
     genres[2].save()
-    queryset = models.Genre.objects.filter(pk__in=list(map(lambda val: val.pk, genres))).collect_active_genres()
+    queryset = models.Genre.objects.filter(pk__in=self.pk_convertor(genres)).collect_active_genres()
     pk1 = genres[1].pk
     pk2 = genres[2].pk
 
@@ -142,7 +144,7 @@ class TestGenre(Common):
 
     for genre in genres:
       _ = factories.QuizFactory(creator=creator, genre=genre, is_completed=is_completed)
-    queryset = models.Genre.objects.filter(pk__in=list(map(lambda val: val.pk, genres))).collect_valid_genres()
+    queryset = models.Genre.objects.filter(pk__in=self.pk_convertor(genres)).collect_valid_genres()
     exacts = [
       genres[1].pk,
       genres[2].pk,
@@ -150,6 +152,20 @@ class TestGenre(Common):
 
     assert queryset.count() == count
     assert callback(queryset, exacts)
+
+  def test_check_get_response_kwargs_method(self, mocker, get_genres):
+    genres = get_genres
+    genres = models.Genre.objects.filter(pk__in=self.pk_convertor(genres))
+    mocker.patch('quiz.models.Genre.objects.collect_active_genres', return_value=genres)
+    kwargs = models.Genre.get_response_kwargs('foobar')
+    keys = kwargs.keys()
+
+    assert 'rows' in keys
+    assert 'header' in keys
+    assert 'filename' in keys
+    assert len(list(kwargs['rows'])) == len(genres)
+    assert len(kwargs['header']) == 2
+    assert kwargs['filename'] == 'genre-foobar.csv'
 
 # ========
 # = Quiz =
@@ -332,6 +348,141 @@ class TestQuiz(Common):
 
     assert can_update == instance.has_update_permission(user)
 
+  @pytest.mark.parametrize([
+    'row',
+    'is_valid',
+  ], [
+    ([1, 2, 3, 4, 5], True),
+    ([1, 2, 3, 4], False),
+  ], ids=[
+    'length-is-5',
+    'length-is-4',
+  ])
+  def test_check_length_checker(self, row, is_valid):
+    assert models.Quiz.length_checker(row) == is_valid
+
+  @pytest.mark.parametrize([
+    'row',
+  ], [
+    ([1, 2], ),
+    ([2, 3, 4], ),
+  ], ids=[
+    'only-two-data',
+    'more-than-two-data',
+  ])
+  def test_check_record_extractor(self, row):
+    out = models.Quiz.record_extractor(row)
+
+    assert out[0] == row[0]
+    assert out[1] == row[1]
+
+  @pytest.mark.parametrize([
+    'has_manager_role',
+    'indices',
+  ], [
+    #       creator
+    #         | genre
+    #         |  |
+    #         V  V
+    (False, [(0, 1), (0, 2), (0, 0)]),
+    (True,  [(1, 2), (0, 3), (1, 0), (0, 1)]),
+  ], ids=[
+    'is-creator',
+    'is-manager',
+  ])
+  def test_valid_records_by_using_record_checker(self, mocker, get_quizzes_info, has_manager_role, indices):
+    creators, genres = get_quizzes_info
+    user = creators[0] if not has_manager_role else factories.UserFactory(is_active=True, role=RoleType.MANAGER)
+    rows = [(str(creators[c_idx].pk), str(genres[g_idx].pk)) for c_idx, g_idx in indices]
+    creators = UserModel.objects.filter(pk__in=self.pk_convertor(creators))
+    genres = models.Genre.objects.filter(pk__in=self.pk_convertor(genres))
+    mocker.patch('quiz.models.UserModel.objects.collect_creators', return_value=creators)
+    mocker.patch('quiz.models.Genre.objects.collect_active_genres', return_value=genres)
+    is_valid, err = models.Quiz.record_checker(rows, user)
+
+    assert is_valid
+    assert err is None
+
+  @pytest.mark.parametrize([
+    'has_manager_role',
+    'indices',
+    'is_invalid_genre',
+    'invalid_indices',
+  ], [
+    (False, [(0, 1), (0, 3), ( 0, -1), ( 0, 2)],  True, [-1]),
+    (False, [(0, 1), (0, 3), ( 0,  0), (-1, 2)], False, [-1]),
+    (False, [(0, 1), (0, 3), ( 1,  0), ( 2, 2)], False, [1, 2]),
+    (True,  [(0, 1), (0, 3), ( 0, -1), ( 0, 2)],  True, [-1]),
+    (True,  [(0, 1), (0, 3), ( 0,  0), (-1, 2)], False, [-1]),
+    (True,  [(0, 1), (0, 3), (-2,  0), (-2, 2)], False, [-2]),
+  ], ids=[
+    'creator-with-invalid-genre',
+    'creator-with-guest',
+    'creator-with-other-creator',
+    'is-manager-with-invalid-genre',
+    'is-manager-with-guest',
+    'is-manager-with-invalid-creator',
+  ])
+  def test_invalid_records_by_using_record_checker(self, mocker, get_quizzes_info, has_manager_role, indices, is_invalid_genre, invalid_indices):
+    creators, genres = get_quizzes_info
+    _invalid_genres = list(genres) + [factories.GenreFactory(is_enabled=False)]
+    _invalid_creators = list(creators) + [
+      factories.UserFactory(is_active=False, role=RoleType.CREATOR),
+      factories.UserFactory(is_active=True, role=RoleType.GUEST),
+    ]
+    user = creators[0] if not has_manager_role else factories.UserFactory(is_active=True, role=RoleType.MANAGER)
+    rows = [(str(_invalid_creators[c_idx].pk), str(_invalid_genres[g_idx].pk)) for c_idx, g_idx in indices]
+    creators = UserModel.objects.filter(pk__in=self.pk_convertor(creators))
+    genres = models.Genre.objects.filter(pk__in=self.pk_convertor(genres))
+    mocker.patch('quiz.models.UserModel.objects.collect_creators', return_value=creators)
+    mocker.patch('quiz.models.Genre.objects.collect_active_genres', return_value=genres)
+    # Create exact data
+    if is_invalid_genre:
+      msg = ','.join([str(_invalid_genres[idx]) for idx in invalid_indices])
+      exact_err = f'The csv file includes invalid genre(s). Details: {msg}'
+    else:
+      msg = ','.join([str(_invalid_creators[idx]) for idx in invalid_indices])
+      exact_err = f'The csv file includes invalid creator(s). Details: {msg}'
+    # Raise exception
+    with pytest.raises(ValidationError) as ex:
+      is_valid, err = models.Quiz.record_checker(rows, user)
+      raise err
+
+    assert not is_valid
+    assert exact_err in str(ex.value)
+
+  def test_check_get_instance_from_list_method(self, get_quizzes_info):
+    creators, genres = get_quizzes_info
+    _creator = creators[0]
+    _genre = genres[0]
+    row = [
+      str(_creator.pk),
+      str(_genre.pk),
+      'hogehoge-quiz',
+      'fugafuga-answer',
+      'true',
+    ]
+    instance = models.Quiz.get_instance_from_list(row)
+
+    assert instance.creator.pk == _creator.pk
+    assert instance.genre.pk == _genre.pk
+    assert instance.question == 'hogehoge-quiz'
+    assert instance.answer == 'fugafuga-answer'
+    assert instance.is_completed
+
+  def test_check_get_response_kwargs_method(self, mocker, get_quizzes_info):
+    creators, _ = get_quizzes_info
+    ids = creators[0].quizzes.all().values_list('pk', flat=True)
+    kwargs = models.Quiz.get_response_kwargs('hoge', ids)
+    keys = kwargs.keys()
+
+    assert 'rows' in keys
+    assert 'header' in keys
+    assert 'filename' in keys
+    assert len(list(kwargs['rows'])) == len(ids)
+    assert len(kwargs['header']) == 5
+    assert kwargs['filename'] == 'quiz-hoge.csv'
+
 # ============
 # = QuizRoom =
 # ============
@@ -361,7 +512,7 @@ class TestQuizRoom(Common):
     ]
     cannot_use_rooms = factories.QuizRoomFactory.create_batch(2, owner=other, is_enabled=False)
     all_rooms = can_use_rooms + cannot_use_rooms
-    queryset = models.QuizRoom.objects.filter(pk__in=list(map(lambda val: val.pk, all_rooms))).collect_relevant_rooms(user)
+    queryset = models.QuizRoom.objects.filter(pk__in=self.pk_convertor(all_rooms)).collect_relevant_rooms(user)
     ids = list(queryset.values_list('pk', flat=True))
     exacts = [room.pk for room in can_use_rooms]
 

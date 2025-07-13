@@ -187,3 +187,66 @@ def test_collect_options_of_items(selected_type, exact_type, exists_callback):
 
   assert isinstance(str_options, str)
   assert g_compare_options(options, expected)
+
+@pytest.mark.utils
+@pytest.mark.model
+@pytest.mark.parametrize([
+  'value',
+  'expected',
+], [
+  ('True', True),
+  ('true', True),
+  ('1', True),
+  ('False', False),
+  ('false', False),
+  ('0', False),
+], ids=[
+  'python-style-true',
+  'javascript-style-true',
+  'number-style-true',
+  'python-style-false',
+  'javascript-style-false',
+  'number-style-false',
+])
+def test_bool_converter(value, expected):
+  estimated = models.bool_converter(value)
+
+  assert estimated == expected
+
+@pytest.mark.utils
+@pytest.mark.model
+def test_echo_buffer():
+  buffer = models._EchoBuffer()
+  val = buffer.write(5)
+
+  assert val == 5
+
+@pytest.mark.utils
+@pytest.mark.model
+def test_streaming_csv_file():
+  compare_array = lambda xs, ys: all(_x == _y for _x, _y in zip(xs, ys))
+  to_joined_str = lambda xs: ','.join([str(val) for val in xs])
+  remove_return_code = lambda val: val.strip()
+  # Define data
+  rows = [
+    [1, 2],
+    [3, 4],
+    [7, 9],
+  ]
+  records = (row for row in rows)
+  header = ['col1', 'col2']
+  item_gen = models.streaming_csv_file(records, header)
+  out_bom = next(item_gen)
+  out_header = next(item_gen)
+  _row0 = next(item_gen)
+  _row1 = next(item_gen)
+  _row2 = next(item_gen)
+
+  with pytest.raises(StopIteration):
+    _ = next(item_gen)
+
+  assert b'\xEF\xBB\xBF' == remove_return_code(out_bom)
+  assert to_joined_str(header)  == remove_return_code(out_header)
+  assert to_joined_str(rows[0]) == remove_return_code(_row0)
+  assert to_joined_str(rows[1]) == remove_return_code(_row1)
+  assert to_joined_str(rows[2]) == remove_return_code(_row2)

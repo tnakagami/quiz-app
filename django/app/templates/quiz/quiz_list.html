@@ -21,15 +21,48 @@
       </div>
       {% endif %}
       <div class="col">
-        <button
-          type="button"
-          id="quiz-search"
-          class="btn btn-success w-100 custom-boxshadow"
-          data-bs-toggle="modal"
-          data-bs-target="#quiz-search-modal"
-        >
-          {% trans "Search quiz (Shift + f)" %}
-        </button>
+        <div class="row">
+          <div class="col-12 mb-2 col-md-9 mb-md-0">
+            <button
+              type="button"
+              id="quiz-search"
+              class="btn btn-success w-100 custom-boxshadow"
+              data-bs-toggle="modal"
+              data-bs-target="#quiz-search-modal"
+            >
+              {% trans "Search quiz (Shift + f)" %}
+            </button>
+          </div>
+          <div class="col-12 col-md-3">
+            <div class="dropdown">
+              <button
+                type="button"
+                class="btn btn-secondary w-100 custom-boxshadow dropdown-toggle no-wrap"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                {% trans "Helper functions" %}
+              </button>
+              <ul class="dropdown-menu">
+                <li>
+                  <a class="dropdown-item" href="{% url 'quiz:download_genre' %}">
+                    {% trans "Download genre" %}
+                  </a>
+                </li>
+                <li>
+                  <a class="dropdown-item" href="{% url 'quiz:upload_quiz' %}">
+                    {% trans "Upload quiz" %}
+                  </a>
+                </li>
+                <li>
+                  <a class="dropdown-item" href="{% url 'quiz:download_quiz' %}">
+                    {% trans "Download quiz" %}
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
       </div>
       {% if quizzes %}
       <div class="col">
@@ -163,10 +196,10 @@
         searchButton.click();
       }
       else if (event.key === 'Enter') {
-        form.submit();
+        searchForm.submit();
       }
     });
-    {% if form.errors %}
+    {% if searchForm.errors %}
     searchButton.click();
     {% endif %}
   };

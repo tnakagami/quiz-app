@@ -1,12 +1,17 @@
+from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.http import StreamingHttpResponse, JsonResponse
 from django.utils.translation import gettext_lazy
 from django.urls import reverse, reverse_lazy
 from django.views.generic import (
+  View,
   ListView,
   CreateView,
   UpdateView,
   DetailView,
+  FormView,
 )
+from utils.models import streaming_csv_file
 from utils.views import (
   CanUpdate,
   IsCreator,
@@ -88,6 +93,12 @@ class QuizListPage(LoginRequiredMixin, HasCreatorRole, ListView, DjangoBreadcrum
 
     return queryset
 
+  ##
+  # @breif Process POST request
+  # @param request Instance of HttpRequest
+  # @param args Positional arguments
+  # @param kwargs named arguments
+  # @return Instance of HttpResponse
   def post(self, request, *args, **kwargs):
     params = self.request.POST.copy() or {}
     self.form = self.form_class(user=self.request.user, data=params)
@@ -162,6 +173,9 @@ class QuizRoomListPage(LoginRequiredMixin, ListView, DjangoBreadcrumbsMixin):
     parent_view_class=Index,
   )
 
+  ##
+  # @breif Get queryset
+  # @return queryset Fitered queryset
   def get_queryset(self):
     user = self.request.user
 
@@ -259,3 +273,141 @@ class EnterQuizRoom(LoginRequiredMixin, UserPassesTestMixin, DetailView, DjangoB
     )
 
     return context
+
+# ===================
+# = Download/Upload =
+# ===================
+class DownloadGenrePage(LoginRequiredMixin, HasCreatorRole, FormView, DjangoBreadcrumbsMixin):
+  raise_exception = True
+  form_class = forms.GenreDownloadForm
+  template_name = 'quiz/download_genre.html'
+  success_url = reverse_lazy('quiz:quiz_list')
+  crumbles = DjangoBreadcrumbsMixin.get_target_crumbles(
+    url_name='quiz:download_genre',
+    title=gettext_lazy('Download genres'),
+    parent_view_class=QuizListPage,
+  )
+
+  ##
+  # @brief Post process for form validation
+  # @param form Instance of `self.form_class`
+  # @return response Instance of StreamingHttpResponse
+  def form_valid(self, form):
+    kwargs = form.create_response_kwargs()
+    filename = kwargs['filename']
+    # Create response
+    response = StreamingHttpResponse(
+      streaming_csv_file(kwargs['rows'], header=kwargs['header']),
+      content_type='text/csv',
+      headers={'Content-Disposition': f'attachment; filename="{filename}"'},
+    )
+    response.set_cookie(
+      'genre_download_status',
+      value='completed',
+      max_age=settings.CSV_DOWNLOAD_MAX_AGE,
+      secure=True,
+    )
+
+    return response
+
+class UploadQuizPage(LoginRequiredMixin, HasCreatorRole, FormView, DjangoBreadcrumbsMixin):
+  raise_exception = True
+  form_class = forms.QuizUploadForm
+  template_name = 'quiz/upload_quiz.html'
+  success_url = reverse_lazy('quiz:quiz_list')
+  crumbles = DjangoBreadcrumbsMixin.get_target_crumbles(
+    url_name='quiz:upload_quiz',
+    title=gettext_lazy('Upload quiz'),
+    parent_view_class=QuizListPage,
+  )
+
+  ##
+  # @brief Set request user to form params
+  # @param args Positional arguments
+  # @param kwargs named arguments
+  # @return kwargs named arguments to create form instance
+  def get_form_kwargs(self, *args, **kwargs):
+    kwargs = super().get_form_kwargs(*args, **kwargs)
+    kwargs['user'] = self.request.user
+
+    return kwargs
+
+  ##
+  # @brief Post process for form validation
+  # @param form Instance of `self.form_class`
+  # @return response Instance of StreamingHttpResponse
+  def form_valid(self, form):
+    from django.core.exceptions import NON_FIELD_ERRORS
+    # Store quizzes based on uploaded file
+    form.register_quizzes()
+    # Check errors
+    if not form.has_error(NON_FIELD_ERRORS):
+      response = super().form_valid(form)
+    else:
+      response = super().form_invalid(form)
+
+    return response
+
+class DownloadQuizPage(LoginRequiredMixin, HasCreatorRole, FormView, DjangoBreadcrumbsMixin):
+  raise_exception = True
+  form_class = forms.QuizDownloadForm
+  template_name = 'quiz/download_quiz.html'
+  success_url = reverse_lazy('quiz:quiz_list')
+  crumbles = DjangoBreadcrumbsMixin.get_target_crumbles(
+    url_name='quiz:download_quiz',
+    title=gettext_lazy('Download quiz'),
+    parent_view_class=QuizListPage,
+  )
+
+  ##
+  # @brief Set request user to form params
+  # @param args Positional arguments
+  # @param kwargs named arguments
+  # @return kwargs named arguments to create form instance
+  def get_form_kwargs(self, *args, **kwargs):
+    kwargs = super().get_form_kwargs(*args, **kwargs)
+    kwargs['user'] = self.request.user
+
+    return kwargs
+
+  ##
+  # @brief Post process for form validation
+  # @param form Instance of `self.form_class`
+  # @return response Instance of StreamingHttpResponse
+  def form_valid(self, form):
+    kwargs = form.create_response_kwargs()
+    filename = kwargs['filename']
+    # Create response
+    response = StreamingHttpResponse(
+      streaming_csv_file(kwargs['rows'], header=kwargs['header']),
+      content_type='text/csv',
+      headers={'Content-Disposition': f'attachment; filename="{filename}"'},
+    )
+    response.set_cookie(
+      'quiz_download_status',
+      value='completed',
+      max_age=settings.CSV_DOWNLOAD_MAX_AGE,
+      secure=True,
+    )
+
+    return response
+
+class QuizAjaxResponse(LoginRequiredMixin, View):
+  raise_exception = True
+  http_method_names = ['post']
+
+  ##
+  # @brief Process POST method requested by ajax function
+  # @param request Instance of HttpRequest
+  # @param args Positional arguments
+  # @param kwargs named arguments
+  # @return response Instance of JsonResponse
+  def post(self, request, *args, **kwargs):
+    try:
+      user_pk = request.POST.get('user_pk')
+      quizzes = models.Quiz.get_quizzes(user_pk)
+      response = JsonResponse({'quizzes': quizzes}, json_dumps_params={'ensure_ascii': False})
+    except Exception as ex:
+      response = JsonResponse({'quizzes': []})
+
+    return response

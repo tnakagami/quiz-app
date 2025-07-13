@@ -3,7 +3,12 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy
-from utils.models import get_current_time, BaseModel
+from utils.models import (
+  bool_converter,
+  get_current_time,
+  BaseModel,
+)
+import urllib.parse
 
 UserModel = get_user_model()
 
@@ -65,6 +70,26 @@ class Genre(BaseModel):
   def has_delete_permission(self, user):
     return False
 
+  ##
+  # @brief Write active genres
+  # @param cls This class object
+  # @param filename Output csv filename
+  # @return response Instance of django.http.HttpResponse
+  @classmethod
+  def get_response_kwargs(cls, filename):
+    # Convert filename with encoding `UTF-8`
+    name = urllib.parse.quote(filename.encode('utf-8'))
+    # Create output data
+    queryset = cls.objects.collect_active_genres()
+    rows = ([obj.name, str(obj.pk)] for obj in queryset.iterator())
+    kwargs = {
+      'rows': rows,
+      'header': ['name', 'pk'],
+      'filename': f'genre-{name}.csv',
+    }
+
+    return kwargs
+
 class QuizQuerySet(models.QuerySet):
   ##
   # @brief Collect active quiz
@@ -98,7 +123,7 @@ class QuizQuerySet(models.QuerySet):
       for key, val in conditions.items():
         q_cond.add(models.Q(**{key: val}), cond_op)
       # Filtering
-      queryset = queryset.filter(q_cond).order_by('pk')
+      queryset = queryset.filter(q_cond).order_by('genre__name')
 
     return queryset
 
@@ -176,6 +201,150 @@ class Quiz(BaseModel):
   # @retval False The request user cannot update instance
   def has_update_permission(self, user):
     return self.creator.pk == user.pk or user.has_manager_role()
+
+  ##
+  # @brief Check the length of each record in csv file
+  # @param row Target row of csv file
+  # @return bool Judgement result
+  # @retval True  File format is valid
+  # @retval False File format is invalid
+  @staticmethod
+  def length_checker(row):
+    ##
+    # CSV header format
+    # Creator ID,Genre ID,Question,Answer,IsCompleted
+    return len(row) == 5
+
+  ##
+  # @brief Extract specific columns
+  # @param row Target row of csv file
+  # @return Extracted record which includes specific columns
+  @staticmethod
+  def record_extractor(row):
+    ##
+    # Extract `Creator ID` and `Genre ID`
+    return (row[0], row[1])
+
+  ##
+  # @brief Check csv file format
+  # @param rows All rows of csv file
+  # @param user The request user
+  # @return bool Judgement result
+  # @retval True  File format is valid
+  # @retval False File format is invalid
+  @staticmethod
+  def record_checker(rows, user):
+    creator_set = {str(pk) for pk, _ in rows}
+    genre_set = {str(pk) for _, pk in rows}
+    # Get genre set based on database records
+    genre_ids = Genre.objects.collect_active_genres().filter(pk__in=list(genre_set)).values_list('pk', flat=True)
+    target_genre = {str(pk) for pk in genre_ids}
+    # Get creator set based on database records
+    if user.has_manager_role():
+      creator_ids = UserModel.objects.collect_creators().filter(pk__in=list(creator_set)).values_list('pk', flat=True)
+      target_creator = {str(pk) for pk in creator_ids}
+    else:
+      target_creator = {str(user.pk),}
+    # Calculate difference between original set and generated one based on database
+    diff_genre = genre_set - target_genre
+    diff_creator = creator_set - target_creator
+
+    if diff_genre:
+      genres = Genre.objects.filter(pk__in=list(diff_genre))
+      genres = ','.join([str(instance) for instance in genres])
+      # Create output data
+      is_valid = False
+      err = ValidationError(
+        gettext_lazy('The csv file includes invalid genre(s). Details: %(genres)s'),
+        code='invalid_file',
+        params={'genres': genres},
+      )
+    elif diff_creator:
+      creators = UserModel.objects.filter(pk__in=list(diff_creator))
+      creators = ','.join([str(instance) for instance in creators])
+      # Create output data
+      is_valid = False
+      err = ValidationError(
+        gettext_lazy('The csv file includes invalid creator(s). Details: %(creators)s'),
+        code='invalid_file',
+        params={'creators': creators},
+      )
+    else:
+      is_valid = True
+      err = None
+
+    return is_valid, err
+
+  ##
+  # @brief Create instance from list data
+  # @param cls This class object
+  # @param row Target row data of csv file
+  # @return instance Quiz created without saving itself
+  @classmethod
+  def get_instance_from_list(cls, row):
+    item = {
+      'creator': UserModel.objects.get(pk=row[0]),
+      'genre': Genre.objects.get(pk=row[1]),
+      'question': row[2],
+      'answer': row[3],
+      'is_completed': bool_converter(row[4]),
+    }
+    instance = cls(**item)
+
+    return instance
+
+  ##
+  # @brief Write relevant quizzes
+  # @param cls This class object
+  # @param filename Output csv filename
+  # @param ids Quiz ids
+  # @return kwargs Dictionary data
+  @classmethod
+  def get_response_kwargs(cls, filename, ids):
+    # Convert filename with encoding `UTF-8`
+    name = urllib.parse.quote(filename.encode('utf-8'))
+    # Create output data
+    queryset = cls.objects.select_related('creator', 'genre').filter(pk__in=list(ids))
+    rows = ([str(obj.creator.pk), obj.genre.name, obj.question, obj.answer, obj.is_completed] for obj in queryset.iterator())
+    kwargs = {
+      'rows': rows,
+      'header': ['Creator.pk', 'Genre', 'Question', 'Answer', 'IsCompleted'],
+      'filename': f'quiz-{name}.csv',
+    }
+
+    return kwargs
+
+  ##
+  # @brief Get relevant quiz data
+  # @param user_pk User's primary key
+  # @return quizzes List of dict which includes each element of Quiz
+  @classmethod
+  def get_quizzes(cls, user_pk):
+    queryset = []
+
+    try:
+      user = UserModel.objects.get(pk=user_pk)
+      # In the case of that user is manager or superuser
+      if user.has_manager_role():
+        queryset = cls.objects.select_related('creator', 'genre').all()
+      # In the case of that user is creator
+      else:
+        queryset = cls.objects.select_related('creator', 'genre').filter(creator=user)
+    except:
+      queryset = cls.objects.none()
+    # Setup data
+    quizzes = [
+      {
+        'pk': str(instance.pk),
+        'creator': str(instance.creator),
+        'genre': str(instance.genre),
+        'question': instance.get_short_question(),
+        'answer': instance.get_short_answer(),
+        'is_completed': instance.is_completed,
+      } for instance in queryset
+    ]
+
+    return quizzes
 
 class QuizRoomQuerySet(models.QuerySet):
   ##

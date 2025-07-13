@@ -165,6 +165,12 @@ CACHES = {
         'LOCATION': '{host}://{host}:{port}'.format(host=os.getenv('DJANGO_REDIS_HOST', 'redis'), port=os.getenv('DJANGO_REDIS_PORT', 6379)),
     }
 }
+# Define session engine
+SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+SESSION_COOKIE_AGE = 3 * 24 * 60 * 60
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 # Define the salt of hash value
 HASH_SALT = os.getenv('DJANGO_HASH_SALT')
 # Define custom user model
@@ -189,6 +195,9 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.getenv('DJANGO_EMAIL_ADDRESS')
 EMAIL_HOST_PASSWORD = os.getenv('DJANGO_APPLICATION_PASSWORD')
 USE_X_FORWARDED_PORT = True
+# User definition variables
+MAX_CSV_FILESIZE = 1024 * 1024 * 8
+CSV_DOWNLOAD_MAX_AGE = 5 * 60
 
 # Log setting
 LOGGING = {
