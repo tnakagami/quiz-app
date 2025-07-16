@@ -155,7 +155,7 @@ class TestGenre(Common):
 
   def test_check_get_response_kwargs_method(self, mocker, get_genres):
     genres = get_genres
-    genres = models.Genre.objects.filter(pk__in=self.pk_convertor(genres))
+    genres = models.Genre.objects.filter(pk__in=self.pk_convertor(genres)).order_by('name')
     mocker.patch('quiz.models.Genre.objects.collect_active_genres', return_value=genres)
     kwargs = models.Genre.get_response_kwargs('foobar')
     keys = kwargs.keys()
@@ -164,6 +164,7 @@ class TestGenre(Common):
     assert 'header' in keys
     assert 'filename' in keys
     assert len(list(kwargs['rows'])) == len(genres)
+    assert all([item.pk == exact.pk for item, exact in zip(kwargs['rows'], genres)])
     assert len(kwargs['header']) == 2
     assert kwargs['filename'] == 'genre-foobar.csv'
 
@@ -451,6 +452,29 @@ class TestQuiz(Common):
     assert not is_valid
     assert exact_err in str(ex.value)
 
+  @pytest.mark.parametrize([
+    'role'
+  ], [
+    (RoleType.MANAGER, ),
+    (RoleType.CREATOR, ),
+  ], ids=[
+    'is-manager',
+    'is-creator',
+  ])
+  def test_include_non_uuid_record(self, role):
+    user = factories.UserFactory(is_active=True, role=role)
+    rows = [
+      ('Creator.pk', 'Genre'),
+      ('invalid-c-pk', 'invalid-g-pk'),
+    ]
+
+    with pytest.raises(ValidationError) as ex:
+      is_valid, err = models.Quiz.record_checker(rows, user)
+      raise err
+
+    assert not is_valid
+    assert 'The csv file includes invalid value(s).' in str(ex.value)
+
   def test_check_get_instance_from_list_method(self, get_quizzes_info):
     creators, genres = get_quizzes_info
     _creator = creators[0]
@@ -470,9 +494,9 @@ class TestQuiz(Common):
     assert instance.answer == 'fugafuga-answer'
     assert instance.is_completed
 
-  def test_check_get_response_kwargs_method(self, mocker, get_quizzes_info):
+  def test_check_get_response_kwargs_method(self, get_quizzes_info):
     creators, _ = get_quizzes_info
-    ids = creators[0].quizzes.all().values_list('pk', flat=True)
+    ids = creators[0].quizzes.all().order_by('genre__name', 'creator__screen_name').values_list('pk', flat=True)
     kwargs = models.Quiz.get_response_kwargs('hoge', ids)
     keys = kwargs.keys()
 
@@ -480,8 +504,47 @@ class TestQuiz(Common):
     assert 'header' in keys
     assert 'filename' in keys
     assert len(list(kwargs['rows'])) == len(ids)
+    assert all([item.pk == exact for item, exact in zip(kwargs['rows'], ids)])
     assert len(kwargs['header']) == 5
     assert kwargs['filename'] == 'quiz-hoge.csv'
+
+  @pytest.mark.parametrize([
+    'has_manager_role',
+  ], [
+    (True, ),
+    (False, ),
+  ], ids=[
+    'is-manager',
+    'is-creator',
+  ])
+  def test_get_quizzes_based_on_userpk(self, mocker, get_quizzes_info, has_manager_role):
+    creators, _ = get_quizzes_info
+    quizzes = models.Quiz.objects.filter(creator__pk__in=self.pk_convertor(creators))
+    mocker.patch('quiz.models.Quiz.objects.select_related', return_value=quizzes)
+    # Define expected content
+    if has_manager_role:
+      user = factories.UserFactory(is_active=True, role=RoleType.MANAGER)
+      use_qs = quizzes
+    else:
+      user = creators[0]
+      use_qs = quizzes.filter(creator=user)
+    expected = [
+      {
+        'pk': str(instance.pk),
+        'creator': str(instance.creator),
+        'genre': str(instance.genre),
+        'question': instance.get_short_question(),
+        'answer': instance.get_short_answer(),
+        'is_completed': instance.is_completed,
+      }
+      for instance in use_qs.order_by('pk')
+    ]
+    # Call target method
+    estimated = models.Quiz.get_quizzes(user)
+    keys = ['pk', 'creator', 'genre', 'question', 'answer', 'is_completed']
+
+    assert len(estimated) == len(expected)
+    assert all([all([val[key] == exact[key] for key in keys]) for val, exact in zip(estimated, expected)])
 
 # ============
 # = QuizRoom =
@@ -502,6 +565,22 @@ class TestQuizRoom(Common):
     with pytest.raises(DataError):
       instance = factories.QuizRoomFactory.build(name='1'*129)
       instance.save()
+
+  def test_call_collect_relevant_room_by_manager(self):
+    user = factories.UserFactory(is_active=True, role=RoleType.MANAGER)
+    creator = factories.UserFactory(is_active=True, role=RoleType.CREATOR)
+    guest = factories.UserFactory(is_active=True, role=RoleType.GUEST)
+    all_rooms = [
+      *factories.QuizRoomFactory.create_batch(2, owner=guest, is_enabled=True),
+      *factories.QuizRoomFactory.create_batch(3, owner=creator, is_enabled=True, members=[guest.pk]),
+      *factories.QuizRoomFactory.create_batch(2, owner=creator, is_enabled=False),
+    ]
+    queryset = models.QuizRoom.objects.filter(pk__in=self.pk_convertor(all_rooms)).collect_relevant_rooms(user)
+    ids = list(queryset.values_list('pk', flat=True))
+    exacts = [room.pk for room in all_rooms]
+
+    assert len(ids) == len(all_rooms)
+    assert all([pk in exacts for pk in ids])
 
   def test_check_collect_relevant_room(self):
     user = factories.UserFactory(is_active=True, role=RoleType.GUEST)
@@ -781,7 +860,7 @@ class TestQuizRoom(Common):
 class TestScore:
   def test_check_instance_type(self):
     room = factories.QuizRoomFactory(name='foo')
-    score = factories.ScoreFactory.build(room=room, status=models.QuizStatusType.WAITING, scores='')
+    score = factories.ScoreFactory.build(room=room, status=models.QuizStatusType.WAITING)
     str_val = 'foo(Waiting)'
 
     assert isinstance(score, models.Score)
@@ -808,6 +887,6 @@ class TestScore:
     'is-end',
   ])
   def test_check_label(self, status, expected):
-    instance = factories.ScoreFactory(status=status, scores='')
+    instance = factories.ScoreFactory(status=status)
 
     assert instance.get_status_label() == expected

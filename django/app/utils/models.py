@@ -78,7 +78,7 @@ def streaming_csv_file(rows, header=None):
   # Write UTF-8 BOM to open this csv file as UTF-8 format in Excel
   yield pseudo_buffer.write(b'\xEF\xBB\xBF')
   # Create writer
-  writer = csv.writer(pseudo_buffer)
+  writer = csv.writer(pseudo_buffer, lineterminator='\n')
   # Write each data
   if header is not None:
     yield writer.writerow(header)
@@ -91,7 +91,7 @@ def streaming_csv_file(rows, header=None):
 # @retval True  The value is `True` in python.
 # @retval False The value is `False` in python.
 def bool_converter(value):
-  return value not in ['False', 'false', '0']
+  return value not in ['False', 'false', 'FALSE', '0', False]
 
 ##
 # @brief Get current time without timezone

@@ -9,6 +9,8 @@ import json
 
 UserModel = get_user_model()
 g_current_time = datetime(2021,7,3,10,17,48,microsecond=123456,tzinfo=timezone.utc)
+to_joined_str = lambda xs: ','.join([str(val) for val in xs])
+remove_return_code = lambda val: val.strip()
 
 @pytest.fixture(autouse=True)
 def mock_current_time(mocker):
@@ -196,17 +198,23 @@ def test_collect_options_of_items(selected_type, exact_type, exists_callback):
 ], [
   ('True', True),
   ('true', True),
+  ('TRUE', True),
   ('1', True),
   ('False', False),
   ('false', False),
+  ('FALSE', False),
   ('0', False),
+  (False, False),
 ], ids=[
   'python-style-true',
   'javascript-style-true',
+  'Excel-style-true',
   'number-style-true',
   'python-style-false',
   'javascript-style-false',
+  'Excel-style-false',
   'number-style-false',
+  'boolean-style-false',
 ])
 def test_bool_converter(value, expected):
   estimated = models.bool_converter(value)
@@ -223,10 +231,16 @@ def test_echo_buffer():
 
 @pytest.mark.utils
 @pytest.mark.model
-def test_streaming_csv_file():
-  compare_array = lambda xs, ys: all(_x == _y for _x, _y in zip(xs, ys))
-  to_joined_str = lambda xs: ','.join([str(val) for val in xs])
-  remove_return_code = lambda val: val.strip()
+@pytest.mark.parametrize([
+  'has_header',
+], [
+  (True, ),
+  (False, ),
+], ids=[
+  'with-header',
+  'without-header',
+])
+def test_streaming_csv_file(has_header):
   # Define data
   rows = [
     [1, 2],
@@ -234,10 +248,16 @@ def test_streaming_csv_file():
     [7, 9],
   ]
   records = (row for row in rows)
-  header = ['col1', 'col2']
+  if has_header:
+    header = ['col1', 'col2']
+    callback = lambda estimated: to_joined_str(header)  == remove_return_code(estimated)
+  else:
+    header = None
+    callback = lambda estimated: True
+  # Call target function
   item_gen = models.streaming_csv_file(records, header)
   out_bom = next(item_gen)
-  out_header = next(item_gen)
+  out_header = next(item_gen) if has_header else []
   _row0 = next(item_gen)
   _row1 = next(item_gen)
   _row2 = next(item_gen)
@@ -246,7 +266,7 @@ def test_streaming_csv_file():
     _ = next(item_gen)
 
   assert b'\xEF\xBB\xBF' == remove_return_code(out_bom)
-  assert to_joined_str(header)  == remove_return_code(out_header)
+  assert callback(out_header)
   assert to_joined_str(rows[0]) == remove_return_code(_row0)
   assert to_joined_str(rows[1]) == remove_return_code(_row1)
   assert to_joined_str(rows[2]) == remove_return_code(_row2)

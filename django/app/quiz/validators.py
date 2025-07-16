@@ -16,6 +16,7 @@ class CustomCSVFileValidator:
     self.length_checker = length_checker or default_length_checker
     self.record_checker = record_checker or default_record_checker
     self.extractor = extractor or default_extractor
+    self.valid_data = []
 
   ##
   # @brief Filtering the record
@@ -32,14 +33,16 @@ class CustomCSVFileValidator:
   # @exception ValidationError Failed to decode
   # @exception ValidationError Raise exception
   def validate(self, csv_file, encoding, header=True):
-    idx = 0
+    self.valid_data = []
 
     try:
+      idx = 0
+
       with TextIOWrapper(csv_file, encoding=encoding) as text_file:
         reader = csv.reader(text_file)
         records = []
 
-        # Skip header
+        # Skip header if exists
         if header:
           next(reader)
         # Check record length and extract specific columns
@@ -53,6 +56,8 @@ class CustomCSVFileValidator:
               code='invalid_file',
               params={'idx': idx},
             )
+          # Store the current row as valid data
+          self.valid_data += [row]
           records += [self.extractor(row)]
         # Check specific columns
         is_valid, err = self.record_checker(records)
@@ -74,12 +79,6 @@ class CustomCSVFileValidator:
 
   ##
   # @brief Get each record
-  # @param csv_file Target CSV file
-  # @param encoding File encoding
-  def get_record(self, csv_file, encoding):
-    with TextIOWrapper(csv_file, encoding=encoding) as text_file:
-      reader = csv.reader(text_file)
-
-      for data in reader:
-        row = self._filter(data)
-        yield row
+  # @return list of valid data
+  def get_record(self):
+    return self.valid_data

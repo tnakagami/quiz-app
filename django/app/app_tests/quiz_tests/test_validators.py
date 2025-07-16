@@ -141,14 +141,22 @@ class TestCustomCSVFileValidator:
 
     assert err_msg in collected_err
 
-  def test_get_record_method(self):
+  @pytest.mark.parametrize([
+    'has_header',
+  ], [
+    (True, ),
+    (False, ),
+  ], ids=[
+    'with-header',
+    'without-header',
+  ])
+  def test_get_record_method(self, has_header):
     data = [
       b'uuid4-c-pk1,hoge-x,foo-y,bar-z,,False\n',
       b'uuid4-c-pk2,foo-bar,,one,two,True\n',
       b'uuid4-c-pk3,,game,nothing,None,0\n',
     ]
     expected = [
-      ['Creator.pk', 'Genre', 'Question', 'Answer', 'IsCompleted'],
       ['uuid4-c-pk1', 'hoge-x', 'foo-y', 'bar-z', 'False'],
       ['uuid4-c-pk2', 'foo-bar', 'one', 'two', 'True'],
       ['uuid4-c-pk3', 'game', 'nothing', 'None', '0'],
@@ -158,12 +166,12 @@ class TestCustomCSVFileValidator:
 
     with tempfile.NamedTemporaryFile(mode='r+', encoding=encoding, suffix='.csv') as tmp_fp:
       with open(tmp_fp.name, mode='rb+') as csv_file:
-        csv_file.write(b'Creator.pk,Genre,Question,Answer,IsCompleted\n')
+        if has_header:
+          csv_file.write(b'Creator.pk,Genre,Question,Answer,IsCompleted\n')
         csv_file.writelines(data)
         csv_file.seek(0)
-        validator.validate(csv_file, encoding)
-      with open(tmp_fp.name, mode='rb') as csv_file:
-        estimated = [row for row in validator.get_record(csv_file, encoding)]
+        validator.validate(csv_file, encoding, header=has_header)
+      estimated = validator.get_record()
 
     assert self.compare_len(estimated, expected)
     assert all([self.compare_items(vals, exacts) for vals, exacts in zip(estimated, expected)])

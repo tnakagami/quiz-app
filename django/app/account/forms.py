@@ -264,7 +264,7 @@ class FriendForm(forms.ModelForm):
 
     # Check whether the friends are included into each individual group or not.
     for group in self.user.group_owners.all():
-      rest_friends = group.extract_invalid_friends(friends)
+      rest_friends = group.extract_invalid_friends(friends).order_by('pk')
 
       if rest_friends.exists():
         names = [str(friend) for friend in rest_friends]

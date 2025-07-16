@@ -121,10 +121,17 @@ class QuizRoomFactory(factory.django.DjangoModelFactory):
     self.members.add(*extracted)
     self.save()
 
+def gen_dict(max_count):
+  pairs = ((faker.pystr(min_chars=2, max_chars=5), faker.pyint(min_value=1, max_value=256, step=1)) for _ in range(max_count))
+  ret = dict(pairs)
+
+  return ret
+
 class ScoreFactory(factory.django.DjangoModelFactory):
   class Meta:
     model = quiz_models.Score
 
   room = factory.SubFactory(QuizRoomFactory)
-  count = factory.LazyAttribute(lambda instance: faker.pyint(min_value=1, max_value=256, step=1))
-  quiz = factory.SubFactory(QuizFactory)
+  index = factory.LazyAttribute(lambda instance: faker.pyint(min_value=1, max_value=256, step=1))
+  sequence = factory.LazyAttribute(lambda instance: gen_dict(3))
+  detail = factory.LazyAttribute(lambda instance: gen_dict(5))

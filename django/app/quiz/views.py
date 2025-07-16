@@ -83,15 +83,7 @@ class QuizListPage(LoginRequiredMixin, HasCreatorRole, ListView, DjangoBreadcrum
   # @breif Get queryset
   # @return queryset Fitered queryset
   def get_queryset(self):
-    user = self.request.user
-    # In the case of that user is manager or superuser
-    if user.has_manager_role():
-      queryset = models.Quiz.objects.select_related('creator', 'genre').all()
-    # In the case of that user is creator
-    else:
-      queryset = user.quizzes.all()
-
-    return queryset
+    return self.model.objects.user_relevant_quizzes(self.request.user)
 
   ##
   # @breif Process POST request
@@ -177,18 +169,11 @@ class QuizRoomListPage(LoginRequiredMixin, ListView, DjangoBreadcrumbsMixin):
   # @breif Get queryset
   # @return queryset Fitered queryset
   def get_queryset(self):
-    user = self.request.user
-
-    # In the case of that user is manager or superuser
-    if user.has_manager_role():
-      queryset = self.model.objects.select_related('owner').prefetch_related('genres', 'creators', 'members').all()
-    # In the case of that user is creator or guest
-    else:
-      queryset = self.model.objects.collect_relevant_rooms(user)
+    rooms = self.model.objects.collect_relevant_rooms(self.request.user)
     # Filtering queryset
     params = self.request.GET.copy() or {}
     self.form = self.form_class(data=params)
-    queryset = self.form.filtering(queryset)
+    queryset = self.form.filtering(rooms)
 
     return queryset
 
@@ -298,7 +283,7 @@ class DownloadGenrePage(LoginRequiredMixin, HasCreatorRole, FormView, DjangoBrea
     # Create response
     response = StreamingHttpResponse(
       streaming_csv_file(kwargs['rows'], header=kwargs['header']),
-      content_type='text/csv',
+      content_type='text/csv;charset=UTF-8',
       headers={'Content-Disposition': f'attachment; filename="{filename}"'},
     )
     response.set_cookie(
@@ -380,7 +365,7 @@ class DownloadQuizPage(LoginRequiredMixin, HasCreatorRole, FormView, DjangoBread
     # Create response
     response = StreamingHttpResponse(
       streaming_csv_file(kwargs['rows'], header=kwargs['header']),
-      content_type='text/csv',
+      content_type='text/csv;charset=UTF-8',
       headers={'Content-Disposition': f'attachment; filename="{filename}"'},
     )
     response.set_cookie(
@@ -392,22 +377,18 @@ class DownloadQuizPage(LoginRequiredMixin, HasCreatorRole, FormView, DjangoBread
 
     return response
 
-class QuizAjaxResponse(LoginRequiredMixin, View):
+class QuizAjaxResponse(LoginRequiredMixin, HasCreatorRole, View):
   raise_exception = True
-  http_method_names = ['post']
+  http_method_names = ['get']
 
   ##
-  # @brief Process POST method requested by ajax function
+  # @brief Process GET method requested by ajax function
   # @param request Instance of HttpRequest
   # @param args Positional arguments
   # @param kwargs named arguments
   # @return response Instance of JsonResponse
-  def post(self, request, *args, **kwargs):
-    try:
-      user_pk = request.POST.get('user_pk')
-      quizzes = models.Quiz.get_quizzes(user_pk)
-      response = JsonResponse({'quizzes': quizzes}, json_dumps_params={'ensure_ascii': False})
-    except Exception as ex:
-      response = JsonResponse({'quizzes': []})
+  def get(self, request, *args, **kwargs):
+    quizzes = models.Quiz.get_quizzes(request.user)
+    response = JsonResponse({'quizzes': quizzes}, json_dumps_params={'ensure_ascii': False})
 
     return response

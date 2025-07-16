@@ -76,12 +76,11 @@
       processing: true,
       ajax: {
         url: "{% url 'quiz:ajax_get_quizzes' %}",
-        method: 'POST',
+        method: 'GET',
         headers: {
           'X-CSRFToken': helper.getCookie('csrftoken'),
         },
         dataType: 'json',
-        data: { user_pk: '{{ user.pk }}' },
         dataSrc: (json) => json.quizzes, // or dataSrc: 'quizzes',
       },
       createdRow: (row, data, index) => {

@@ -313,14 +313,12 @@ class QuizUploadForm(forms.Form):
   # @exception IntegrityError Add the error to `non_field_errors`
   # @pre Assume that `self.clean` method is called.
   def register_quizzes(self):
-    csv_file = self.cleaned_data.get('csv_file')
-    encoding = self.cleaned_data.get('encoding')
     instances = []
     # Register items
     try:
       enabled_items = [
         models.Quiz.get_instance_from_list(row)
-        for row in self.validator.get_record(csv_file, encoding)
+        for row in self.validator.get_record()
       ]
       # Store relevant items to database
       with transaction.atomic():
@@ -632,3 +630,5 @@ class QuizRoomForm(ModelFormBasedOnUser):
   def post_process(self, instance, *args, **kwargs):
     super().post_process(instance, *args, **kwargs)
     self.save_m2m()
+    score = models.Score(room=instance)
+    score.save()

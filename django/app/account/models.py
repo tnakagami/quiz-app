@@ -408,16 +408,15 @@ class IndividualGroup(BaseModel):
 
   ##
   # @brief Get relevant members
-  # @param onwer_pk Owner's primary key
+  # @param onwer Instance of User
   # @param group_pk Individual group's primary key
   # @return List of dict which includes text, pk and is_selected element
   @classmethod
-  def get_options(cls, owner_pk, group_pk):
+  def get_options(cls, owner, group_pk):
     dual_listbox = DualListbox()
     callback = dual_listbox.user_cb
 
     try:
-      owner = User.objects.get(pk=owner_pk)
       instance = cls.objects.get(pk=group_pk, owner=owner)
       queryset = instance.members.all()
     except:

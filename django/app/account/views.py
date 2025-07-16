@@ -96,9 +96,12 @@ class UserProfilePage(LoginRequiredMixin, DetailView, DjangoBreadcrumbsMixin):
 
   ##
   # @brief Get logged-in user instance
-  # @return Instance of User model
+  # @return user Instance of User model
   def get_object(self, queryset=None):
-    return self.request.user
+    user = self.request.user
+    instance = self.model.objects.get(pk=user.pk)
+
+    return instance
 
 class UpdateUserProfilePage(LoginRequiredMixin, UpdateView, DjangoBreadcrumbsMixin):
   raise_exception = True
@@ -114,9 +117,12 @@ class UpdateUserProfilePage(LoginRequiredMixin, UpdateView, DjangoBreadcrumbsMix
 
   ##
   # @brief Get logged-in user instance
-  # @return Instance of User model
+  # @return user Instance of User model
   def get_object(self, queryset=None):
-    return self.request.user
+    user = self.request.user
+    instance = self.model.objects.get(pk=user.pk)
+
+    return instance
 
 class IsNotAuthenticated(UserPassesTestMixin):
   ##
@@ -344,9 +350,12 @@ class UpdateFriendPage(BaseCreateUpdateView, IsPlayer, UpdateView, DjangoBreadcr
 
   ##
   # @brief Get logged-in user instance
-  # @return Instance of User model
+  # @return user Instance of User model
   def get_object(self, queryset=None):
-    return self.request.user
+    user = self.request.user
+    instance = self.model.objects.get(pk=user.pk)
+
+    return instance
 
 # ====================
 # = Individual group =
@@ -395,7 +404,7 @@ class DeleteIndividualGroup(CustomDeleteView):
   model = models.IndividualGroup
   success_url = reverse_lazy('account:individual_group_list')
 
-class IndividualGroupAjaxResponse(LoginRequiredMixin, View):
+class IndividualGroupAjaxResponse(LoginRequiredMixin, IsPlayer, View):
   raise_exception = True
   http_method_names = ['post']
 
@@ -403,9 +412,8 @@ class IndividualGroupAjaxResponse(LoginRequiredMixin, View):
     try:
       body = request.body.decode('utf-8')
       post_data = json.loads(body)
-      owner_pk = post_data.get('owner_pk')
       group_pk = post_data.get('group_pk')
-      options = models.IndividualGroup.get_options(owner_pk, group_pk)
+      options = models.IndividualGroup.get_options(request.user, group_pk)
       response = JsonResponse({'options': options})
     except:
       response = JsonResponse({'options': []})

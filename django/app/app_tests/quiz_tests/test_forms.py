@@ -540,6 +540,38 @@ class TestQuizUploadForm(Common):
     assert err_msg in str(form.non_field_errors())
     assert len(instances) == 0
 
+@pytest.mark.quiz
+@pytest.mark.form
+@pytest.mark.parametrize([
+  'data',
+], [
+  ('abc', ),
+  (123, ),
+  (3.14, ),
+  ([3, 'a'], ),
+  ((3, '1', 4), ),
+  ({'hoge': 'bar', 'k': 3}, ),
+  (True, ),
+  (None, ),
+], ids=[
+  'is-string',
+  'is-int',
+  'is-float',
+  'is-list',
+  'is-tuple',
+  'is-dict',
+  'is-bool',
+  'is-none',
+])
+def test_custom_multiple_choicefield(data):
+  field = forms.CustomMultipleChoiceField(
+    label='', 
+    choices=[], 
+    required=False, 
+  )
+
+  assert field.valid_value(data)
+
 # ====================
 # = QuizDownloadForm =
 # ====================
@@ -596,6 +628,26 @@ class TestQuizDownloadForm(Common):
     is_valid = form.is_valid()
 
     assert not is_valid
+
+  def test_check_clean_quizzes_method(self, get_genres, get_quiz_accounts):
+    user = get_quiz_accounts
+    genre = get_genres[0]
+    creators = factories.UserFactory.create_batch(2, is_active=True, role=RoleType.CREATOR)
+    instances = [factories.QuizFactory(creator=creator, genre=genre) for creator in creators]
+    # Set expected value
+    if user.has_manager_role():
+      expected = self.pk_convertor(instances)
+    else:
+      own = factories.QuizFactory(creator=user, genre=genre)
+      instances += [own]
+      expected = [own.pk]
+    # Create form instance
+    form = forms.QuizDownloadForm(user=user)
+    form.cleaned_data = {'quizzes': self.pk_convertor(instances)}
+    outputs = form.clean_quizzes()
+
+    assert len(outputs) == len(expected)
+    assert all([pk in expected for pk in outputs])
 
 # ============
 # = QuizForm =
@@ -1003,6 +1055,12 @@ class TestQuizRoomForm(Common):
     ids_member = self.pk_convertor(members)
 
     assert is_valid
+    assert hasattr(instance, 'score')
+    assert isinstance(instance.score, models.Score)
+    assert instance.score.index == 1
+    assert instance.score.status == models.QuizStatusType.START
+    assert isinstance(instance.score.sequence, dict)
+    assert isinstance(instance.score.detail, dict)
     assert all([val.pk in ids_genre for val in instance.genres.all()])
     assert all([val.pk in ids_creator for val in instance.creators.all()])
     assert all([val.pk in ids_member for val in instance.members.all()])

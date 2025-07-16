@@ -1,4 +1,6 @@
 import pytest
+from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.contrib.auth import get_user_model
 from django.db.models import Q
 from django.urls import reverse
@@ -10,7 +12,10 @@ from app_tests import (
 )
 from account.models import RoleType
 from quiz import views, models
+import json
+import tempfile
 import uuid
+import urllib.parse
 
 UserModel = get_user_model()
 
@@ -47,6 +52,15 @@ class Common:
       creator = factories.UserFactory(is_active=True, role=RoleType.CREATOR)
 
     return creator
+
+  @pytest.fixture(scope='module', params=['is-manager', 'is-creator'])
+  def get_has_creator_role_members(self, get_manager, get_creator, request):
+    if request.param == 'is-manager':
+      user = get_manager
+    else:
+      user = get_creator
+
+    return user
 
   @pytest.fixture(scope='module')
   def get_guest(self, django_db_blocker):
@@ -266,7 +280,9 @@ class TestQuizView(Common):
         ]
     # Create parameters
     all_queryset = models.Quiz.objects.filter(pk__in=self.pk_convertor(instances))
-    mocker.patch('quiz.models.Quiz.objects.all', return_value=all_queryset)
+    if not has_manager_role:
+      all_queryset = all_queryset.filter(creator=creators[0])
+    mocker.patch('quiz.views.QuizListPage.get_queryset', return_value=all_queryset)
     params = {
       'genres': [str(genres[1].pk), str(genres[2].pk)],
       'creators': [str(creators[1].pk), str(creators[2].pk)] if has_manager_role else [],
@@ -282,7 +298,7 @@ class TestQuizView(Common):
     else:
       del params['creators']
       selected_qs = models.Quiz.objects.collect_quizzes(
-        queryset=all_queryset.filter(creator=creators[0]),
+        queryset=all_queryset,
         genres=params['genres'],
         is_and_op=is_and_op,
       )
@@ -290,9 +306,9 @@ class TestQuizView(Common):
     client.force_login(user)
     response = client.post(self.list_view_url, data=params, follow=True)
     quizzes = response.context['quizzes']
-    estimated = models.Quiz.objects.filter(pk__in=[_quiz.pk for _quiz in quizzes]).order_by('genre__name')
+    estimated = models.Quiz.objects.filter(pk__in=[_quiz.pk for _quiz in quizzes]).order_by('pk')
     expected = selected_qs[:self.paginate_by] if len(selected_qs) > self.paginate_by else selected_qs
-    expected = models.Quiz.objects.filter(pk__in=self.pk_convertor(expected)).order_by('genre__name')
+    expected = models.Quiz.objects.filter(pk__in=self.pk_convertor(expected)).order_by('pk')
 
     assert response.status_code == status.HTTP_200_OK
     assert estimated.count() == len(expected)
@@ -654,7 +670,7 @@ class TestQuizRoomView(Common):
       target_qs = models.QuizRoom.objects.filter(pk__in=self.pk_convertor(player_rooms))
       mocker.patch('quiz.models.QuizRoom.objects.collect_relevant_rooms', return_value=target_qs)
     else:
-      mocker.patch('quiz.models.QuizRoom.objects.all', return_value=all_queryset)
+      mocker.patch('quiz.models.QuizRoom.objects.collect_relevant_rooms', return_value=all_queryset)
     query_string = {
       'name': name,
     }
@@ -1014,3 +1030,399 @@ class TestQuizRoomView(Common):
     context = view.get_context_data()
 
     assert view.crumbles[-1].title == 'hoge-room'
+
+# =====================
+# = DownloadGenreView =
+# =====================
+@pytest.mark.quiz
+@pytest.mark.view
+@pytest.mark.django_db
+class TestDownloadGenreView(Common):
+  form_view_url = reverse('quiz:download_genre')
+
+  def test_check_get_access(self, get_user, client):
+    exact_types = {
+      'superuser': status.HTTP_200_OK,
+      'manager': status.HTTP_200_OK,
+      'creator': status.HTTP_200_OK,
+      'guest': status.HTTP_403_FORBIDDEN,
+    }
+    key, user = get_user
+    client.force_login(user)
+    response = client.get(self.form_view_url)
+
+    assert response.status_code == exact_types[key]
+
+  def test_check_post_access(self, mocker, get_has_creator_role_members, client):
+    output = {
+      'rows': (row for row in [['hoge', 'abc'], ['foo', '123']]),
+      'header': ['name', 'pk'],
+      'filename': 'genre-test1.csv',
+    }
+    mocker.patch('quiz.forms.GenreDownloadForm.create_response_kwargs', return_value=output)
+    user = get_has_creator_role_members
+    params = {
+      'filename': 'dummy-name',
+    }
+    expected = bytes('name,pk\nhoge,abc\nfoo,123\n', 'utf-8')
+    # Post access
+    client.force_login(user)
+    response = client.post(self.form_view_url, data=params)
+    cookie = response.cookies.get('genre_download_status')
+    attachment = response.get('content-disposition')
+    stream = response.getvalue()
+
+    assert response.has_header('content-disposition')
+    assert output['filename'] == urllib.parse.unquote(attachment.split('=')[1].replace('"', ''))
+    assert cookie.value == 'completed'
+    assert expected in stream
+
+  @pytest.mark.parametrize([
+    'params',
+    'err_msg',
+  ], [
+    ({}, 'This field is required'),
+    ({'filename': '1'*129}, 'Ensure this value has at most 128 character'),
+  ], ids=[
+    'is-empty',
+    'too-long-filename',
+  ])
+  def test_invalid_post_request(self, get_has_creator_role_members, client, params, err_msg):
+    user = get_has_creator_role_members
+    # Post access
+    client.force_login(user)
+    response = client.post(self.form_view_url, data=params)
+    errors = response.context['form'].errors
+
+    assert response.status_code == status.HTTP_200_OK
+    assert err_msg in str(errors)
+
+# ==================
+# = UploadQuizView =
+# ==================
+@pytest.mark.quiz
+@pytest.mark.view
+@pytest.mark.django_db
+class TestUploadQuizView(Common):
+  form_view_url = reverse('quiz:upload_quiz')
+
+  def test_check_get_access(self, get_user, client):
+    exact_types = {
+      'superuser': status.HTTP_200_OK,
+      'manager': status.HTTP_200_OK,
+      'creator': status.HTTP_200_OK,
+      'guest': status.HTTP_403_FORBIDDEN,
+    }
+    key, user = get_user
+    client.force_login(user)
+    response = client.get(self.form_view_url)
+
+    assert response.status_code == exact_types[key]
+
+  @pytest.fixture(params=[
+    'utf-8-with-header',
+    'utf-8-without-header',
+    'sjis-with-header',
+    'sjis-without-header',
+    'cp932-with-header',
+    'cp932-without-header',
+  ])
+  def get_valid_form_param(self, request, get_genres, get_has_creator_role_members):
+    genre = get_genres[0]
+    creators = factories.UserFactory.create_batch(3, is_active=True, role=RoleType.CREATOR)
+    config = {
+      'utf-8-with-header':    ('utf-8', True),
+      'utf-8-without-header': ('utf-8', False),
+      'sjis-with-header':     ('shift_jis', True),
+      'sjis-without-header':  ('shift_jis', False),
+      'cp932-with-header':    ('cp932', True),
+      'cp932-without-header': ('cp932', False),
+    }
+    user = get_has_creator_role_members
+    encoding, header = config[request.param]
+    # Set creator's members
+    if user.has_manager_role():
+      members = creators
+      q_cond = Q(creator__pk__in=self.pk_convertor(creators), genre=genre)
+    else:
+      members = [user]
+      q_cond = Q(creator=user, genre=genre)
+    # Setup input data
+    inputs = [
+      ('uploaded-q1', 'uploaded-a1', True),
+      ('uploaded-q2', 'uploaded-a2', False),
+      ('uploaded-q3', 'uploaded-a3', False),
+      ('uploaded-q4', 'uploaded-a4', True),
+    ]
+    # Set quiz
+    valid_data = []
+    for question, answer, is_completed in inputs:
+      for creator in members:
+        record = [str(creator.pk), str(genre.pk), question, answer, is_completed]
+        valid_data += [record]
+    csv_file = SimpleUploadedFile('hoge.csv', bytes('foo,bar\n', encoding=encoding))
+    # Create form data
+    params = {
+      'encoding': encoding,
+      'csv_file': csv_file,
+      'header': header,
+    }
+
+    yield user, params, q_cond, valid_data
+
+    # Post-process
+    csv_file.close()
+
+  def test_check_valid_post_access(self, mocker, get_valid_form_param, client):
+    user, params, q_cond, valid_data = get_valid_form_param
+    mock_csv_validator = mocker.patch('quiz.forms.validators.CustomCSVFileValidator.validate', return_value=None)
+    mock_get_record_method = mocker.patch('quiz.forms.validators.CustomCSVFileValidator.get_record', return_value=valid_data)
+    # Send request
+    client.force_login(user)
+    response = client.post(self.form_view_url, data=params)
+    # Collect expected queryset
+    queryset = models.Quiz.objects.filter(q_cond)
+
+    assert response.status_code == status.HTTP_302_FOUND
+    assert response['Location'] == reverse('quiz:quiz_list')
+    assert all([
+      queryset.filter(question=question, answer=answer, is_completed=is_completed).exists() 
+      for _, _, question, answer, is_completed in valid_data
+    ])
+    assert mock_csv_validator.call_count == 1
+    assert mock_get_record_method.call_count == 1
+
+  @pytest.fixture(params=['form-invalid', 'invalid-bulk-create', 'invalid-header-input'])
+  def get_invalid_form_param(self, mocker, request):
+    input_header = True
+    err_msg = ''
+
+    if request.param == 'form-invalid':
+      mocker.patch('quiz.forms.QuizUploadForm.clean', side_effect=ValidationError('invalid-inputs'))
+      err_msg = 'invalid-inputs'
+    elif request.param == 'invalid-bulk-create':
+      from django.db.utils import IntegrityError
+      mocker.patch('quiz.forms.QuizUploadForm.clean', return_value=None)
+      mocker.patch('quiz.forms.validators.CustomCSVFileValidator.get_record', return_value=[])
+      mocker.patch('quiz.models.Quiz.objects.bulk_create', side_effect=IntegrityError('test'))
+      err_msg = 'Include invalid records. Please check the detail: test.'
+    elif request.param == 'invalid-header-input':
+      input_header = False
+      err_msg = 'The csv file includes invalid value(s).'
+    # Setup temporary file
+    encoding = 'utf-8'
+    tmp_fp = tempfile.NamedTemporaryFile(mode='r+', encoding=encoding, suffix='.csv')
+    with open(tmp_fp.name, encoding=encoding, mode='w') as csv_file:
+      csv_file.write('Creator.pk,Genre,Question,Answer,IsCompleted\n')
+      csv_file.write('c-pk,g-pk,q-1,a-1,True\n')
+      csv_file.write('c-pk,g-pk,q-2,a-2,False\n')
+    with open(tmp_fp.name, encoding=encoding, mode='r') as fin:
+        csv_file = SimpleUploadedFile(fin.name, bytes(fin.read(), encoding=fin.encoding))
+        # Create form data
+        params = {
+          'encoding': encoding,
+          'csv_file': csv_file,
+          'header': input_header,
+        }
+
+    yield params, err_msg
+
+    # Post-process
+    csv_file.close()
+    tmp_fp.close()
+
+  def test_check_invalid_post_access(self, get_has_creator_role_members, get_invalid_form_param, client):
+    user = get_has_creator_role_members
+    params, err_msg = get_invalid_form_param
+    # Send request
+    client.force_login(user)
+    response = client.post(self.form_view_url, data=params)
+    errors = response.context['form'].errors
+
+    assert response.status_code == status.HTTP_200_OK
+    assert err_msg in str(errors)
+
+# ====================
+# = DownloadQuizView =
+# ====================
+@pytest.mark.quiz
+@pytest.mark.view
+@pytest.mark.django_db
+class TestDownloadQuizView(Common):
+  form_view_url = reverse('quiz:download_quiz')
+
+  def test_check_get_access(self, get_user, client):
+    exact_types = {
+      'superuser': status.HTTP_200_OK,
+      'manager': status.HTTP_200_OK,
+      'creator': status.HTTP_200_OK,
+      'guest': status.HTTP_403_FORBIDDEN,
+    }
+    key, user = get_user
+    client.force_login(user)
+    response = client.get(self.form_view_url)
+
+    assert response.status_code == exact_types[key]
+
+  @pytest.fixture(params=['select-valid-quizzes', 'include-invalid-quizzes', 'no-quizzes'])
+  def get_several_form_param(self, mocker, request, get_genres, get_has_creator_role_members):
+    def generate_csv_data(instance):
+      c_pk = str(instance.creator.pk)
+      name = instance.genre.name
+      qqq = instance.question
+      ans = instance.answer
+      is_c = instance.is_completed
+      val = f'{c_pk},{name},{qqq},{ans},{is_c}'
+
+      return val
+
+    genres = get_genres[:3]
+    user = get_has_creator_role_members
+    _is_manager = user.has_manager_role()
+    params = {
+      'filename': 'hoge',
+    }
+    expected = {
+      'filename': f'quiz-{params["filename"]}.csv',
+    }
+    creators = factories.UserFactory.create_batch(2, is_active=True, role=RoleType.CREATOR)
+    target = user if not _is_manager else creators[0]
+    # Create quizzes
+    xs = [
+      factories.QuizFactory(creator=target,      genre=genres[0], question='q-1', answer='a-5', is_completed=False), # 0
+      factories.QuizFactory(creator=target,      genre=genres[1], question='q-2', answer='a-4', is_completed=True),  # 1
+      factories.QuizFactory(creator=target,      genre=genres[2], question='q-3', answer='a-3', is_completed=False), # 2
+      factories.QuizFactory(creator=creators[1], genre=genres[0], question='q-4', answer='a-2', is_completed=True),  # 3
+      factories.QuizFactory(creator=creators[1], genre=genres[1], question='q-5', answer='a-1', is_completed=False), # 4
+    ]
+    all_queryset = models.Quiz.objects.filter(pk__in=self.pk_convertor(xs)).order_by('genre__name', 'creator__screen_name')
+    mocker.patch('quiz.models.Quiz.objects.all', return_value=all_queryset)
+    # Define each parameter
+    inputs = [
+      [xs[0], xs[1], xs[2]], # select-valid-quizzes
+      [xs[0], xs[4], xs[2]], # include-invalid-quizzes (memo: order by `genre__name` so xs[0] (= genres[0]) -> xs[4] (= genres[1]) -> xs[2] (= genres[2]))
+      [xs[0], xs[2]],        # for creator
+    ]
+    patterns = {
+      'select-valid-quizzes': list(map(str, self.pk_convertor(inputs[0]))),
+      'include-invalid-quizzes': list(map(str, self.pk_convertor(inputs[1]))),
+      'no-quizzes': [],
+    }
+    header = ','.join(['Creator.pk', 'Genre', 'Question', 'Answer', 'IsCompleted']) + '\n'
+    expected_vals = {
+      'select-valid-quizzes': '\n'.join([generate_csv_data(item) for item in inputs[0]]) + '\n',
+      'include-invalid-quizzes': '\n'.join([generate_csv_data(item) for item in (inputs[1] if _is_manager else inputs[2])]) + '\n',
+      'no-quizzes': '',
+    }
+    # Collect relevant data
+    key = request.param
+    params['quizzes'] = patterns[key]
+    expected['data'] = bytes(header + expected_vals[key], 'utf-8')
+
+    return user, params, expected
+
+  def test_check_post_access(self, get_several_form_param, client):
+    user, params, expected = get_several_form_param
+    # Post access
+    client.force_login(user)
+    response = client.post(self.form_view_url, data=params)
+    cookie = response.cookies.get('quiz_download_status')
+    attachment = response.get('content-disposition')
+    stream = response.getvalue()
+
+    assert response.has_header('content-disposition')
+    assert expected['filename'] == urllib.parse.unquote(attachment.split('=')[1].replace('"', ''))
+    assert cookie.value == 'completed'
+    assert expected['data'] in stream
+
+  @pytest.mark.parametrize([
+    'params',
+    'err_msg',
+  ], [
+    ({}, 'This field is required'),
+    ({'filename': '1'*129}, 'Ensure this value has at most 128 character'),
+  ], ids=[
+    'is-empty',
+    'too-long-filename',
+  ])
+  def test_invalid_post_request(self, get_has_creator_role_members, client, params, err_msg):
+    user = get_has_creator_role_members
+    # Post access
+    client.force_login(user)
+    response = client.post(self.form_view_url, data=params)
+    errors = response.context['form'].errors
+
+    assert response.status_code == status.HTTP_200_OK
+    assert err_msg in str(errors)
+
+# ====================
+# = QuizAjaxResponse =
+# ====================
+@pytest.mark.quiz
+@pytest.mark.view
+@pytest.mark.django_db
+class TestQuizAjaxResponse(Common):
+  ajax_url = reverse('quiz:ajax_get_quizzes')
+
+  def test_check_get_access(self, get_user, client):
+    exact_types = {
+      'superuser': status.HTTP_200_OK,
+      'manager': status.HTTP_200_OK,
+      'creator': status.HTTP_200_OK,
+      'guest': status.HTTP_403_FORBIDDEN,
+    }
+    key, user = get_user
+    client.force_login(user)
+    response = client.get(self.ajax_url)
+
+    assert response.status_code == exact_types[key]
+
+  def test_valid_get_request(self, mocker, get_genres, get_has_creator_role_members, client):
+    genre = get_genres[0]
+    creators = factories.UserFactory.create_batch(3, is_active=True, role=RoleType.CREATOR)
+    user = get_has_creator_role_members
+    # Create quiz
+    quizzes = [factories.QuizFactory(creator=creator, genre=genre, is_completed=True) for creator in creators]
+
+    if not user.has_manager_role():
+      additional_data = [
+        factories.QuizFactory(creator=user, genre=genre, is_completed=True),
+        factories.QuizFactory(creator=user, genre=genre, is_completed=False),
+      ]
+      quizzes += additional_data
+      expected = list(map(str, self.pk_convertor(additional_data)))
+    else:
+      expected = list(map(str, self.pk_convertor(quizzes)))
+    # Convert list to queryset
+    quizzes = models.Quiz.objects.filter(pk__in=self.pk_convertor(quizzes)).order_by('pk')
+    mocker.patch('quiz.models.Quiz.objects.select_related', return_value=quizzes)
+    # Send GET request
+    client.force_login(user)
+    response = client.get(self.ajax_url)
+    data = json.loads(response.content)
+    estimated = data['quizzes']
+
+    assert response.status_code == status.HTTP_200_OK
+    assert all([item['pk'] in expected for item in estimated])
+
+  @pytest.mark.parametrize([
+    'is_authenticated',
+    'status_code',
+  ], [
+    (True, status.HTTP_405_METHOD_NOT_ALLOWED),
+    (False, status.HTTP_403_FORBIDDEN),
+  ], ids=[
+    'is-authenticated',
+    'is-not-authenticated',
+  ])
+  def test_check_post_access(self, get_user, client, is_authenticated, status_code):
+    key, user = get_user
+
+    if is_authenticated:
+      client.force_login(user)
+      # Upate status code
+      if key == 'guest':
+        status_code = status.HTTP_403_FORBIDDEN
+    response = client.post(self.ajax_url)
+
+    assert response.status_code == status_code

@@ -646,11 +646,11 @@ class TestUpdateFriends(Common):
     # In the case of that target user has individual group which includes user's friends
     other = factories.UserFactory(is_active=True, role=RoleType.GUEST) 
     friends = list(factories.UserFactory.create_batch(2, is_active=True, role=RoleType.GUEST))
-    ids = [user.pk for user in friends]
+    friends = UserModel.objects.filter(pk__in=[val.pk for val in friends]).order_by('pk')
     user = factories.UserFactory(
       is_active=True,
       role=RoleType.CREATOR,
-      friends=ids,
+      friends=friends,
     )
     instance = factories.IndividualGroupFactory(owner=user, name='hoge-foo', members=friends)
     app = csrf_exempt_django_app
@@ -895,7 +895,22 @@ class TestGroupAjax(Common):
     with pytest.raises(AppError) as ex:
       _ = app.get(self.ajax_url)
 
-    assert str(status.HTTP_405_METHOD_NOT_ALLOWED) in ex.value.args[0]
+    assert str(status.HTTP_403_FORBIDDEN) in ex.value.args[0]
+
+  def test_cannot_get_access_with_authentication(self, csrf_exempt_django_app, get_users):
+    app = csrf_exempt_django_app
+    exact_types = {
+      'superuser': status.HTTP_403_FORBIDDEN,
+      'manager': status.HTTP_403_FORBIDDEN,
+      'creator': status.HTTP_405_METHOD_NOT_ALLOWED,
+      'guest': status.HTTP_405_METHOD_NOT_ALLOWED,
+    }
+    key, user = get_users
+
+    with pytest.raises(AppError) as ex:
+      _ = app.get(self.ajax_url, user=user)
+
+    assert str(exact_types[key]) in ex.value.args[0]
 
   def test_send_post_request(self, csrf_exempt_django_app, get_players):
     _, user = get_players
@@ -908,7 +923,7 @@ class TestGroupAjax(Common):
     members = [friends[0], friends[1]]
     instance = factories.IndividualGroupFactory(owner=user, members=members)
     app = csrf_exempt_django_app
-    response = app.post_json(self.ajax_url, dict(owner_pk=str(user.pk), group_pk=str(instance.pk)))
+    response = app.post_json(self.ajax_url, dict(group_pk=str(instance.pk)), user=user)
     data = response.json
     expected = g_generate_item(members, False)
 
@@ -917,9 +932,10 @@ class TestGroupAjax(Common):
     assert g_compare_options(expected, data['options'])
 
   def test_invalid_post_request(self, csrf_exempt_django_app):
+    user = factories.UserFactory(is_active=True, role=RoleType.GUEST)
     other = factories.UserFactory(is_active=True, role=RoleType.GUEST)
     app = csrf_exempt_django_app
-    response = app.post_json(self.ajax_url, dict(owner_pk=str(other.pk)))
+    response = app.post_json(self.ajax_url, dict(owner_pk=str(other.pk)), user=user)
     data = response.json
     expected = g_generate_item(UserModel.objects.collect_valid_normal_users(), False)
 

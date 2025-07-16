@@ -600,11 +600,11 @@ def test_check_get_options_method_in_individual_group(call_type, expected_type):
   not_exist_group.delete()
 
   patterns = {
-    'valid-pattern':    {'owner_pk': user.pk,   'group_pk': group.pk},
-    'invalid-owner-pk': {'owner_pk': nobody.pk, 'group_pk': group.pk},
-    'not-exist-owner':  {'owner_pk': user.pk,   'group_pk': _other_group.pk},
-    'invalid-group-pk': {'owner_pk': user.pk,   'group_pk': not_exist_group.pk},
-    'not-exist-group':  {'owner_pk': other.pk,  'group_pk': group.pk},
+    'valid-pattern':    {'owner': user,   'group_pk': group.pk},
+    'invalid-owner-pk': {'owner': nobody, 'group_pk': group.pk},
+    'not-exist-owner':  {'owner': user,   'group_pk': _other_group.pk},
+    'invalid-group-pk': {'owner': user,   'group_pk': not_exist_group.pk},
+    'not-exist-group':  {'owner': other,  'group_pk': group.pk},
   }
   expected = {
     'specific': g_generate_item([members[0], members[-1]], False),
