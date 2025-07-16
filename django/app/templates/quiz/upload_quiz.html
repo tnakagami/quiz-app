@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block header %}
+<style>
+  .custom-secret > span {
+    background-color: #212529;
+  }
+  .custom-secret > span:hover, .custom-secret > span:active {
+    background-color: white;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+{% include 'breadcrumbs.html' with title=_("Upload quiz") %}
+<div class="row justify-content-center">
+  <div class="col">
+    <div class="row row-cols-1 g-2">
+      <div class="col">
+        {% if user.is_creator %}
+        <div class="card">
+          <div class="card-header d-flex flex-row">
+            <div>{% trans "Your role is CREATOR" %}</div>
+            <a
+              id="copy-user-id"
+              tabindex="0"
+              role="button"
+              class="btn btn-outline-primary px-1 py-0 mx-3 custom-boxshadow position-absolute end-0"
+              data-bs-toggle="popover"
+              data-bs-trigger="focus"
+              data-bs-placement="bottom"
+              data-bs-content="{% trans 'Copied!' %}"
+            >
+              <i class="fas fa-copy fa-sm"></i>
+            </a>
+          </div>
+          <div class="card-body">
+            <p class="card-text">{% trans "You can only upload own quizzes. Your account ID is shown below and you can copy it using upper-right button." %}</p>
+            <p class="card-text custom-secret">
+              {% trans "Your account ID (secret)" %}:<span id="user-id" class="mx-1">{{ user.pk|stringformat:"s" }}</span>
+            </p>
+          </div>
+        </div>
+        {% else %}
+        <div class="card">
+          <div class="card-header">{% trans "Your role is MANAGER" %}</div>
+          <div class="card-body">
+            <p class="card-text">{% trans "You can upload all creator's quizzes." %}</p>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+      <div class="col">
+        <hr />
+      </div>
+      <div class="col">
+        <form method="POST" id="quiz-upload-form" enctype="multipart/form-data">
+          {% csrf_token %}
+
+          {{ form }}
+
+          <div class="mt-1 row row-cols-1 row-cols-md-2 g-2">
+            <div class="col">
+              <button
+                type="submit"
+                class="btn btn-primary w-100 custom-boxshadow"
+              >
+                {% trans "Upload" %}
+              </button>
+            </div>
+            <div class="col">
+              <a
+                href="{% url 'quiz:quiz_list' %}"
+                class="btn btn-secondary w-100 custom-boxshadow">
+                {% trans "Cancel" %}
+              </a>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block bodyjs %}
+{% if user.is_creator %}
+{{ block.super }}
+<script>
+(function () {
+  const init = () => {
+    const btn = document.querySelector('#copy-user-id');
+    const popover = new bootstrap.Popover(btn, {
+      delay: {
+        'show': 100,
+        'hide': 1500,
+      },
+    });
+    btn.addEventListener('click', (event) => {
+      const helper = new HelperMethods();
+      const element = document.querySelector('#user-id');
+      helper.copyToClipboard(element);
+      popover.show();
+    }, false);
+  };
+  // Add DOM event
+  document.addEventListener('DOMContentLoaded', init);
+})();
+</script>
+{% endif %}
+{% endblock %}

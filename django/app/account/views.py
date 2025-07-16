@@ -288,7 +288,7 @@ class RoleChangeRequestListPage(LoginRequiredMixin, HasManagerRole, ListView, Dj
   # @brief Get queryset
   # @return Queryset of role approval records
   def get_queryset(self):
-    return self.model.objects.collect_targets()
+    return self.model.objects.select_related('user').collect_targets()
 
   ##
   # @brief Get context data
@@ -404,7 +404,7 @@ class DeleteIndividualGroup(CustomDeleteView):
   model = models.IndividualGroup
   success_url = reverse_lazy('account:individual_group_list')
 
-class IndividualGroupAjaxResponse(View):
+class IndividualGroupAjaxResponse(LoginRequiredMixin, IsPlayer, View):
   raise_exception = True
   http_method_names = ['post']
 
@@ -412,9 +412,8 @@ class IndividualGroupAjaxResponse(View):
     try:
       body = request.body.decode('utf-8')
       post_data = json.loads(body)
-      owner_pk = post_data.get('owner_pk')
       group_pk = post_data.get('group_pk')
-      options = models.IndividualGroup.get_options(owner_pk, group_pk)
+      options = models.IndividualGroup.get_options(request.user, group_pk)
       response = JsonResponse({'options': options})
     except:
       response = JsonResponse({'options': []})

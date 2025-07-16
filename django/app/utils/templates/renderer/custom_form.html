@@ -8,11 +8,14 @@
   </div>
   {% endif %}
   {% for field in form %}
+  {% if not field.is_hidden %}
   <div class="col">
     <div class="row row-cols-1 g-2">
+      {% if field.label %}
       <div class="col">
         <label class="form-label fw-bold text-decoration-underline"{% if field.id_for_label %} for="{{ field.id_for_label }}"{% endif %}>{{ field.label }}</label>
       </div>
+      {% endif %}
       <div class="col">{{ field }}</div>
       {% if field.errors %}
       <div class="col text-danger fs-6">
@@ -26,6 +29,7 @@
       {% endif %}
     </div>
   </div>
+  {% endif %}
   {% if forloop.last and hidden_fields %}
   <div class="col">{% for field in hidden_fields %}{{ field }}{% endfor %}</div>
   {% endif %}

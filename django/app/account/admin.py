@@ -30,10 +30,10 @@ class CustomUserAdmin(UserAdmin):
 
   form = CustomUserChangeForm
   add_form = CustomUserCreationForm
-  list_display = ('email', 'screen_name', 'role', 'is_active', 'is_staff', 'is_superuser')
+  list_display = ('email', 'code', 'screen_name', 'role', 'is_active', 'is_staff', 'is_superuser')
   list_filter = ('is_staff', 'is_superuser', 'is_active', 'groups')
-  search_fields = ('email', 'screen_name', 'role')
-  ordering = ('created_at', 'screen_name', 'email')
+  search_fields = ('email', 'code', 'screen_name', 'role')
+  ordering = ('code', 'screen_name', 'email')
 
 @admin.register(RoleApproval)
 class RoleApprovalAdmin(admin.ModelAdmin):

@@ -240,7 +240,7 @@ class FriendForm(forms.ModelForm):
   def __init__(self, user, *args, **kwargs):
     super().__init__(*args, **kwargs)
     self.user = user
-    self.fields['friends'].queryset = UserModel.objects.collect_valid_normal_users().exclude(pk__in=[self.user.pk])
+    self.fields['friends'].queryset = UserModel.objects.collect_valid_normal_users(self.user)
     self.dual_listbox = DualListbox()
 
   ##
@@ -264,7 +264,7 @@ class FriendForm(forms.ModelForm):
 
     # Check whether the friends are included into each individual group or not.
     for group in self.user.group_owners.all():
-      rest_friends = group.extract_invalid_friends(friends)
+      rest_friends = group.extract_invalid_friends(friends).order_by('pk')
 
       if rest_friends.exists():
         names = [str(friend) for friend in rest_friends]

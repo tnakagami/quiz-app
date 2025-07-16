@@ -1264,33 +1264,44 @@ def test_delete_record_in_delete_individual_group(client):
 
 @pytest.mark.account
 @pytest.mark.view
-def test_get_access_to_individual_group_ajax_response(client):
-  url = reverse('account:ajax_get_options')
-  response = client.get(url)
-
-  assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
-
-@pytest.mark.account
-@pytest.mark.view
 @pytest.mark.django_db
 @pytest.mark.parametrize([
   'is_authenticated',
+  'config',
+  'status_code',
 ], [
-  (True, ),
-  (False, ),
+  (True, {'role': models.RoleType.GUEST, 'is_staff': True, 'is_superuser': True}, status.HTTP_403_FORBIDDEN),
+  (True, {'role': models.RoleType.MANAGER}, status.HTTP_403_FORBIDDEN),
+  (True, {'role': models.RoleType.CREATOR}, status.HTTP_405_METHOD_NOT_ALLOWED),
+  (True, {'role': models.RoleType.GUEST}, status.HTTP_405_METHOD_NOT_ALLOWED),
+  (False, None, status.HTTP_403_FORBIDDEN),
 ], ids=[
-  'user-is-authenticated',
-  'is-guest-user',
+  'superuser-who-is-authenticated',
+  'manager-who-is-authenticated',
+  'creator-who-is-authenticated',
+  'guest-who-is-authenticated',
+  'is-anonymous-user',
 ])
-def test_get_access_to_individual_group_ajax_response(init_records, client, is_authenticated):
-  user = init_records[0].user
+def test_get_access_to_individual_group_ajax_response(client, is_authenticated, config, status_code):
   url = reverse('account:ajax_get_options')
   # Execute force login or not
   if is_authenticated:
+    user = factories.UserFactory(is_active=True, **config)
     client.force_login(user)
   response = client.get(url)
 
-  assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
+  assert response.status_code == status_code
+
+@pytest.fixture(params=['is-guest', 'is-creator'])
+def get_players_with_friends(request):
+  friends = list(factories.UserFactory.create_batch(4, is_active=True))
+
+  if request.param == 'is-guest':
+    user = factories.UserFactory(is_active=True, friends=friends, role=models.RoleType.GUEST)
+  else:
+    user = factories.UserFactory(is_active=True, friends=friends, role=models.RoleType.CREATOR)
+
+  return user, friends
 
 @pytest.mark.account
 @pytest.mark.view
@@ -1299,18 +1310,13 @@ def test_get_access_to_individual_group_ajax_response(init_records, client, is_a
   'arg_type',
   'expected_type',
 ], [
-  ('both-pairs', 'specific'),
-  ('only-owner', 'all'),
-  ('only-group', 'all'),
+  ('only-group', 'specific'),
   ('no-data', 'all'),
 ], ids=lambda xs: str(xs))
-def test_post_access_to_individual_group_ajax_response(rf, arg_type, expected_type):
-  friends = list(factories.UserFactory.create_batch(4, is_active=True))
-  user = factories.UserFactory(is_active=True, friends=friends)
+def test_post_access_to_individual_group_ajax_response(get_players_with_friends, rf, arg_type, expected_type):
+  user, friends = get_players_with_friends
   group = factories.IndividualGroupFactory(owner=user, members=[friends[0], friends[-1]])
   patterns = {
-    'both-pairs': {'owner_pk': str(user.pk), 'group_pk': str(group.pk)},
-    'only-owner': {'owner_pk': str(user.pk)},
     'only-group': {'group_pk': str(group.pk)},
     'no-data':    {},
   }
@@ -1324,6 +1330,7 @@ def test_post_access_to_individual_group_ajax_response(rf, arg_type, expected_ty
   exact_arr = expected[expected_type]
   # Execute req-res
   request = rf.post(url, data=params, content_type='application/json')
+  request.user = user
   ajax_view = views.IndividualGroupAjaxResponse.as_view()
   response = ajax_view(request)
   data = json.loads(response.content)
@@ -1335,10 +1342,14 @@ def test_post_access_to_individual_group_ajax_response(rf, arg_type, expected_ty
 
 @pytest.mark.account
 @pytest.mark.view
-def test_invalid_access_to_individual_group_ajax_response(client):
+@pytest.mark.django_db
+def test_invalid_request_to_individual_group_ajax_response(client):
+  friends = list(factories.UserFactory.create_batch(4, is_active=True))
+  user = factories.UserFactory(is_active=True, friends=friends)
   url = reverse('account:ajax_get_options')
-  params = {'owner_pk': 'abc', 'group_pk': 123}
+  params = {'group_pk': 123}
   # Execute req-res
+  client.force_login(user)
   response = client.post(url, data=params, headers={'Content-Type': 'application/json'})
   data = json.loads(response.content)
   options = data['options']

@@ -14,9 +14,6 @@ class BaseFormWithCSS(forms.Form):
       _classes = field.widget.attrs.get('class', '')
       field.widget.attrs['class'] = f'{_classes} form-control'
 
-import logging
-logger = logging.getLogger(__name__)
-
 class ModelFormBasedOnUser(forms.ModelForm):
   template_name = 'renderer/custom_form.html'
   owner_name = 'user'
@@ -38,12 +35,6 @@ class ModelFormBasedOnUser(forms.ModelForm):
     instance = super().save(commit=False)
     target = f'{self.owner_name}_id'
     owner = getattr(instance, target, None)
-    for o in dir(instance):
-      logger.info(o)
-
-    logger.info(target)
-    logger.info(owner)
-    logger.info(hasattr(instance, target))
     # In the case of that the create view is called.
     if hasattr(instance, target) and owner is None:
       setattr(instance, self.owner_name, self.user)

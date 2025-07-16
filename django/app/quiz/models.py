@@ -3,7 +3,12 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy
-from utils.models import get_current_time, BaseModel
+from utils.models import (
+  bool_converter,
+  get_current_time,
+  BaseModel,
+)
+import urllib.parse
 
 UserModel = get_user_model()
 
@@ -13,6 +18,13 @@ class GenreQuerySet(models.QuerySet):
   # @return Queryset whose `is_enabled` column is `True`
   def collect_active_genres(self):
     return self.filter(is_enabled=True)
+
+  ##
+  # @brief Collect active genres
+  # @return Queryset that `is_enabled` column is `True` and the number of `quizzes` is greater than 0
+  def collect_valid_genres(self):
+    return self.annotate(quiz_counts=models.Count('quizzes', filter=models.Q(quizzes__is_completed=True))) \
+               .filter(quiz_counts__gt=0, is_enabled=True)
 
 class Genre(BaseModel):
   class Meta:
@@ -58,13 +70,50 @@ class Genre(BaseModel):
   def has_delete_permission(self, user):
     return False
 
+  ##
+  # @brief Write active genres
+  # @param cls This class object
+  # @param filename Output csv filename
+  # @return response Instance of django.http.HttpResponse
+  @classmethod
+  def get_response_kwargs(cls, filename):
+    # Convert filename with encoding `UTF-8`
+    name = urllib.parse.quote(filename.encode('utf-8'))
+    # Create output data
+    queryset = cls.objects.collect_active_genres().order_by('name')
+    rows = ([obj.name, str(obj.pk)] for obj in queryset.iterator())
+    kwargs = {
+      'rows': rows,
+      'header': ['name', 'pk'],
+      'filename': f'genre-{name}.csv',
+    }
+
+    return kwargs
+
 class QuizQuerySet(models.QuerySet):
   ##
-  # @brief Collect active genre
+  # @brief Collect quizzes based on user
+  # @param user Instance of UserModel
+  # @return Queryset 
+  def user_relevant_quizzes(self, user):
+    if user.has_manager_role():
+      queryset = self.select_related('creator', 'genre').all()
+    else:
+      queryset = user.quizzes.all()
+
+    return queryset
+
+  ##
+  # @brief Collect active quiz
+  # @param queryset Input queryset
+  # @param creators Input creators
+  # @param genres Input genres
+  # @parma is_and_op As using the "AND" operator, it is `True`
   # @return Queryset which consists of some creators, some genres, or both of them
   # @pre The variable type of creators and genres consists of one of `model instance`, `list`, and `QuerySet`.
-  def collect_quizzes(self, creators=None, genres=None):
-    queryset = self.filter(is_completed=True)
+  def collect_quizzes(self, queryset=None, creators=None, genres=None, is_and_op=False):
+    if queryset is None:
+      queryset = self.filter(is_completed=True)
     conditions = {}
     # Create condition for creators
     if creators is not None:
@@ -80,12 +129,15 @@ class QuizQuerySet(models.QuerySet):
         conditions['genre'] = genres
     # In the case of existing any conditions
     if conditions:
+      cond_op = models.Q.AND if is_and_op else models.Q.OR
       q_cond = models.Q()
       # Create query condition
       for key, val in conditions.items():
-        q_cond.add(models.Q(**{key: val}), models.Q.OR)
+        q_cond.add(models.Q(**{key: val}), cond_op)
       # Filtering
-      queryset = queryset.filter(q_cond)
+      queryset = queryset.filter(q_cond).distinct()
+    # Ordering by genre's name
+    queryset = queryset.order_by('genre__name')
 
     return queryset
 
@@ -164,15 +216,165 @@ class Quiz(BaseModel):
   def has_update_permission(self, user):
     return self.creator.pk == user.pk or user.has_manager_role()
 
+  ##
+  # @brief Check the length of each record in csv file
+  # @param row Target row of csv file
+  # @return bool Judgement result
+  # @retval True  File format is valid
+  # @retval False File format is invalid
+  @staticmethod
+  def length_checker(row):
+    ##
+    # CSV header format
+    # Creator ID,Genre ID,Question,Answer,IsCompleted
+    return len(row) == 5
+
+  ##
+  # @brief Extract specific columns
+  # @param row Target row of csv file
+  # @return Extracted record which includes specific columns
+  @staticmethod
+  def record_extractor(row):
+    ##
+    # Extract `Creator ID` and `Genre ID`
+    return (row[0], row[1])
+
+  ##
+  # @brief Check csv file format
+  # @param rows All rows of csv file
+  # @param user The request user
+  # @return bool Judgement result
+  # @retval True  File format is valid
+  # @retval False File format is invalid
+  @staticmethod
+  def record_checker(rows, user):
+    creator_set = {str(pk) for pk, _ in rows}
+    genre_set = {str(pk) for _, pk in rows}
+
+    try:
+      # Get genre set based on database records
+      genre_ids = Genre.objects.collect_active_genres().filter(pk__in=list(genre_set)).values_list('pk', flat=True)
+      target_genre = {str(pk) for pk in genre_ids}
+      # Get creator set based on database records
+      if user.has_manager_role():
+        creator_ids = UserModel.objects.collect_creators().filter(pk__in=list(creator_set)).values_list('pk', flat=True)
+        target_creator = {str(pk) for pk in creator_ids}
+      else:
+        target_creator = {str(user.pk),}
+      # Calculate difference between original set and generated one based on database
+      diff_genre = genre_set - target_genre
+      diff_creator = creator_set - target_creator
+
+      if diff_genre:
+        genres = Genre.objects.filter(pk__in=list(diff_genre))
+        genres = ','.join([str(instance) for instance in genres])
+        # Create output data
+        is_valid = False
+        err = ValidationError(
+          gettext_lazy('The csv file includes invalid genre(s). Details: %(genres)s'),
+          code='invalid_file',
+          params={'genres': genres},
+        )
+      elif diff_creator:
+        creators = UserModel.objects.filter(pk__in=list(diff_creator))
+        creators = ','.join([str(instance) for instance in creators])
+        # Create output data
+        is_valid = False
+        err = ValidationError(
+          gettext_lazy('The csv file includes invalid creator(s). Details: %(creators)s'),
+          code='invalid_file',
+          params={'creators': creators},
+        )
+      else:
+        is_valid = True
+        err = None
+    except ValidationError as ex:
+      is_valid = False
+      err = ValidationError(
+        gettext_lazy('The csv file includes invalid value(s). Details: %(value)s'),
+        code='invalid_file',
+        params={'value': str(ex)},
+      )
+
+    return is_valid, err
+
+  ##
+  # @brief Create instance from list data
+  # @param cls This class object
+  # @param row Target row data of csv file
+  # @return instance Quiz created without saving itself
+  @classmethod
+  def get_instance_from_list(cls, row):
+    item = {
+      'creator': UserModel.objects.get(pk=row[0]),
+      'genre': Genre.objects.get(pk=row[1]),
+      'question': row[2],
+      'answer': row[3],
+      'is_completed': bool_converter(row[4]),
+    }
+    instance = cls(**item)
+
+    return instance
+
+  ##
+  # @brief Write relevant quizzes
+  # @param cls This class object
+  # @param filename Output csv filename
+  # @param ids Quiz ids
+  # @return kwargs Dictionary data
+  @classmethod
+  def get_response_kwargs(cls, filename, ids):
+    # Convert filename with encoding `UTF-8`
+    name = urllib.parse.quote(filename.encode('utf-8'))
+    # Create output data
+    queryset = cls.objects.select_related('creator', 'genre').filter(pk__in=list(ids)).order_by('genre__name', 'creator__screen_name')
+    rows = ([str(obj.creator.pk), obj.genre.name, obj.question, obj.answer, obj.is_completed] for obj in queryset.iterator())
+    kwargs = {
+      'rows': rows,
+      'header': ['Creator.pk', 'Genre', 'Question', 'Answer', 'IsCompleted'],
+      'filename': f'quiz-{name}.csv',
+    }
+
+    return kwargs
+
+  ##
+  # @brief Get relevant quiz data
+  # @param user Instance of UserModel
+  # @return quizzes List of dict which includes each element of Quiz
+  @classmethod
+  def get_quizzes(cls, user):
+    # In the case of that user is manager or superuser
+    if user.has_manager_role():
+      queryset = cls.objects.select_related('creator', 'genre').all()
+    # In the case of that user is creator
+    else:
+      queryset = cls.objects.select_related('creator', 'genre').filter(creator=user)
+    # Setup data
+    quizzes = [
+      {
+        'pk': str(instance.pk),
+        'creator': str(instance.creator),
+        'genre': str(instance.genre),
+        'question': instance.get_short_question(),
+        'answer': instance.get_short_answer(),
+        'is_completed': instance.is_completed,
+      } for instance in queryset.order_by('pk')
+    ]
+
+    return quizzes
+
 class QuizRoomQuerySet(models.QuerySet):
   ##
   # @brief Collect relevant quiz room
   # @return Queryset The queryset consists of room owner is user or user is included into assigned members
   # @pre The user's role is either `GUEST` or `CREATOR`
   def collect_relevant_rooms(self, user):
-    owner_rooms = user.quiz_rooms.all()
-    valid_assigned_rooms = user.assigned_rooms.all().exclude(is_enabled=False)
-    queryset = (owner_rooms | valid_assigned_rooms).order_by('pk').distinct().order_by('name', '-created_at')
+    if user.has_manager_role():
+      queryset = self.select_related('owner').prefetch_related('genres', 'creators', 'members').all()
+    else:
+      owner_rooms = user.quiz_rooms.all()
+      valid_assigned_rooms = user.assigned_rooms.all().exclude(is_enabled=False)
+      queryset = (owner_rooms | valid_assigned_rooms).order_by('pk').distinct().order_by('name', '-created_at')
 
     return queryset
 
@@ -339,36 +541,36 @@ class QuizStatusType(models.IntegerChoices):
 
 class Score(BaseModel):
   class Meta:
-    ordering = ('room__name', '-count')
+    ordering = ('room__name', '-index')
 
-  room = models.ForeignKey(
+  room = models.OneToOneField(
     QuizRoom,
     verbose_name=gettext_lazy('Room'),
     on_delete=models.CASCADE,
-    related_name='scores',
+    related_name='score',
   )
   status = models.IntegerField(
     gettext_lazy('Status'),
     choices=QuizStatusType.choices,
     default=QuizStatusType.START,
   )
-  count = models.PositiveIntegerField(
-    gettext_lazy('Count'),
+  index = models.PositiveIntegerField(
+    gettext_lazy('Index'),
     validators=[MinValueValidator(1)],
     default=1,
     help_text=gettext_lazy('The n-th question'),
   )
-  quiz = models.ForeignKey(
-    Quiz,
-    verbose_name=gettext_lazy('Quiz'),
-    on_delete=models.CASCADE,
-    related_name='scores',
-    null=True,
-  )
-  scores = models.JSONField(
-    gettext_lazy('Scores'),
+  sequence = models.JSONField(
+    gettext_lazy('Sequence'),
     blank=True,
-    help_text=gettext_lazy('Store the scores of each member.'),
+    default=dict,
+    help_text=gettext_lazy('Sequence of questions'),
+  )
+  detail = models.JSONField(
+    gettext_lazy('Detail score'),
+    blank=True,
+    default=dict,
+    help_text=gettext_lazy('Detail score of each member.'),
   )
 
   ##

@@ -10,6 +10,9 @@ def setup_django(settings):
   settings.TIME_ZONE = 'Asia/Tokyo'
   settings.HASH_SALT = 'send-salt-to-relevant-member'
   settings.EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+  settings.SESSION_COOKIE_SECURE = False
+  settings.CSRF_COOKIE_SECURE = False
+  settings.SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 
 @pytest.fixture
 def csrf_exempt_django_app(django_app_factory):

@@ -21,7 +21,7 @@
             <thead>
               <tr>
                 <th scope="col">{% trans "Group name" %}</th>
-                <th scope="col">{% trans "Number of members" %}</th>
+                <th scope="col">{% trans "#Members" %}</th>
                 <th colspan="2">{% trans "Operation" %}</th>
               </tr>
             </thead>
@@ -33,7 +33,7 @@
                 <td>
                   <a
                     href="{% url 'account:update_group' pk=instance.pk %}"
-                    class="btn btn-outline-success w-100 custom-boxshadow"
+                    class="btn btn-outline-success w-100 custom-boxshadow text-nowrap"
                   >
                     {% trans "Edit" %}
                   </a>
@@ -41,7 +41,7 @@
                 <td>
                   <button
                     type="button"
-                    class="btn btn-outline-danger w-100 custom-boxshadow js-delete-group"
+                    class="btn btn-outline-danger w-100 custom-boxshadow text-nowrap js-delete-group"
                     data-name="{{ instance.name }}"
                     data-url="{% url 'account:delete_group' pk=instance.pk %}"
                   >

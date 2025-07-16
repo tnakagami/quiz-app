@@ -1,8 +1,12 @@
 {% extends 'base.html' %}
 {% load i18n %}
 
+{% block header %}
+{% include form.dual_listbox_template_name %}
+{% endblock %}
+
 {% block content %}
-{% include 'breadcrumbs.html' with title=_("Quizzes") %}
+{% include 'breadcrumbs.html' with title=_("Quiz list") %}
 <div class="row justify-content-center">
   <div class="col">
     <div class="row row-cols-1 g-2">
@@ -16,6 +20,50 @@
         </a>
       </div>
       {% endif %}
+      <div class="col">
+        <div class="row">
+          <div class="col-12 mb-2 col-md-9 mb-md-0">
+            <button
+              type="button"
+              id="quiz-search"
+              class="btn btn-success w-100 custom-boxshadow"
+              data-bs-toggle="modal"
+              data-bs-target="#quiz-search-modal"
+            >
+              {% trans "Search quiz (Shift + f)" %}
+            </button>
+          </div>
+          <div class="col-12 col-md-3">
+            <div class="dropdown">
+              <button
+                type="button"
+                class="btn btn-secondary w-100 custom-boxshadow dropdown-toggle no-wrap"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                {% trans "Helper functions" %}
+              </button>
+              <ul class="dropdown-menu">
+                <li>
+                  <a class="dropdown-item" href="{% url 'quiz:download_genre' %}">
+                    {% trans "Download genre" %}
+                  </a>
+                </li>
+                <li>
+                  <a class="dropdown-item" href="{% url 'quiz:upload_quiz' %}">
+                    {% trans "Upload quiz" %}
+                  </a>
+                </li>
+                <li>
+                  <a class="dropdown-item" href="{% url 'quiz:download_quiz' %}">
+                    {% trans "Download quiz" %}
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
       {% if quizzes %}
       <div class="col">
         <div class="table-responsive">
@@ -41,7 +89,7 @@
                 <td>
                   <a
                     href="{% url 'quiz:update_quiz' pk=instance.pk %}"
-                    class="btn btn-outline-success w-100 custom-boxshadow"
+                    class="btn btn-outline-success w-100 custom-boxshadow text-nowrap"
                   >
                     {% trans "Edit" %}
                   </a>
@@ -49,8 +97,8 @@
                 <td>
                   <button
                     type="button"
-                    class="btn btn-outline-danger w-100 custom-boxshadow js-delete-quiz"
-                    data-name="{{ instance.name }}"
+                    class="btn btn-outline-danger w-100 custom-boxshadow text-nowrap js-delete-quiz"
+                    data-name="{{ instance|stringformat:'s' }}"
                     data-url="{% url 'quiz:delete_quiz' pk=instance.pk %}"
                   >
                     {% trans "Delete" %}
@@ -74,6 +122,40 @@
   </div>
 </div>
 
+<div class="modal" id="quiz-search-modal" tabindex="-1" aria-labelledby="quiz-search-label" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <p class="modal-title fs-5" id="quiz-search-label">{% trans "Filtering quizzes" %}</p>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>{% trans "Select genres or creators" %}</p>
+      </div>
+      <div class="modal-footer">
+        <form method="POST" action="{% url 'quiz:quiz_list' %}" id="quiz-search-form" class="w-100">
+          {% csrf_token %}
+
+          {{ form }}
+
+          <div class="mt-1 row g-2">
+            <div class="col-12 col-md-6">
+              <button type="submit" class="btn btn-primary w-100 custom-boxshadow">
+                {% trans "Search (Enter)" %}
+              </button>
+            </div>
+            <div class="col-12 col-md-6">
+              <button type="button" class="btn btn-secondary w-100 custom-boxshadow" data-bs-dismiss="modal">
+                {% trans "Cancel" %}
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
 {# Delete modal #}
 {% include "delete_modal_form.html" with modal_id="delete-modal" form_id="delete-form" %}
 {% endblock %}
@@ -89,6 +171,37 @@
       formID: 'delete-form',
       modalID: 'delete-modal',
     });
+    (() => {
+      const element = document.querySelector('#genreList');
+      const availableTitle = element.dataset.available;
+      const selectedTitle = element.dataset.selected;
+      const options = '{{ form.get_genre_options|safe }}';
+      helper.initDualListbox(element, availableTitle, selectedTitle, options);
+    })();
+    {% if user.has_manager_role %}
+    (() => {
+      const element = document.querySelector('#creatorList');
+      const availableTitle = element.dataset.available;
+      const selectedTitle = element.dataset.selected;
+      const options = '{{ form.get_creator_options|safe }}';
+      helper.initDualListbox(element, availableTitle, selectedTitle, options);
+    })();
+    {% endif %}
+    // Add key event
+    const searchButton = document.querySelector('#quiz-search');
+    const searchForm = document.querySelector('#quiz-search-form');
+    document.addEventListener('keyup', (event) => {
+      if (event.key === 'F') {
+        /* F := Sfhit + f */
+        searchButton.click();
+      }
+      else if (event.key === 'Enter') {
+        searchForm.submit();
+      }
+    });
+    {% if searchForm.errors %}
+    searchButton.click();
+    {% endif %}
   };
   // Add DOM event
   document.addEventListener('DOMContentLoaded', init);

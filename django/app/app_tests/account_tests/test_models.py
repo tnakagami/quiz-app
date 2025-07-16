@@ -1,5 +1,6 @@
 import pytest
 from django.core.exceptions import ValidationError
+from django.db.models import Count, Q
 from django.db.utils import IntegrityError, DataError
 from datetime import datetime, timezone
 from app_tests import (
@@ -196,7 +197,7 @@ def test_add_friends():
   user = factories.UserFactory(friends=[_friend])
   friends = user.friends.all()
 
-  assert len(friends) == 1
+  assert friends.count() == 1
   assert friends[0].pk == _friend.pk
 
 @pytest.mark.account
@@ -291,7 +292,7 @@ def test_check_collect_valid_normal_users_of_user_manager():
   exacts = models.User.objects.filter(is_active=True, is_staff=False).exclude(role=models.RoleType.MANAGER)
   ids = list(queryset.values_list('pk', flat=True))
 
-  assert len(queryset) == len(exacts)
+  assert queryset.count() == exacts.count()
   assert all([instance.pk in ids for instance in queryset])
 
 @pytest.mark.account
@@ -318,7 +319,19 @@ def test_check_collect_creators_of_user_manager():
   exacts = models.User.objects.filter(is_active=True, is_staff=False, role=models.RoleType.CREATOR)
   ids = list(queryset.values_list('pk', flat=True))
 
-  assert len(queryset) == len(exacts)
+  assert queryset.count() == exacts.count()
+  assert all([instance.pk in ids for instance in queryset])
+
+@pytest.mark.account
+@pytest.mark.model
+@pytest.mark.django_db
+def test_check_collect_valid_creators_of_user_manager():
+  queryset = models.User.objects.collect_valid_creators()
+  exacts = models.User.objects.annotate(qc=Count('quizzes', filter=Q(quizzes__is_completed=True))) \
+                              .filter(is_active=True, is_staff=False, role=models.RoleType.CREATOR, qc__gt=0)
+  ids = list(queryset.values_list('pk', flat=True))
+
+  assert queryset.count() == exacts.count()
   assert all([instance.pk in ids for instance in queryset])
 
 @pytest.mark.account
@@ -340,6 +353,44 @@ def test_check_collect_creators_of_user_queryset():
       valid_users += targets
 
   queryset = models.User.objects.filter(pk__in=list(map(lambda val: val.pk, all_users))).collect_creators()
+  pks = [user.pk for user in valid_users]
+
+  assert queryset.count() == len(pks)
+  assert all([queryset.filter(pk=pk).exists() for pk in pks])
+
+@pytest.mark.account
+@pytest.mark.model
+@pytest.mark.django_db
+@pytest.mark.parametrize([
+  'is_completed',
+], [
+  (True, ),
+  (False, ),
+], ids=[
+  'with-complated-quiz',
+  'without-complated-quiz',
+])
+def test_check_collect_valid_creators_of_user_queryset(is_completed):
+  all_users = []
+  valid_users = []
+  genre = factories.GenreFactory(is_enabled=True)
+
+  for idx, role in enumerate([models.RoleType.GUEST, models.RoleType.CREATOR, models.RoleType.MANAGER], 2):
+    targets = list(factories.UserFactory.create_batch(idx, is_active=True, role=role))
+    all_users += [
+      factories.UserFactory(is_active=True, is_staff=True, is_superuser=True, role=role),
+      factories.UserFactory(is_active=True, is_staff=True, role=role),
+      *factories.UserFactory.create_batch(2, is_active=False, role=role),
+    ] + targets
+
+    if role == models.RoleType.CREATOR:
+      for _user in targets:
+        _ = factories.QuizFactory(creator=_user, genre=genre, is_completed=is_completed)
+
+      if is_completed:
+        valid_users += targets
+
+  queryset = models.User.objects.filter(pk__in=list(map(lambda val: val.pk, all_users))).collect_valid_creators()
   pks = [user.pk for user in valid_users]
 
   assert queryset.count() == len(pks)
@@ -549,11 +600,11 @@ def test_check_get_options_method_in_individual_group(call_type, expected_type):
   not_exist_group.delete()
 
   patterns = {
-    'valid-pattern':    {'owner_pk': user.pk,   'group_pk': group.pk},
-    'invalid-owner-pk': {'owner_pk': nobody.pk, 'group_pk': group.pk},
-    'not-exist-owner':  {'owner_pk': user.pk,   'group_pk': _other_group.pk},
-    'invalid-group-pk': {'owner_pk': user.pk,   'group_pk': not_exist_group.pk},
-    'not-exist-group':  {'owner_pk': other.pk,  'group_pk': group.pk},
+    'valid-pattern':    {'owner': user,   'group_pk': group.pk},
+    'invalid-owner-pk': {'owner': nobody, 'group_pk': group.pk},
+    'not-exist-owner':  {'owner': user,   'group_pk': _other_group.pk},
+    'invalid-group-pk': {'owner': user,   'group_pk': not_exist_group.pk},
+    'not-exist-group':  {'owner': other,  'group_pk': group.pk},
   }
   expected = {
     'specific': g_generate_item([members[0], members[-1]], False),

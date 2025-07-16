@@ -106,14 +106,11 @@
           const dualListbox = new DualListbox(elementName, {
             availableTitle: availableTitle,
             selectedTitle:  selectedTitle,
-            addButtonText: '>',
-            removeButtonText: '<',
-            addAllButtonText: '>>',
-            removeAllButtonText: '<<',
             sortable: true,
             upButtonText: 'Up',
             downButtonText: 'Down',
             draggable: true,
+            enableDoubleClick: true,
             options: JSON.parse(options),
           });
           // Update css
@@ -121,13 +118,35 @@
           dualListbox.search_left.classList.add('form-control', 'px-2');
           dualListbox.search_right.classList.remove('dual-listbox__search');
           dualListbox.search_right.classList.add('form-control', 'px-2');
+          const textPairs = Object.freeze({
+            add_button: '>',
+            add_all_button: '>>',
+            remove_button: '<',
+            remove_all_button: '<<',
+          });
 
           for (const name of ['add_button', 'add_all_button', 'remove_button', 'remove_all_button']) {
+            const text = textPairs[name];
             dualListbox[name].classList.remove('dual-listbox__button');
             dualListbox[name].classList.add('btn', 'btn-outline-dark', 'w-100', 'h-100', 'm-2');
+            dualListbox[name].innerHTML = `<span>${text}</span>`
           }
 
           return dualListbox;
+        }
+        downloadStatusChecker(key, value, callback=undefined, interval=1000) {
+          const target = `${key}=${value}`
+          const timerId = window.setInterval(() => {
+            // Check whether targetCookieValue exists or not
+            if (document.cookie.includes(target)) {
+              window.clearInterval(timerId);
+              document.cookie = `${key}=; max-age=0; path=/; Secure`;
+              // Call callback function if it's set
+              if (callback) {
+                callback();
+              }
+            }
+          }, interval);
         }
       }
     </script>

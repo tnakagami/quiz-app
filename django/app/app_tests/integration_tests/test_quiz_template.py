@@ -8,11 +8,14 @@ from app_tests import status, factories
 from app_tests.integration_tests import get_current_path
 from account.models import RoleType
 from quiz import models
+import urllib.parse
 
 UserModel = get_user_model()
 
 class Common:
   index_url = reverse('utils:index')
+  pk_convertor = lambda _self, xs: [item.pk for item in xs]
+  compare_qs = lambda _self, qs, exacts: all([val.pk == ex.pk for val, ex in zip(qs, exacts)])
 
   @pytest.fixture(params=['superuser', 'staff', 'manager', 'creator', 'guest'], scope='module')
   def get_users(self, django_db_blocker, request):
@@ -174,8 +177,8 @@ class TestGenre(Common):
     assert get_current_path(response) == self.genre_list_url
     assert instance.is_enabled == is_enabled
 
-  def test_can_move_to_genre_update_page(self, csrf_exempt_django_app, get_managers):
-    instance = factories.GenreFactory()
+  def test_can_move_to_genre_update_page(self, csrf_exempt_django_app, get_genres, get_managers):
+    instance = get_genres[0]
     user = get_managers
     app = csrf_exempt_django_app
     page = app.get(self.genre_list_url, user=user)
@@ -185,8 +188,8 @@ class TestGenre(Common):
     assert response.status_code == status.HTTP_200_OK
     assert get_current_path(response) == output_url
 
-  def test_can_move_to_parent_page_from_genre_update_page(self, csrf_exempt_django_app, get_managers):
-    instance = factories.GenreFactory()
+  def test_can_move_to_parent_page_from_genre_update_page(self, csrf_exempt_django_app, get_genres, get_managers):
+    instance = get_genres[0]
     user = get_managers
     app = csrf_exempt_django_app
     url = self.update_genre_url(instance.pk)
@@ -272,42 +275,91 @@ class TestQuiz(Common):
   @pytest.fixture
   def create_quizzes(self, django_db_blocker, get_genres, get_creator):
     with django_db_blocker.unblock():
+      instances = []
       genres = get_genres
       others = factories.UserFactory.create_batch(3, is_active=True, role=RoleType.CREATOR)
-      _ = factories.QuizFactory(creator=others[0], genre=genres[0], is_completed=True)
-      _ = factories.QuizFactory(creator=others[1], genre=genres[1], is_completed=False)
-      _ = factories.QuizFactory(creator=others[2], genre=genres[0], is_completed=True)
+      instances += [
+        factories.QuizFactory(creator=others[0], genre=genres[0], is_completed=True),
+        factories.QuizFactory(creator=others[1], genre=genres[1], is_completed=False),
+        factories.QuizFactory(creator=others[2], genre=genres[0], is_completed=True),
+      ]
       creator = get_creator
-      _ = factories.QuizFactory(creator=creator, genre=genres[0], is_completed=True)
-      _ = factories.QuizFactory(creator=creator, genre=genres[1], is_completed=False)
+      instances += [
+        factories.QuizFactory(creator=creator, genre=genres[0], is_completed=True),
+        factories.QuizFactory(creator=creator, genre=genres[1], is_completed=False),
+      ]
+      all_queryset = models.Quiz.objects.filter(pk__in=self.pk_convertor(instances))
 
-    return creator, others[1]
+    return creator, others[1], all_queryset
 
-  def test_check_number_of_quizzes_for_manager(self, csrf_exempt_django_app, create_quizzes, get_managers):
-    creator, _ = create_quizzes
+  def test_check_quiz_queryset_for_manager(self, csrf_exempt_django_app, mocker, create_quizzes, get_managers):
+    creator, _, all_queryset = create_quizzes
     user = get_managers
     app = csrf_exempt_django_app
+    mocker.patch('quiz.views.QuizListPage.get_queryset', return_value=all_queryset)
     response = app.get(self.quiz_list_url, user=user)
     quizzes = response.context['quizzes']
-    all_counts = models.Quiz.objects.all().count()
-    expected = self.paginate_by if all_counts > self.paginate_by else all_counts
+    estimated = models.Quiz.objects.filter(pk__in=[_quiz.pk for _quiz in quizzes])
+    expected = all_queryset[:self.paginate_by] if len(all_queryset) > self.paginate_by else all_queryset
 
-    assert len(quizzes) == expected
+    assert response.status_code == status.HTTP_200_OK
+    assert estimated.count() == len(expected)
+    assert self.compare_qs(estimated, expected)
 
-  def test_check_number_of_quizzes_for_creator(self, csrf_exempt_django_app, create_quizzes):
-    user, _ = create_quizzes
+  def test_check_quiz_queryset_for_creator(self, csrf_exempt_django_app, create_quizzes):
+    user, _, all_queryset = create_quizzes
     app = csrf_exempt_django_app
     response = app.get(self.quiz_list_url, user=user)
     quizzes = response.context['quizzes']
-    all_counts = user.quizzes.all().count()
-    expected = self.paginate_by if all_counts > self.paginate_by else all_counts
+    estimated = all_queryset.filter(pk__in=[_quiz.pk for _quiz in quizzes]).order_by('pk')
+    expected = all_queryset.filter(creator=user).order_by('pk')
 
-    assert len(quizzes) == expected
+    assert response.status_code == status.HTTP_200_OK
+    assert estimated.count() == expected.count()
+    assert self.compare_qs(estimated, expected)
 
-  def test_send_create_request(self, csrf_exempt_django_app, get_creator):
+  def test_check_filtering_method_for_manager(self, csrf_exempt_django_app, mocker, get_genres, create_quizzes, get_managers):
+    genres = get_genres
+    creator, _, all_queryset = create_quizzes
+    user = get_managers
+    mocker.patch('quiz.views.QuizListPage.get_queryset', return_value=all_queryset)
+    app = csrf_exempt_django_app
+    forms = app.get(self.quiz_list_url, user=user).forms
+    form = forms['quiz-search-form']
+    form['genres'] = [str(genres[0].pk)]
+    form['creators'] = [str(creator.pk)]
+    form['is_and_op'] = False
+    response = form.submit()
+    quizzes = response.context['quizzes']
+    estimated = models.Quiz.objects.filter(pk__in=[_quiz.pk for _quiz in quizzes]).order_by('pk')
+    expected = all_queryset.filter(Q(genre__pk__in=[genres[0].pk]) | Q(creator__pk__in=[creator.pk])).order_by('pk')
+
+    assert response.status_code == status.HTTP_200_OK
+    assert estimated.count() == expected.count()
+    assert self.compare_qs(estimated, expected)
+
+  def test_check_filtering_method_for_creator(self, csrf_exempt_django_app, get_genres, create_quizzes):
+    genres = get_genres
+    user, _, all_queryset = create_quizzes
+    app = csrf_exempt_django_app
+    forms = app.get(self.quiz_list_url, user=user).forms
+    form = forms['quiz-search-form']
+    form['genres'] = [str(genres[0].pk)]
+    form['creators'] = [str(user.pk)]
+    form['is_and_op'] = False
+    response = form.submit()
+    quizzes = response.context['quizzes']
+    estimated = models.Quiz.objects.filter(pk__in=[_quiz.pk for _quiz in quizzes]).order_by('pk')
+    expected = all_queryset.filter(creator=user).order_by('pk')
+
+    assert response.status_code == status.HTTP_200_OK
+    assert estimated.count() == expected.count()
+    assert self.compare_qs(estimated, expected)
+
+  def test_send_create_request(self, csrf_exempt_django_app, get_genres, get_creator):
     user = get_creator
     app = csrf_exempt_django_app
-    genre = factories.GenreFactory(is_enabled=True)
+    genre = get_genres[3]
     forms = app.get(self.create_quiz_url, user=user).forms
     form = forms['quiz-form']
     form['genre'] = str(genre.pk)
@@ -315,16 +367,16 @@ class TestQuiz(Common):
     form['answer'] = 'fugafuga'
     form['is_completed'] = False
     response = form.submit().follow()
-    all_counts = user.quizzes.all().count()
+    all_counts = models.Quiz.objects.filter(creator=user, genre=genre).count()
 
     assert response.status_code == status.HTTP_200_OK
     assert get_current_path(response) == self.quiz_list_url
     assert all_counts == 1
 
-  def test_invalid_create_request(self, csrf_exempt_django_app, get_creator):
+  def test_invalid_create_request(self, csrf_exempt_django_app, get_genres, get_creator):
     user = get_creator
     app = csrf_exempt_django_app
-    genre = factories.GenreFactory(is_enabled=True)
+    genre = get_genres[0]
     invalid_genre = factories.GenreFactory(is_enabled=False)
     forms = app.get(self.create_quiz_url, user=user).forms
     form = forms['quiz-form']
@@ -355,7 +407,7 @@ class TestQuiz(Common):
     assert get_current_path(response) == self.quiz_list_url
 
   def test_cannot_move_to_other_creators_update_page(self, csrf_exempt_django_app, create_quizzes):
-    user, other = create_quizzes
+    user, other, _ = create_quizzes
     instance = other.quizzes.all().first()
     app = csrf_exempt_django_app
     url = self.update_quiz_url(instance.pk)
@@ -366,7 +418,7 @@ class TestQuiz(Common):
     assert str(status.HTTP_403_FORBIDDEN) in ex.value.args[0]
 
   def test_update_quiz_for_creator(self, csrf_exempt_django_app, create_quizzes):
-    user, _ = create_quizzes
+    user, _, _ = create_quizzes
     instance = user.quizzes.all().first()
     app = csrf_exempt_django_app
     url = self.update_quiz_url(instance.pk)
@@ -387,7 +439,7 @@ class TestQuiz(Common):
     assert not instance.is_completed
 
   def test_update_quiz_for_manager(self, csrf_exempt_django_app, create_quizzes, get_managers):
-    _, other = create_quizzes
+    _, other, _ = create_quizzes
     user = get_managers
     instance = other.quizzes.all().first()
     app = csrf_exempt_django_app
@@ -409,7 +461,7 @@ class TestQuiz(Common):
     assert instance.is_completed
 
   def test_cannot_access_to_delete_page(self, csrf_exempt_django_app, create_quizzes, get_users):
-    creator, _ = create_quizzes
+    creator, _, _ = create_quizzes
     user = get_users
     instance = creator.quizzes.all().first()
     app = csrf_exempt_django_app
@@ -424,7 +476,7 @@ class TestQuiz(Common):
     ])
 
   def test_delete_quiz_for_manager(self, csrf_exempt_django_app, create_quizzes, get_managers):
-    _, other = create_quizzes
+    _, other, _ = create_quizzes
     user = get_managers
     instance = other.quizzes.all().first()
     app = csrf_exempt_django_app
@@ -434,10 +486,10 @@ class TestQuiz(Common):
 
     assert response.status_code == status.HTTP_200_OK
     assert get_current_path(response) == self.quiz_list_url
-    assert len(queryset) == 0
+    assert queryset.count() == 0
 
   def test_delete_quiz_for_creator(self, csrf_exempt_django_app, create_quizzes):
-    user, _ = create_quizzes
+    user, _, _ = create_quizzes
     instance = user.quizzes.all().first()
     app = csrf_exempt_django_app
     url = self.delete_quiz_url(instance.pk)
@@ -446,10 +498,10 @@ class TestQuiz(Common):
 
     assert response.status_code == status.HTTP_200_OK
     assert get_current_path(response) == self.quiz_list_url
-    assert len(queryset) == 0
+    assert queryset.count() == 0
 
   def test_delete_quiz_for_other_creator(self, csrf_exempt_django_app, create_quizzes):
-    user, other = create_quizzes
+    user, other, _ = create_quizzes
     instance = other.quizzes.all().first()
     app = csrf_exempt_django_app
     url = self.delete_quiz_url(instance.pk)
@@ -471,7 +523,6 @@ class TestQuizRoom(Common):
   delete_room_url = lambda _self, pk: reverse('quiz:delete_room', kwargs={'pk': pk})
   enter_room_url = lambda _self, pk: reverse('quiz:enter_room', kwargs={'pk': pk})
   pk_str_convertor = lambda _self, xs: [str(item.pk) for item in xs]
-  paginate_by = 15
 
   def test_can_move_to_room_page(self, csrf_exempt_django_app, get_users):
     user = get_users
@@ -519,57 +570,102 @@ class TestQuizRoom(Common):
 
   @pytest.fixture(scope='class')
   def create_rooms(self, django_db_blocker, get_players, create_members):
-    pk_convertor = lambda xs: [item.pk for item in xs]
-
     with django_db_blocker.unblock():
       creators, guests, genres = create_members
       members = creators + guests
       user = get_players
       configs = [
         ### Not relevant ###
-        {'owner': creators[0], 'creators': [creators[1].pk, creators[2].pk], 'genres': [genres[0].pk, genres[3].pk], 'members': pk_convertor(guests), 'is_enabled': False},
+        {'owner': creators[0], 'name': 'target-room', 'creators': [creators[1].pk, creators[2].pk], 'genres': [genres[0].pk, genres[3].pk], 'members': self.pk_convertor(guests), 'is_enabled': False},
         # The user includes members
-        {'owner': creators[1], 'creators': [creators[2].pk, creators[3].pk], 'members': pk_convertor(guests+[user]), 'is_enabled': True},
+        {'owner': creators[1], 'name': 'test-room1',  'creators': [creators[2].pk, creators[3].pk], 'members': self.pk_convertor(guests+[user]), 'is_enabled': True},
         ### Not relevant ###
-        {'owner': guests[0], 'creators': [creators[0].pk, creators[3].pk], 'genres': [genres[5].pk], 'members': pk_convertor(members), 'is_enabled': True},
+        {'owner': guests[0],   'name': 'test-room2',  'creators': [creators[0].pk, creators[3].pk], 'genres': [genres[5].pk], 'members': self.pk_convertor(members), 'is_enabled': True},
         # The user includes members
-        {'owner': guests[1], 'genres': [genres[3].pk, genres[4].pk], 'members': pk_convertor(members+[user]), 'is_enabled': False},
+        {'owner': guests[1],   'name': 'test-room3',  'genres':   [genres[3].pk, genres[4].pk], 'members': self.pk_convertor(members+[user]), 'is_enabled': False},
         # The user is an owner
-        {'owner': user, 'creators': [creators[0].pk], 'members': pk_convertor(guests), 'is_enabled': True},
+        {'owner': user,        'name': 'target-room', 'creators': [creators[0].pk], 'members': self.pk_convertor(guests), 'is_enabled': True},
         # The user is an owner
-        {'owner': user, 'creators': [creators[1].pk], 'members': pk_convertor(creators), 'is_enabled': False},
+        {'owner': user,        'name': 'test-room4',  'creators': [creators[1].pk], 'members': self.pk_convertor(creators), 'is_enabled': False},
       ]
-      for kwargs in configs:
-        _ = factories.QuizRoomFactory(max_question=10, **kwargs)
+      instances = [factories.QuizRoomFactory(max_question=10, **kwargs) for kwargs in configs]
+      all_queryset = models.QuizRoom.objects.filter(pk__in=self.pk_convertor(instances))
 
-    return user, guests[0]
+    return user, guests[0], all_queryset
 
-  def test_check_number_of_rooms_for_manager(self, csrf_exempt_django_app, create_rooms, get_managers):
+  def test_check_room_queryset_for_manager(self, csrf_exempt_django_app, mocker, create_rooms, get_managers):
     user = get_managers
-    _ = create_rooms
+    _, _, all_queryset = create_rooms
+    app = csrf_exempt_django_app
+    mocker.patch('quiz.models.QuizRoom.objects.collect_relevant_rooms', return_value=all_queryset)
+    # Send GET request
+    response = app.get(self.room_list_url, user=user)
+    rooms = models.QuizRoom.objects.filter(pk__in=[_room.pk for _room in response.context['rooms']]).order_by('pk')
+    expected = all_queryset.order_by('pk')
+
+    assert response.status_code == status.HTTP_200_OK
+    assert rooms.count() == expected.count()
+    assert self.compare_qs(rooms, expected)
+
+  def test_check_room_queryset_for_player(self, csrf_exempt_django_app, create_rooms):
+    user, _, all_queryset = create_rooms
     app = csrf_exempt_django_app
     response = app.get(self.room_list_url, user=user)
-    rooms = response.context['rooms']
-    all_counts = models.QuizRoom.objects.all().count()
-    expect = self.paginate_by if all_counts > self.paginate_by else all_counts
+    rooms = models.QuizRoom.objects.filter(pk__in=[_room.pk for _room in response.context['rooms']]).order_by('pk')
+    expected = all_queryset.filter(Q(owner=user) | Q(members__pk__in=[user.pk], is_enabled=True)).order_by('pk').distinct()
 
-    assert len(rooms) == expect
+    assert response.status_code == status.HTTP_200_OK
+    assert rooms.count() == expected.count()
+    assert self.compare_qs(rooms, expected)
 
-  def test_check_number_of_room_for_player(self, csrf_exempt_django_app, create_rooms):
-    user, _ = create_rooms
+  @pytest.mark.parametrize([
+    'name',
+    'pair',
+  ], [
+    ('target-room', {True: 1, False: 2}),
+    ('test-room', {True: 2, False: 4}),
+    ('room', {True: 3, False: 6}),
+  ], ids=[
+    'target-room-and-manager-2-player-1',
+    'test-room-and-manager-4-player-2',
+    'room-and-manager-6-player-3',
+  ])
+  def test_check_filtering_method(self, csrf_exempt_django_app, mocker, create_rooms, get_users, name, pair):
+    _u_tmp = get_users
+    is_player = _u_tmp.is_player()
+    owner, _, all_queryset = create_rooms
+    expected_count = pair[is_player]
     app = csrf_exempt_django_app
-    response = app.get(self.room_list_url, user=user)
-    rooms = response.context['rooms']
-    relevant_records = models.QuizRoom.objects.filter(Q(owner=user) | Q(members__pk__in=[user.pk], is_enabled=True)).order_by('pk').distinct()
-    all_counts = relevant_records.count()
-    expect = self.paginate_by if all_counts > self.paginate_by else all_counts
+    # Define queryset
+    if is_player:
+      user = owner
+      _user_qs = all_queryset.filter(Q(owner=user) | Q(members__in=[user], is_enabled=True))
+    else:
+      user = _u_tmp
+      _user_qs = all_queryset
+    mocker.patch('quiz.models.QuizRoom.objects.collect_relevant_rooms', return_value=_user_qs)
+    # Collect Form data
+    forms = app.get(self.room_list_url, user=user).forms
+    form = forms['room-search-form']
+    form['name'] = name
+    response = form.submit()
+    rooms = models.QuizRoom.objects.filter(pk__in=[_room.pk for _room in response.context['rooms']]).order_by('pk')
 
-    assert len(rooms) == expect
+    if is_player:
+      expected = all_queryset.filter(Q(owner=user, name__contains=name) | Q(members__pk__in=[user.pk], is_enabled=True, name__contains=name)).order_by('pk').distinct()
+    else:
+      expected = all_queryset.filter(name__contains=name).order_by('pk')
+
+    assert response.status_code == status.HTTP_200_OK
+    assert rooms.count() == expected.count() == expected_count
+    assert self.compare_qs(rooms, expected)
 
   def test_send_create_request(self, csrf_exempt_django_app, create_members, get_players):
     user = get_players
     app = csrf_exempt_django_app
     creators, guests, genres = create_members
+    _ = factories.QuizFactory(creator=creators[0], genre=genres[0], is_completed=True)
+    _ = factories.QuizFactory(creator=creators[1], genre=genres[0], is_completed=True)
     forms = app.get(self.create_room_url, user=user).forms
     form = forms['room-form']
     creator_ids = self.pk_str_convertor([creators[0], creators[1]])
@@ -579,10 +675,10 @@ class TestQuizRoom(Common):
     form['creators'] = creator_ids
     form['genres'] = genre_ids
     form['members'] = member_ids
-    form['max_question'] = 3
+    form['max_question'] = 2
     form['is_enabled'] = False
     response = form.submit().follow()
-    instance = models.QuizRoom.objects.get(owner=user, max_question=3)
+    instance = models.QuizRoom.objects.get(owner=user, max_question=2)
 
     assert response.status_code == status.HTTP_200_OK
     assert get_current_path(response) == self.room_list_url
@@ -599,7 +695,7 @@ class TestQuizRoom(Common):
     form = forms['room-form']
     form['name'] = 'test-room'
     form['members'] = self.pk_str_convertor([guests[0], guests[1]])
-    form['max_question'] = 3
+    form['max_question'] = 1
     form['is_enabled'] = True
     response = form.submit()
     errors = response.context['form'].errors
@@ -610,7 +706,7 @@ class TestQuizRoom(Common):
 
   def test_can_move_to_room_update_page(self, csrf_exempt_django_app, create_members, get_managers):
     creators, guests, genres = create_members
-    instance = factories.QuizRoomFactory(
+    _ = factories.QuizRoomFactory(
       owner=creators[0],
       genres=[genres[1].pk, genres[2].pk],
       members=[guests[0].pk],
@@ -642,7 +738,7 @@ class TestQuizRoom(Common):
     assert get_current_path(response) == self.room_list_url
 
   def test_cannot_move_to_other_creators_update_page(self, csrf_exempt_django_app, create_rooms):
-    user, other = create_rooms
+    user, other, _ = create_rooms
     instance = other.quiz_rooms.all().first()
     app = csrf_exempt_django_app
     url = self.update_room_url(instance.pk)
@@ -653,31 +749,40 @@ class TestQuizRoom(Common):
     assert str(status.HTTP_403_FORBIDDEN) in ex.value.args[0]
 
   @pytest.fixture
-  def get_being_able_to_modify_rooms(self, django_db_blocker, get_players, create_members):
-    pk_convertor = lambda xs: [item.pk for item in xs]
-
+  def get_being_able_to_modify_rooms(self, django_db_blocker, get_players, get_genres):
     with django_db_blocker.unblock():
-      creators, guests, genres = create_members
+      creators = list(factories.UserFactory.create_batch(4, is_active=True, role=RoleType.CREATOR))
+      guests = list(factories.UserFactory.create_batch(3, is_active=True, role=RoleType.GUEST))
+      genres = get_genres
       members = creators + guests
       user = get_players
       configs = [
         ### Not relevant ###
-        {'owner': creators[0], 'creators': [creators[1].pk, creators[2].pk], 'genres': [genres[0].pk, genres[3].pk], 'members': pk_convertor(guests), 'is_enabled': False},
+        {'owner': creators[0], 'creators': [creators[1].pk, creators[2].pk], 'genres': [genres[0].pk, genres[3].pk], 'members': self.pk_convertor(guests), 'is_enabled': False},
         # The user includes members
-        {'owner': creators[1], 'creators': [creators[2].pk, creators[3].pk], 'members': pk_convertor(guests+[user]), 'is_enabled': True},
+        {'owner': creators[1], 'creators': [creators[2].pk, creators[3].pk], 'members': self.pk_convertor(guests+[user]), 'is_enabled': True},
         # The user is an owner
-        {'owner': user, 'creators': [creators[0].pk], 'members': pk_convertor(guests), 'is_enabled': True},
+        {'owner': user, 'creators': [creators[0].pk], 'members': self.pk_convertor(guests), 'is_enabled': True},
         # The user is an owner
-        {'owner': user, 'creators': [creators[1].pk], 'members': pk_convertor(creators), 'is_enabled': False},
+        {'owner': user, 'creators': [creators[1].pk], 'members': self.pk_convertor(creators), 'is_enabled': False},
       ]
+      _ = factories.QuizFactory(creator=creators[0], genre=genres[0], is_completed=True)
+      _ = factories.QuizFactory(creator=creators[0], genre=genres[1], is_completed=True)
+      _ = factories.QuizFactory(creator=creators[1], genre=genres[0], is_completed=True)
+      _ = factories.QuizFactory(creator=creators[1], genre=genres[1], is_completed=True)
+      if user.is_creator():
+        _ = factories.QuizFactory(creator=user, genre=genres[0], is_completed=True)
+        _ = factories.QuizFactory(creator=user, genre=genres[1], is_completed=True)
       for kwargs in configs:
-        _ = factories.QuizRoomFactory(max_question=10, **kwargs)
+        _ = factories.QuizRoomFactory(max_question=2, **kwargs)
 
     return user, creators[0]
 
   def test_update_room_for_creator(self, csrf_exempt_django_app, create_members, get_being_able_to_modify_rooms):
     creators, guests, genres = create_members
     user, _ = get_being_able_to_modify_rooms
+    _ = factories.QuizFactory(creator=creators[0], genre=genres[0], is_completed=True)
+    _ = factories.QuizFactory(creator=creators[2], genre=genres[0], is_completed=True)
     target = user.quiz_rooms.all().first()
     app = csrf_exempt_django_app
     url = self.update_room_url(target.pk)
@@ -685,7 +790,7 @@ class TestQuizRoom(Common):
     form = forms['room-form']
     creator_ids = self.pk_str_convertor([creators[0], creators[2]])
     form['creators'] = creator_ids
-    form['max_question'] = 11
+    form['max_question'] = 2
     form['is_enabled'] = True
     response = form.submit().follow()
     instance = models.QuizRoom.objects.get(pk=target.pk)
@@ -697,12 +802,14 @@ class TestQuizRoom(Common):
     assert all([pk in creator_ids for pk in self.pk_str_convertor(instance.creators.all())])
     assert all([pk in genres_ids for pk in self.pk_str_convertor(instance.genres.all())])
     assert all([pk in members_ids for pk in self.pk_str_convertor(instance.members.all())])
-    assert instance.max_question == 11
+    assert instance.max_question == 2
     assert instance.is_enabled
 
   def test_update_room_for_manager(self, csrf_exempt_django_app, create_members, get_being_able_to_modify_rooms, get_managers):
     creators, guests, genres = create_members
     _, other = get_being_able_to_modify_rooms
+    _ = factories.QuizFactory(creator=creators[0], genre=genres[0], is_completed=True)
+    _ = factories.QuizFactory(creator=creators[2], genre=genres[0], is_completed=True)
     user = get_managers
     target = other.quiz_rooms.all().first()
     app = csrf_exempt_django_app
@@ -711,7 +818,7 @@ class TestQuizRoom(Common):
     form = forms['room-form']
     creator_ids = self.pk_str_convertor([creators[0], creators[2]])
     form['creators'] = creator_ids
-    form['max_question'] = 11
+    form['max_question'] = 2
     form['is_enabled'] = True
     response = form.submit().follow()
     instance = models.QuizRoom.objects.get(pk=target.pk)
@@ -723,7 +830,7 @@ class TestQuizRoom(Common):
     assert all([pk in creator_ids for pk in self.pk_str_convertor(instance.creators.all())])
     assert all([pk in genres_ids for pk in self.pk_str_convertor(instance.genres.all())])
     assert all([pk in members_ids for pk in self.pk_str_convertor(instance.members.all())])
-    assert instance.max_question == 11
+    assert instance.max_question == 2
     assert instance.is_enabled
 
   def test_cannot_access_to_delete_page(self, csrf_exempt_django_app, get_being_able_to_modify_rooms, get_users):
@@ -757,7 +864,7 @@ class TestQuizRoom(Common):
 
     assert response.status_code == status.HTTP_200_OK
     assert get_current_path(response) == self.room_list_url
-    assert len(queryset) == 0
+    assert queryset.count() == 0
 
   def test_can_delete_room_for_player(self, csrf_exempt_django_app, create_members, get_players):
     user = get_players
@@ -775,7 +882,7 @@ class TestQuizRoom(Common):
 
     assert response.status_code == status.HTTP_200_OK
     assert get_current_path(response) == self.room_list_url
-    assert len(queryset) == 0
+    assert queryset.count() == 0
 
   def test_cannot_delete_room_for_player(self, csrf_exempt_django_app, create_members, get_users):
     user = get_users
@@ -867,3 +974,322 @@ class TestQuizRoom(Common):
       _ = app.post(url, user=user)
 
     assert str(status.HTTP_403_FORBIDDEN) in ex.value.args[0]
+
+# =================
+# = DownloadGenre =
+# =================
+@pytest.mark.webtest
+@pytest.mark.django_db
+class TestDownloadGenre(Common):
+  quiz_list_url = reverse('quiz:quiz_list')
+  form_view_url = reverse('quiz:download_genre')
+
+  def test_can_move_to_download_page(self, csrf_exempt_django_app, get_editors):
+    user = get_editors
+    app = csrf_exempt_django_app
+    page = app.get(self.quiz_list_url, user=user)
+    response = page.click('Download genre')
+
+    assert response.status_code == status.HTTP_200_OK
+    assert get_current_path(response) == self.form_view_url
+
+  def test_can_move_to_parent_page_from_download_page(self, csrf_exempt_django_app, get_editors):
+    user = get_editors
+    app = csrf_exempt_django_app
+    page = app.get(self.form_view_url, user=user)
+    response = page.click('Cancel')
+
+    assert response.status_code == status.HTTP_200_OK
+    assert get_current_path(response) == self.quiz_list_url
+
+  @pytest.mark.parametrize([
+    'filename',
+    'exact_fname',
+  ], [
+    ('hoge-test', 'genre-hoge-test.csv'),
+    ('foo-test.csv', 'genre-foo-test.csv'),
+    ('.csv', 'genre-20200102-100518.csv'),
+  ], ids=[
+    'normal-name',
+    'with-extensions',
+    'only-extensions',
+  ])
+  def test_send_post_request(self, mocker, csrf_exempt_django_app, get_genres, get_editors, filename, exact_fname):
+    genres = get_genres
+    genres = models.Genre.objects.filter(pk__in=self.pk_convertor(genres)).order_by('name')
+    user = get_editors
+    # Setup mock
+    mocker.patch('quiz.forms.generate_default_filename', return_value='20200102-100518')
+    mocker.patch('quiz.models.Genre.objects.collect_active_genres', return_value=genres)
+    # Create expected values
+    lines = '\n'.join([','.join([obj.name, str(obj.pk)]) for obj in genres]) + '\n'
+    expected = {
+      'data': bytes('name,pk\n' + lines, 'utf-8'),
+      'filename': exact_fname,
+    }
+    # Send post request
+    app = csrf_exempt_django_app
+    forms = app.get(self.form_view_url, user=user).forms
+    form = forms['genre-download-form']
+    form['filename'] = filename
+    response = form.submit()
+    cookie = response.client.cookies.get('genre_download_status')
+    attachment = response['content-disposition']
+    stream = response.content
+
+    assert expected['filename'] == urllib.parse.unquote(attachment.split('=')[1].replace('"', ''))
+    assert cookie.value == 'completed'
+    assert expected['data'] in stream
+
+  def test_send_invalid_request(self, csrf_exempt_django_app, get_editors):
+    user = get_editors
+    # Send post request
+    app = csrf_exempt_django_app
+    forms = app.get(self.form_view_url, user=user).forms
+    form = forms['genre-download-form']
+    form['filename'] = '1'*129
+    response = form.submit()
+    errors = response.context['form'].errors
+
+    assert response.status_code == status.HTTP_200_OK
+    assert 'Ensure this value has at most 128 character' in str(errors)
+
+# ==============
+# = UploadQuiz =
+# ==============
+@pytest.mark.webtest
+@pytest.mark.django_db
+class TestUploadQuiz(Common):
+  quiz_list_url = reverse('quiz:quiz_list')
+  form_view_url = reverse('quiz:upload_quiz')
+
+  def test_can_move_to_upload_page(self, csrf_exempt_django_app, get_editors):
+    user = get_editors
+    app = csrf_exempt_django_app
+    page = app.get(self.quiz_list_url, user=user)
+    response = page.click('Upload quiz')
+
+    assert response.status_code == status.HTTP_200_OK
+    assert get_current_path(response) == self.form_view_url
+
+  def test_can_move_to_parent_page_from_upload_page(self, csrf_exempt_django_app, get_editors):
+    user = get_editors
+    app = csrf_exempt_django_app
+    page = app.get(self.form_view_url, user=user)
+    response = page.click('Cancel')
+
+    assert response.status_code == status.HTTP_200_OK
+    assert get_current_path(response) == self.quiz_list_url
+
+  @pytest.fixture(params=[
+    'utf-8-with-header',
+    'utf-8-without-header',
+    'sjis-with-header',
+    'sjis-without-header',
+    'cp932-with-header',
+    'cp932-without-header',
+  ])
+  def get_valid_form_param(self, request, get_genres, get_editors):
+    genre = get_genres[0]
+    creators = factories.UserFactory.create_batch(3, is_active=True, role=RoleType.CREATOR)
+    config = {
+      'utf-8-with-header':    ('utf-8', True),
+      'utf-8-without-header': ('utf-8', False),
+      'sjis-with-header':     ('shift_jis', True),
+      'sjis-without-header':  ('shift_jis', False),
+      'cp932-with-header':    ('cp932', True),
+      'cp932-without-header': ('cp932', False),
+    }
+    user = get_editors
+    encoding, header = config[request.param]
+    # Set creator's members
+    if user.has_manager_role():
+      members = creators
+      q_cond = Q(creator__pk__in=self.pk_convertor(creators), genre=genre)
+    else:
+      members = [user]
+      q_cond = Q(creator=user, genre=genre)
+    # Setup temporary file
+    inputs = [
+      ('q1', 'a1', True),
+      ('q2', 'a2', False),
+      ('q3-hoge', 'a3-foo', True),
+      ('q4-x', 'a4-y', True),
+    ]
+    if header:
+      data = ['Creator.pk,Genre,Question,Answer,IsCompleted\n']
+    else:
+      data = []
+    data += [
+      f'{creator.pk},{genre.pk},{question},{answer},{is_completed}\n'
+      for creator in members for question, answer, is_completed in inputs
+    ]
+    # Create form data
+    params = {
+      'encoding': encoding,
+      'csv_file': ('test-file.csv', bytes(''.join(data), encoding=encoding)), # For django-webtest format
+      'header': header,
+    }
+
+    return user, params, q_cond, inputs
+
+  def test_send_post_request(self, get_valid_form_param, csrf_exempt_django_app):
+    user, params, q_cond, inputs = get_valid_form_param
+    # Send request
+    app = csrf_exempt_django_app
+    forms = app.get(self.form_view_url, user=user).forms
+    form = forms['quiz-upload-form']
+    for key, val in params.items():
+      form[key] = val
+    response = form.submit().follow()
+    # Collect expected queryset
+    queryset = models.Quiz.objects.filter(q_cond)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert get_current_path(response) == self.quiz_list_url
+    assert all([
+      queryset.filter(question=question, answer=answer, is_completed=is_completed).exists()
+      for question, answer, is_completed in inputs
+    ])
+
+  def test_send_invalid_encoding(self, get_editors, csrf_exempt_django_app):
+    params = {
+      'encoding': 'euc-jp',
+      'csv_file': ('hoge.csv', bytes('hogehoge\nfogafoga\n', 'euc-jp')),
+    }
+    # Send request
+    user = get_editors
+    app = csrf_exempt_django_app
+    forms = app.get(self.form_view_url, user=user).forms
+    form = forms['quiz-upload-form']
+
+    with pytest.raises(ValueError):
+      form['encoding'] = 'euc-jp'
+
+  def test_send_invalid_extensions(self, get_editors, csrf_exempt_django_app):
+    params = {
+      'encoding': 'utf-8',
+      'csv_file': ('hoge.txt', bytes('hogehoge\nfogafoga\n', 'utf-8')),
+    }
+    err_msg = 'The extention has to be &quot;.csv&quot;.'
+    # Send request
+    user = get_editors
+    app = csrf_exempt_django_app
+    forms = app.get(self.form_view_url, user=user).forms
+    form = forms['quiz-upload-form']
+    for key, val in params.items():
+      form[key] = val
+    response = form.submit()
+    errors = response.context['form'].errors
+
+    assert response.status_code == status.HTTP_200_OK
+    assert err_msg in str(errors)
+
+# ================
+# = DownloadQuiz =
+# ================
+@pytest.mark.webtest
+@pytest.mark.django_db
+class TestDownloadQuiz(Common):
+  quiz_list_url = reverse('quiz:quiz_list')
+  form_view_url = reverse('quiz:download_quiz')
+
+  def test_can_move_to_download_page(self, csrf_exempt_django_app, get_editors):
+    user = get_editors
+    app = csrf_exempt_django_app
+    page = app.get(self.quiz_list_url, user=user)
+    response = page.click('Download quiz')
+
+    assert response.status_code == status.HTTP_200_OK
+    assert get_current_path(response) == self.form_view_url
+
+  def test_can_move_to_parent_page_from_download_page(self, csrf_exempt_django_app, get_editors):
+    user = get_editors
+    app = csrf_exempt_django_app
+    page = app.get(self.form_view_url, user=user)
+    response = page.click('Cancel')
+
+    assert response.status_code == status.HTTP_200_OK
+    assert get_current_path(response) == self.quiz_list_url
+
+  @pytest.mark.parametrize([
+    'filename',
+    'exact_fname',
+    'indices',
+  ], [
+    ('hoge-test', 'quiz-hoge-test.csv',   [0, 1, 3, 4]), # Include all genre patterns
+    ('foo-test.csv', 'quiz-foo-test.csv', [0, 2, 3, 5]), # Include all creators
+    ('.csv', 'quiz-20200102-100518.csv',  range(8)),     # Include all instances
+  ], ids=[
+    'normal-name',
+    'with-extensions',
+    'only-extensions',
+  ])
+  def test_send_post_request(self, mocker, csrf_exempt_django_app, get_genres, get_editors, filename, exact_fname, indices):
+    def generate_csv_data(instance):
+      c_pk = str(instance.creator.pk)
+      name = instance.genre.name
+      qqq = instance.question
+      ans = instance.answer
+      is_c = instance.is_completed
+      val = f'{c_pk},{name},{qqq},{ans},{is_c}'
+
+      return val
+
+    mocker.patch('quiz.forms.generate_default_filename', return_value='20200102-100518')
+    genres = get_genres[:4]
+    user = get_editors
+    is_manager = user.has_manager_role()
+    creator = user if not is_manager else factories.UserFactory(is_active=True, role=RoleType.CREATOR)
+    others = factories.UserFactory.create_batch(3, is_active=True, role=RoleType.CREATOR)
+    instances = [
+      factories.QuizFactory(creator=creator,   genre=genres[0], question='qq1', answer='ans-8', is_completed=True),  # 0
+      factories.QuizFactory(creator=others[0], genre=genres[1], question='qq2', answer='ans-7', is_completed=False), # 1
+      factories.QuizFactory(creator=others[0], genre=genres[0], question='qq3', answer='ans-6', is_completed=True),  # 2
+      factories.QuizFactory(creator=others[1], genre=genres[2], question='qq4', answer='ans-5', is_completed=False), # 3
+      factories.QuizFactory(creator=others[2], genre=genres[3], question='qq5', answer='ans-4', is_completed=True),  # 4
+      factories.QuizFactory(creator=others[2], genre=genres[0], question='qq6', answer='ans-3', is_completed=False), # 5
+      factories.QuizFactory(creator=creator,   genre=genres[3], question='qq7', answer='ans-2', is_completed=False), # 6
+      factories.QuizFactory(creator=creator,   genre=genres[2], question='qq8', answer='ans-1', is_completed=False), # 7
+    ]
+    all_queryset = models.Quiz.objects.filter(pk__in=self.pk_convertor(instances))
+    mocker.patch('quiz.models.Quiz.objects.all', return_value=all_queryset)
+    # Create expected values
+    if is_manager:
+      items = [instances[idx] for idx in indices]
+    else:
+      items = [instances[idx] for idx in indices if idx in [0, 6, 7]]
+    items = models.Quiz.objects.filter(pk__in=self.pk_convertor(items)).order_by('genre__name', 'creator__screen_name')
+    lines = '\n'.join([generate_csv_data(obj) for obj in items]) + '\n'
+    expected = {
+      'data': bytes('Creator.pk,Genre,Question,Answer,IsCompleted\n' + lines, 'utf-8'),
+      'filename': exact_fname,
+    }
+    # Send post request
+    app = csrf_exempt_django_app
+    forms = app.get(self.form_view_url, user=user).forms
+    form = forms['quiz-download-form']
+    form['filename'] = filename
+    form['quizzes'].options = [(str(instances[idx].pk), True, f'{idx}') for idx in indices]
+    form['quizzes'] = [str(instances[idx].pk) for idx in indices]
+    response = form.submit()
+    cookie = response.client.cookies.get('quiz_download_status')
+    attachment = response['content-disposition']
+    stream = response.content
+
+    assert expected['filename'] == urllib.parse.unquote(attachment.split('=')[1].replace('"', ''))
+    assert cookie.value == 'completed'
+    assert expected['data'] in stream
+
+  def test_send_invalid_request(self, csrf_exempt_django_app, get_editors):
+    user = get_editors
+    # Send post request
+    app = csrf_exempt_django_app
+    forms = app.get(self.form_view_url, user=user).forms
+    form = forms['quiz-download-form']
+    form['filename'] = '1'*129
+    response = form.submit()
+    errors = response.context['form'].errors
+
+    assert response.status_code == status.HTTP_200_OK
+    assert 'Ensure this value has at most 128 character' in str(errors)
