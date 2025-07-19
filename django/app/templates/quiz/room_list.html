@@ -43,7 +43,7 @@
             </thead>
             <tbody class="table-group-divider">
             {% for instance in rooms %}
-              <tr>
+              <tr class="align-middle">
                 {% with table_css=instance.is_enabled|yesno:',table-secondary' %}
                 <td scope="row" class="{{ table_css }}">
                   {% if user.is_player %}

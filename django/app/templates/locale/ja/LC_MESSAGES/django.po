@@ -1,0 +1,660 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-07-17 22:26+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+#: templates/403.html:5
+msgid "403 Forbidden"
+msgstr "403 Forbidden"
+
+#: templates/403.html:9
+msgid "You don&apos;t have permission to access the requested page."
+msgstr "リクエストされたページにアクセスする権限がありません。"
+
+#: templates/404.html:5
+msgid "404 Page Not Found"
+msgstr "404 Page Not Found"
+
+#: templates/404.html:10
+msgid "Requested URL is not found."
+msgstr "リクエストされたURLは存在しません。"
+
+#: templates/405.html:5
+msgid "405 Method Not Allowed"
+msgstr "405 Method Not Allowed"
+
+#: templates/405.html:9
+msgid "Requested HTTP Method is not allowd."
+msgstr "リクエストされたHTTPメソッドは、許可されていません。"
+
+#: templates/500.html:5
+msgid "500 Internal Server Error"
+msgstr "500 Internal Server Error"
+
+#: templates/500.html:9
+msgid "Internal Server Error: Please contact the administrator."
+msgstr "サーバ内部エラー： サーバ管理者に問い合わせてください。"
+
+#: templates/account/complete_account_creation.html:5
+msgid "Complete definitive registration"
+msgstr "本登録完了"
+
+#: templates/account/complete_account_creation.html:8
+msgid "Finish a definitive registration."
+msgstr "本登録が完了しました。"
+
+#: templates/account/complete_account_creation.html:9
+#: templates/err_base.html:33
+msgid "Redirect to the index page after 3 seconds."
+msgstr "3秒後にトップページに遷移します。"
+
+#: templates/account/create_account.html:5 templates/header.html:72
+msgid "Create account"
+msgstr "アカウント新規登録"
+
+#: templates/account/create_account.html:21
+msgid "Provisional registration"
+msgstr "アカウント仮登録"
+
+#: templates/account/create_account.html:29 templates/account/login.html:29
+#: templates/account/passwords/password_change_form.html:27
+#: templates/account/passwords/password_reset_form.html:27
+#: templates/account/profiles/change_role_form.html:53
+#: templates/account/profiles/friend_form.html:54
+#: templates/account/profiles/group_form.html:54
+#: templates/account/profiles/profile_form.html:27
+#: templates/account/profiles/role_change_requests.html:95
+#: templates/quiz/download_genre.html:27 templates/quiz/download_quiz.html:34
+#: templates/quiz/genre_form.html:27 templates/quiz/quiz_form.html:27
+#: templates/quiz/quiz_list.html:149 templates/quiz/room_form.html:31
+#: templates/quiz/room_list.html:140 templates/quiz/upload_quiz.html:76
+msgid "Cancel"
+msgstr "キャンセル"
+
+#: templates/account/done_account_creation.html:5
+msgid "Conducted provisional registration"
+msgstr "アカウントの仮登録完了"
+
+#: templates/account/done_account_creation.html:8
+msgid ""
+"Send message to your e-mail address to conduct a definitive registration."
+msgstr "本登録を行うために、入力されたメールアドレスにメッセージを送信しました。"
+
+#: templates/account/done_account_creation.html:10
+#: templates/account/passwords/done_password_reset.html:10
+msgid "Redirect to the index page after 10 seconds."
+msgstr "10秒後にトップページに遷移します。"
+
+#: templates/account/login.html:5 templates/account/login.html:21
+#: templates/header.html:73
+msgid "Login"
+msgstr "ログイン"
+
+#: templates/account/login.html:39
+msgid "Forget own password"
+msgstr "パスワードを忘れた方"
+
+#: templates/account/mail_template/password_reset/message.txt:1
+#: templates/account/mail_template/provisional_registration/message.txt:1
+#, python-format
+msgid "Dear %(email)s"
+msgstr "%(email)s さん"
+
+#: templates/account/mail_template/password_reset/message.txt:4
+msgid "We&apos;d like you to access the following URL to reset your password."
+msgstr "パスワードをリセットをするには、以下のURLにアクセスしてください。"
+
+#: templates/account/mail_template/password_reset/message.txt:6
+msgid "Password reset URL"
+msgstr "パスワードリセット用URL"
+
+#: templates/account/mail_template/password_reset/message.txt:9
+#: templates/account/mail_template/provisional_registration/message.txt:11
+#, python-format
+msgid "Caution: The above url is valid for %(timelimit)s minutes."
+msgstr "注意：上記のURLは、%(timelimit)s 分間のみ有効です。"
+
+#: templates/account/mail_template/password_reset/message.txt:11
+#: templates/account/mail_template/provisional_registration/message.txt:13
+msgid "Administrator of Quiz app"
+msgstr "クイズアプリのサーバ管理者"
+
+#: templates/account/mail_template/password_reset/subject.txt:1
+msgid "Quiz app - Reset password"
+msgstr "クイズアプリ - パスワードリセット"
+
+#: templates/account/mail_template/provisional_registration/message.txt:4
+msgid "Thank you for conducting provisional registration process."
+msgstr "仮登録を行っていただき、ありがとうございます。"
+
+#: templates/account/mail_template/provisional_registration/message.txt:5
+msgid ""
+"We&apos;d like you to access the following URL to complete a definitive "
+"registration."
+msgstr "本登録を完了するには、以下のURLにアクセスしてください。"
+
+#: templates/account/mail_template/provisional_registration/message.txt:6
+msgid "Note: Your registration process has not completed yet."
+msgstr "メモ： アカウント登録は、まだ完了しておりません。"
+
+#: templates/account/mail_template/provisional_registration/message.txt:8
+msgid "Definitive registration URL"
+msgstr "本登録用URL"
+
+#: templates/account/mail_template/provisional_registration/subject.txt:1
+msgid "Quiz app - Account registration"
+msgstr "クイズアプリ - アカウント登録"
+
+#: templates/account/passwords/complete_password_reset.html:5
+msgid "Password was reset"
+msgstr "パスワードのリセット"
+
+#: templates/account/passwords/complete_password_reset.html:8
+msgid "Your password was reset. Please login with new password."
+msgstr "パスワードがリセットされました。新しいパスワードでログインしてください。"
+
+#: templates/account/passwords/complete_password_reset.html:11
+msgid "Go to login page"
+msgstr "ログインページに移動"
+
+#: templates/account/passwords/complete_password_reset.html:14
+msgid "Redirect to the login page after 5 seconds."
+msgstr "5秒後にログインページに遷移します。"
+
+#: templates/account/passwords/confirm_password_form.html:7
+msgid "Confirm password reset"
+msgstr "パスワードリセットの確認"
+
+#: templates/account/passwords/confirm_password_form.html:24
+#: templates/account/passwords/password_reset_form.html:20
+msgid "Send"
+msgstr "送信"
+
+#: templates/account/passwords/done_password_change.html:5
+msgid "Password was updated"
+msgstr "パスワードの更新"
+
+#: templates/account/passwords/done_password_change.html:8
+msgid "Your password was updated."
+msgstr "パスワードが更新されました。"
+
+#: templates/account/passwords/done_password_change.html:11
+msgid "Go to index page"
+msgstr "トップページに戻る"
+
+#: templates/account/passwords/done_password_change.html:14
+msgid "Redirect to the index page after 5 seconds."
+msgstr "5秒後にトップページに遷移します。"
+
+#: templates/account/passwords/done_password_reset.html:5
+msgid "Sent password reset request"
+msgstr "パスワードリセットのリクエスト送信"
+
+#: templates/account/passwords/done_password_reset.html:8
+msgid "The request of password reset was sent to your email."
+msgstr "パスワードリセットのリクエストが指定されたメールアドレスに送信されました。"
+
+#: templates/account/passwords/password_change_form.html:5
+#: templates/account/profiles/user_profile.html:80
+msgid "Update password"
+msgstr "パスワード更新"
+
+#: templates/account/passwords/password_change_form.html:20
+#: templates/account/profiles/friend_form.html:47
+#: templates/account/profiles/profile_form.html:20
+msgid "Update"
+msgstr "更新"
+
+#: templates/account/passwords/password_reset_form.html:5
+msgid "Reset password"
+msgstr "パスワードリセット"
+
+#: templates/account/profiles/change_role_form.html:5
+msgid "Change own role"
+msgstr "自身のロールを変更"
+
+#: templates/account/profiles/change_role_form.html:14
+#: templates/account/profiles/user_profile.html:14
+msgid "Element"
+msgstr "項目"
+
+#: templates/account/profiles/change_role_form.html:15
+#: templates/account/profiles/user_profile.html:15
+msgid "Value"
+msgstr "値"
+
+#: templates/account/profiles/change_role_form.html:20
+msgid "screen name"
+msgstr "表示名"
+
+#: templates/account/profiles/change_role_form.html:24
+msgid "Current role"
+msgstr "現在のロール"
+
+#: templates/account/profiles/change_role_form.html:46
+msgid "Request"
+msgstr "リクエスト"
+
+#: templates/account/profiles/friend_form.html:9
+#: templates/account/profiles/user_profile.html:89
+msgid "Register/Unregister friends"
+msgstr "フレンドの登録／解除"
+
+#: templates/account/profiles/friend_form.html:18
+#: templates/account/profiles/group_form.html:18
+msgid "Errors"
+msgstr "エラー"
+
+#: templates/account/profiles/friend_form.html:70
+msgid "All Users"
+msgstr "全ユーザ"
+
+#: templates/account/profiles/friend_form.html:71
+msgid "Assigned users"
+msgstr "選択済みユーザ"
+
+#: templates/account/profiles/group_form.html:9
+msgid "Create/Update group"
+msgstr "グループの作成／更新"
+
+#: templates/account/profiles/group_form.html:47
+#: templates/quiz/genre_form.html:20 templates/quiz/quiz_form.html:20
+#: templates/quiz/room_form.html:24
+msgid "Create/Update"
+msgstr "作成／更新"
+
+#: templates/account/profiles/group_form.html:70
+msgid "Own friends"
+msgstr "自身のフレンズ"
+
+#: templates/account/profiles/group_form.html:71
+msgid "Assigned friends"
+msgstr "選択済みフレンズ"
+
+#: templates/account/profiles/group_list.html:5
+msgid "Individual groups"
+msgstr "個人グループ"
+
+#: templates/account/profiles/group_list.html:14
+msgid "Create a new group"
+msgstr "新規グループ作成"
+
+#: templates/account/profiles/group_list.html:23
+msgid "Group name"
+msgstr "グループ名"
+
+#: templates/account/profiles/group_list.html:24
+#: templates/quiz/room_list.html:38
+msgid "#Members"
+msgstr "メンバ数"
+
+#: templates/account/profiles/group_list.html:25
+#: templates/account/profiles/role_change_requests.html:17
+#: templates/account/profiles/user_profile.html:16
+#: templates/quiz/genre_list.html:25 templates/quiz/quiz_list.html:77
+#: templates/quiz/room_list.html:41
+msgid "Operation"
+msgstr "操作"
+
+#: templates/account/profiles/group_list.html:38
+#: templates/quiz/genre_list.html:40 templates/quiz/quiz_list.html:94
+#: templates/quiz/room_list.html:65 templates/quiz/room_list.html:73
+msgid "Edit"
+msgstr "更新"
+
+#: templates/account/profiles/group_list.html:48
+#: templates/quiz/quiz_list.html:104 templates/quiz/room_list.html:85
+#: templates/quiz/room_list.html:95
+msgid "Delete"
+msgstr "削除"
+
+#: templates/account/profiles/group_list.html:62
+msgid "There is no individual groups."
+msgstr "個人グループが存在しません。"
+
+#: templates/account/profiles/profile_form.html:5
+#: templates/account/profiles/user_profile.html:72
+msgid "Update user profile"
+msgstr "ユーザプロフィールの更新"
+
+#: templates/account/profiles/role_change_requests.html:5
+msgid "Role change requests"
+msgstr "ロール変更リクエスト"
+
+#: templates/account/profiles/role_change_requests.html:15
+msgid "Screen name (e-mail)"
+msgstr "表示名（メールアドレス）"
+
+#: templates/account/profiles/role_change_requests.html:16
+#: templates/account/profiles/user_profile.html:57
+msgid "Role"
+msgstr "ロール"
+
+#: templates/account/profiles/role_change_requests.html:34
+#: templates/delete_modal_form.html:19
+msgid "Accept"
+msgstr "承認"
+
+#: templates/account/profiles/role_change_requests.html:43
+msgid "Reject"
+msgstr "否認"
+
+#: templates/account/profiles/role_change_requests.html:57
+msgid "There is no role change requests."
+msgstr "ロール変更リクエストが存在しません。"
+
+#: templates/account/profiles/role_change_requests.html:68
+msgid "Confirm approval status"
+msgstr "承認状況の確認"
+
+#: templates/account/profiles/role_change_requests.html:72
+msgid "Please check the following judgement result."
+msgstr "下記の判断結果を確認してください。"
+
+#: templates/account/profiles/role_change_requests.html:73
+#: templates/delete_modal_form.html:11
+msgid "Target"
+msgstr "対象"
+
+#: templates/account/profiles/role_change_requests.html:74
+msgid "Result"
+msgstr "判断結果"
+
+#: templates/account/profiles/role_change_requests.html:90
+msgid "Submit"
+msgstr "送信"
+
+#: templates/account/profiles/user_profile.html:5
+msgid "User profile"
+msgstr "ユーザプロフィール"
+
+#: templates/account/profiles/user_profile.html:21
+msgid "Screen name"
+msgstr "表示名"
+
+#: templates/account/profiles/user_profile.html:32
+#: templates/account/profiles/user_profile.html:50 templates/index.html:78
+#: templates/quiz/upload_quiz.html:33
+msgid "Copied!"
+msgstr "コピーしました"
+
+#: templates/account/profiles/user_profile.html:39
+msgid "Code"
+msgstr "コード"
+
+#: templates/account/profiles/user_profile.html:97
+msgid "Create/Edit/delete indivitual groups"
+msgstr "個人グループの作成／更新／削除"
+
+#: templates/account/profiles/user_profile.html:107
+msgid "Change own role to \"CREATOR\""
+msgstr "自身のロールを「クイズ制作者」に変更"
+
+#: templates/delete_modal_form.html:6
+msgid "Confirmation of deletion"
+msgstr "削除の確認"
+
+#: templates/delete_modal_form.html:10
+msgid "May I really delete this record?"
+msgstr "このデータを本当に削除しても良いですか？"
+
+#: templates/delete_modal_form.html:24
+msgid "Close"
+msgstr "閉じる"
+
+#: templates/header.html:7
+msgid "L.E.D Quiz"
+msgstr "L.E.D Quiz"
+
+#: templates/header.html:58
+msgid "User Profile"
+msgstr "ユーザプロフィール"
+
+#: templates/header.html:66
+msgid "Logout"
+msgstr "ログアウト"
+
+#: templates/index.html:5
+msgid "Index"
+msgstr "Index"
+
+#: templates/index.html:9
+msgid "Please login from above link or create new account."
+msgstr "上記のリンクからログインまたはアカウントの新規登録を行ってください。"
+
+#: templates/index.html:16
+msgid "Allowed all users"
+msgstr "全ユーザ"
+
+#: templates/index.html:18
+msgid "Quiz room"
+msgstr "クイズルーム"
+
+#: templates/index.html:19
+msgid "Check/Create/Update/Delete quiz room."
+msgstr "クイズルームの確認／作成／更新／削除"
+
+#: templates/index.html:29
+msgid "Create or manager only"
+msgstr "クイズ制作者／管理者のみ"
+
+#: templates/index.html:31
+msgid "Quiz"
+msgstr "クイズ"
+
+#: templates/index.html:32
+msgid "Check/Create/Update/Delete quizzes."
+msgstr "クイズの確認／作成／更新／削除"
+
+#: templates/index.html:43 templates/index.html:55 templates/index.html:65
+msgid "Manager only"
+msgstr "管理者のみ"
+
+#: templates/index.html:45
+msgid "Quiz genre"
+msgstr "ジャンル"
+
+#: templates/index.html:46
+msgid "Check/Create/Update quiz genres."
+msgstr "ジャンルの確認／作成／更新"
+
+#: templates/index.html:57
+msgid "Role change request"
+msgstr "ロール変更リクエスト"
+
+#: templates/index.html:58
+msgid "Check/update role change requests."
+msgstr "ロール変更リクエストの確認／更新"
+
+#: templates/index.html:69
+msgid "Today&apos;s hash value"
+msgstr "今日のハッシュ値"
+
+#: templates/quiz/download_genre.html:5 templates/quiz/quiz_list.html:49
+msgid "Download genre"
+msgstr "ジャンルのダウンロード"
+
+#: templates/quiz/download_genre.html:20 templates/quiz/download_quiz.html:27
+msgid "Download"
+msgstr "ダウンロード"
+
+#: templates/quiz/download_quiz.html:10 templates/quiz/quiz_list.html:59
+msgid "Download quiz"
+msgstr "クイズのダウンロード"
+
+#: templates/quiz/download_quiz.html:49 templates/quiz/quiz_list.html:73
+msgid "Creator"
+msgstr "クイズ制作者"
+
+#: templates/quiz/download_quiz.html:50 templates/quiz/quiz_list.html:74
+#: templates/quiz/room_list.html:39
+msgid "Genre"
+msgstr "ジャンル"
+
+#: templates/quiz/download_quiz.html:51 templates/quiz/quiz_list.html:75
+msgid "Question"
+msgstr "問題"
+
+#: templates/quiz/download_quiz.html:52 templates/quiz/quiz_list.html:76
+msgid "Answer"
+msgstr "解答"
+
+#: templates/quiz/download_quiz.html:53
+msgid "Status"
+msgstr "作成状況"
+
+#: templates/quiz/download_quiz.html:107
+msgid "Checked"
+msgstr "選択済み"
+
+#: templates/quiz/download_quiz.html:113
+msgid "Un-checked"
+msgstr "未選択"
+
+#: templates/quiz/download_quiz.html:145
+msgid "Created"
+msgstr "作成完了"
+
+#: templates/quiz/download_quiz.html:146
+msgid "Creating"
+msgstr "作成中"
+
+#: templates/quiz/genre_form.html:5
+msgid "Create/Update genre"
+msgstr "ジャンルの作成／更新"
+
+#: templates/quiz/genre_list.html:5
+msgid "Genre list"
+msgstr "ジャンル一覧"
+
+#: templates/quiz/genre_list.html:14
+msgid "Create a new genre"
+msgstr "ジャンルの新規作成"
+
+#: templates/quiz/genre_list.html:23
+msgid "Genre name"
+msgstr "ジャンル名"
+
+#: templates/quiz/genre_list.html:24
+msgid "#Created quizzes"
+msgstr "作成済みクイズ数"
+
+#: templates/quiz/genre_list.html:54
+msgid "There is no genres."
+msgstr "ジャンルが存在しません。"
+
+#: templates/quiz/quiz_form.html:5
+msgid "Create/Update quiz"
+msgstr "クイズの作成／更新"
+
+#: templates/quiz/quiz_list.html:9
+msgid "Quiz list"
+msgstr "クイズ一覧"
+
+#: templates/quiz/quiz_list.html:19
+msgid "Create a new quiz (creator only)"
+msgstr "クイズの新規作成（クイズ制作者のみ）"
+
+#: templates/quiz/quiz_list.html:33
+msgid "Search quiz (Shift + f)"
+msgstr "クイズ検索（Shift + f）"
+
+#: templates/quiz/quiz_list.html:44
+msgid "Helper functions"
+msgstr "補助機能"
+
+#: templates/quiz/quiz_list.html:54 templates/quiz/upload_quiz.html:16
+msgid "Upload quiz"
+msgstr "クイズのアップロード"
+
+#: templates/quiz/quiz_list.html:118
+msgid "There is no quizzes."
+msgstr "クイズが存在しません。"
+
+#: templates/quiz/quiz_list.html:129
+msgid "Filtering quizzes"
+msgstr "クイズのフィルタリング"
+
+#: templates/quiz/quiz_list.html:133
+msgid "Select genres or creators"
+msgstr "ジャンルまたはクイズ制作者を選択"
+
+#: templates/quiz/quiz_list.html:144 templates/quiz/room_list.html:135
+msgid "Search (Enter)"
+msgstr "検索（Enter）"
+
+#: templates/quiz/room_form.html:9
+msgid "Create/Update quiz room"
+msgstr "クイズルームの作成／更新"
+
+#: templates/quiz/room_list.html:6
+msgid "Quiz room list"
+msgstr "クイズルーム一覧"
+
+#: templates/quiz/room_list.html:16
+msgid "Create a new quiz room (player only)"
+msgstr "クイズルームの作成（一般ユーザ／クイズ制作者のみ）"
+
+#: templates/quiz/room_list.html:28
+msgid "Search room (Shift + f)"
+msgstr "クイズルームの検索（Shift + f）"
+
+#: templates/quiz/room_list.html:37
+msgid "Room name"
+msgstr "ルーム名"
+
+#: templates/quiz/room_list.html:40
+msgid "Creators"
+msgstr "クイズ制作者"
+
+#: templates/quiz/room_list.html:110
+msgid "There is no quiz rooms."
+msgstr "クイズルームが存在しません。"
+
+#: templates/quiz/room_list.html:121
+msgid "Filtering rooms"
+msgstr "クイズルームのフィルタリング"
+
+#: templates/quiz/room_list.html:125
+msgid "Enter the room name (partial match search possible)"
+msgstr "クイズルーム名の入力（部分一致検索も可能）"
+
+#: templates/quiz/upload_quiz.html:24
+msgid "Your role is CREATOR"
+msgstr "ロール：　クイズ制作者"
+
+#: templates/quiz/upload_quiz.html:39
+msgid ""
+"You can only upload own quizzes. Your account ID is shown below and you can "
+"copy it using upper-right button."
+msgstr "自身が作成したクイズのみアップロードできます。また、右上のボタンからあなたのアカウントIDをコピーできます。"
+
+#: templates/quiz/upload_quiz.html:41
+msgid "Your account ID (secret)"
+msgstr "アカウントID（機密）"
+
+#: templates/quiz/upload_quiz.html:47
+msgid "Your role is MANAGER"
+msgstr "ロール：　管理者"
+
+#: templates/quiz/upload_quiz.html:49
+msgid "You can upload all creator's quizzes."
+msgstr "すべてのクイズ制作者のクイズをアップロードできます。"
+
+#: templates/quiz/upload_quiz.html:69
+msgid "Upload"
+msgstr "アップロード"

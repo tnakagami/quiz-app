@@ -442,9 +442,9 @@ def get_input_patterns_for_change_password_page(request):
     clone_node['old_password'] = 'a1H-2oG@xxx#'
     err_msg = 'Your old password was entered incorrectly. Please enter it again.'
   elif request.param == 'same-passwords':
+    clone_node['old_password'] = clone_node['old_password']
     clone_node['new_password1'] = clone_node['old_password']
-    clone_node['new_password2'] = clone_node['old_password']
-    err_msg = 'The new password is same as new password. Please enter difference passwords.'
+    err_msg = 'The old password is same as new password. Please enter difference passwords.'
   elif request.param == 'invalid-new-password':
     clone_node['new_password2'] = 'h2o!nH3@xxx+'
     err_msg = 'The two password fields didn’t match.'

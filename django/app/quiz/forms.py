@@ -39,6 +39,7 @@ class GenreForm(forms.ModelForm):
     widgets = {
       'name': forms.TextInput(attrs={
         'class': 'form-control',
+        'autofocus': True,
       }),
     }
 
@@ -68,6 +69,7 @@ class GenreDownloadForm(forms.Form):
     required=True,
     widget=forms.TextInput(attrs={
       'class': 'form-control',
+      'autofocus': True,
     }),
     help_text=gettext_lazy('You don’t have to enter the extention.'),
   )
@@ -159,9 +161,10 @@ class QuizSearchForm(forms.Form):
       ]
     else:
       ##
-      # If the request user's role is `CREATOR`, then this system hides the `creators` field.
+      # If the request user's role is `CREATOR`, then this system hides the `creators` and `is_and_op` fields.
       self.fields['creators'].choices = [(str(self.user.pk), str(self.user))]
       self.fields['creators'].widget = forms.HiddenInput()
+      self.fields['is_and_op'].widget = forms.HiddenInput()
     self.dual_listbox = DualListbox()
 
   ##
@@ -247,6 +250,7 @@ class QuizUploadForm(forms.Form):
     required=True,
     widget=forms.Select(attrs={
       'class': 'form-select',
+      'autofocus': True,
     }),
     help_text=gettext_lazy('In general, please select "Shift-JIS" in Windows OS, "UTF-8" in Linux like OS.'),
   )
@@ -346,6 +350,7 @@ class QuizDownloadForm(forms.Form):
     required=True,
     widget=forms.TextInput(attrs={
       'class': 'form-control',
+      'autofocus': True,
     }),
     help_text=gettext_lazy('You don’t have to enter the extention.'),
   )
@@ -412,6 +417,7 @@ class QuizForm(ModelFormBasedOnUser):
     widgets = {
       'genre': forms.Select(attrs={
         'class': 'form-select',
+        'autofocus': True,
       }),
       'question': forms.Textarea(attrs={
         'class': 'form-control',
@@ -421,7 +427,7 @@ class QuizForm(ModelFormBasedOnUser):
       }),
       'answer': forms.Textarea(attrs={
         'class': 'form-control',
-        'rows': '2',
+        'rows': '3',
         'cols': '40',
         'style': 'resize: none;',
       }),
@@ -496,6 +502,7 @@ class QuizRoomForm(ModelFormBasedOnUser):
     widgets = {
       'name': forms.TextInput(attrs={
         'class': 'form-control',
+        'autofocus': True,
       }),
       'genres': forms.SelectMultiple(attrs={
         'id': 'genreList',
@@ -572,7 +579,7 @@ class QuizRoomForm(ModelFormBasedOnUser):
     # Check combination of both genres and creators
     if (genres is None or genres.count() == 0) and (creators is None or creators.count() == 0):
       raise forms.ValidationError(
-        gettext_lazy('You have to assign at least one of genres and creators to the quiz room.'),
+        gettext_lazy('You have to assign at least one of genres or creators to the quiz room.'),
         code='invalid_assignment',
       )
     # Check the number of quizzes this system can collect
@@ -630,5 +637,6 @@ class QuizRoomForm(ModelFormBasedOnUser):
   def post_process(self, instance, *args, **kwargs):
     super().post_process(instance, *args, **kwargs)
     self.save_m2m()
-    score = models.Score(room=instance)
+    score, _ = models.Score.objects.get_or_create(room=instance)
     score.save()
+    instance.reset()

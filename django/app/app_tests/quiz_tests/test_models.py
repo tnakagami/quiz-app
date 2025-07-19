@@ -439,10 +439,12 @@ class TestQuiz(Common):
     mocker.patch('quiz.models.Genre.objects.collect_active_genres', return_value=genres)
     # Create exact data
     if is_invalid_genre:
-      msg = ','.join([str(_invalid_genres[idx]) for idx in invalid_indices])
+      invalids = models.Genre.objects.filter(pk__in=self.pk_convertor([_invalid_genres[idx] for idx in invalid_indices])).order_by('name')
+      msg = ','.join([str(_genre) for _genre in invalids])
       exact_err = f'The csv file includes invalid genre(s). Details: {msg}'
     else:
-      msg = ','.join([str(_invalid_creators[idx]) for idx in invalid_indices])
+      invalids = UserModel.objects.filter(pk__in=self.pk_convertor([_invalid_creators[idx] for idx in invalid_indices])).order_by('pk')
+      msg = ','.join([str(_creator) for _creator in invalids])
       exact_err = f'The csv file includes invalid creator(s). Details: {msg}'
     # Raise exception
     with pytest.raises(ValidationError) as ex:
@@ -607,6 +609,77 @@ class TestQuizRoom(Common):
     assert is_player == instance.is_assigned(user)
 
   @pytest.mark.parametrize([
+    'is_enabled',
+    'role',
+  ], [
+    (True, RoleType.GUEST),
+    (True, RoleType.CREATOR),
+    (False, RoleType.GUEST),
+  ], ids=[
+    'is-enabled-with-guest',
+    'is-enabled-with-creator',
+    'is-not-enabled-with-guest',
+  ])
+  def test_check_reset_method(self, get_genres, is_enabled, role):
+    genres = get_genres[:4]
+    creators = factories.UserFactory.create_batch(4, is_active=True, role=RoleType.CREATOR)
+    members = factories.UserFactory.create_batch(6, is_active=True)
+    members = UserModel.objects.filter(pk__in=self.pk_convertor(members)).order_by('pk')
+    owner = factories.UserFactory(is_active=True, role=role)
+    quizzes = [
+      factories.QuizFactory(creator=creators[0], genre=genres[0], is_completed=True),  # 0 
+      factories.QuizFactory(creator=creators[0], genre=genres[1], is_completed=False), # 1, Is not selected
+      factories.QuizFactory(creator=creators[1], genre=genres[0], is_completed=True),  # 2, Is not selected
+      factories.QuizFactory(creator=creators[1], genre=genres[1], is_completed=True),  # 3
+      factories.QuizFactory(creator=creators[2], genre=genres[1], is_completed=True),  # 4
+      factories.QuizFactory(creator=creators[2], genre=genres[3], is_completed=True),  # 5, Is not selected
+      factories.QuizFactory(creator=creators[3], genre=genres[0], is_completed=True),  # 6, Is not selected
+      factories.QuizFactory(creator=creators[3], genre=genres[0], is_completed=True),  # 7, Is not selected
+      factories.QuizFactory(creator=creators[3], genre=genres[2], is_completed=True),  # 8
+    ]
+    room = factories.QuizRoomFactory(
+      owner=owner,
+      creators=[creators[0]],
+      genres=[genres[1], genres[2]],
+      members=list(members),
+      max_question=4,
+      is_enabled=is_enabled,
+    )
+    room.score.status = models.QuizStatusType.Answering
+    room.score.index = 2
+    room.score.sequence = {}
+    room.score.detail = {}
+    room.score.save()
+    # Call target method
+    room.reset()
+    _expected_vals = {
+      True: {
+        'index': 1,
+        'len_seq': room.max_question,
+        'len_detail': len(members) + 1,
+        'status': models.QuizStatusType.START,
+        'seq': [str(quizzes[idx].pk) for idx in [0, 3, 4, 8]],
+        'detail': [str(owner.pk)] + [str(pk) for pk in members.values_list('pk', flat=True)],
+      },
+      False: {
+        'index': 2,
+        'len_seq': 0,
+        'len_detail': 0,
+        'status': models.QuizStatusType.Answering,
+        'seq': [],
+        'detail': [],
+      },
+    }
+    expected = _expected_vals[is_enabled]
+
+    assert room.score.index == expected['index']
+    assert len(room.score.sequence) == expected['len_seq']
+    assert len(room.score.detail) == expected['len_detail']
+    assert room.score.status == expected['status']
+    assert all([pk in expected['seq'] for pk in room.score.sequence.values()])
+    assert all([pk in expected['detail'] for pk in room.score.detail.keys()])
+
+  @pytest.mark.parametrize([
     'role',
     'is_enabled',
     'expected',
@@ -631,6 +704,7 @@ class TestQuizRoom(Common):
     instance = factories.QuizRoomFactory(owner=owner, members=list(members), is_enabled=is_enabled)
 
     assert instance.is_assigned(owner) == expected
+    assert instance.is_owner(owner)
 
   @pytest.mark.parametrize([
     'role',
@@ -872,19 +946,19 @@ class TestScore:
   ], [
     (models.QuizStatusType.START, 'Start'),
     (models.QuizStatusType.WAITING, 'Waiting'),
-    (models.QuizStatusType.SET_QUESTION, 'Set question'),
+    (models.QuizStatusType.SENT_QUESTION, 'Sent question'),
     (models.QuizStatusType.Answering, 'Answering'),
     (models.QuizStatusType.RECEIVED_ANSWERS, 'Received answers'),
     (models.QuizStatusType.JUDGING, 'Judging'),
     (models.QuizStatusType.END, 'End'),
   ], ids=[
-    'is-start',
-    'is-waiting',
-    'is-set-question',
-    'is-answering',
-    'is-received-answers',
-    'is-judging',
-    'is-end',
+    'start',
+    'waiting',
+    'sent-question',
+    'answering',
+    'received-answers',
+    'judging',
+    'end',
   ])
   def test_check_label(self, status, expected):
     instance = factories.ScoreFactory(status=status)

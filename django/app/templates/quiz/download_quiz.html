@@ -81,7 +81,7 @@
           'X-CSRFToken': helper.getCookie('csrftoken'),
         },
         dataType: 'json',
-        dataSrc: (json) => json.quizzes, // or dataSrc: 'quizzes',
+        dataSrc: (json) => json.quizzes,
       },
       createdRow: (row, data, index) => {
         if (!data.is_completed) {
@@ -91,6 +91,7 @@
             row.classList.toggle(cssName);
           }, false);
         }
+        row.classList.add('align-middle');
       },
       columnDefs: [
         {
@@ -121,10 +122,6 @@
         {
           targets: 1,
           data: 'creator',
-          searchPanes: {
-            show: true,
-            options: []
-          }
         },
         {
           targets: 2,

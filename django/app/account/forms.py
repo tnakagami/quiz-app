@@ -108,6 +108,11 @@ class UserProfileForm(forms.ModelForm, BaseFormWithCSS):
   class Meta:
     model = UserModel
     fields = ('screen_name',)
+    widgets = {
+      'screen_name': forms.TextInput(attrs={
+        'autofocus': True,
+      }),
+    }
 
 class CustomPasswordChangeForm(PasswordChangeForm, BaseFormWithCSS):
   ##
@@ -119,7 +124,7 @@ class CustomPasswordChangeForm(PasswordChangeForm, BaseFormWithCSS):
 
     if old_password == new_password:
       raise forms.ValidationError(
-        gettext_lazy('The new password is same as new password. Please enter difference passwords.'),
+        gettext_lazy('The old password is same as new password. Please enter difference passwords.'),
         code='same_passwords',
       )
 
@@ -129,11 +134,20 @@ class CustomPasswordResetForm(PasswordResetForm, BaseFormWithCSS):
   email = forms.EmailField(
     label=gettext_lazy('Email'),
     max_length=128,
-    widget=forms.EmailInput(attrs={'autocomplete': 'email'}),
+    widget=forms.EmailInput(attrs={
+      'autocomplete': 'email',
+      'autofocus': True,
+    }),
   )
 
 class CustomSetPasswordForm(SetPasswordForm, BaseFormWithCSS):
-  pass
+  class Meta:
+    widgets = {
+      'new_password1': forms.PasswordInput(attrs={
+        'autocomplete': 'new-password',
+        'autofocus': True,
+      }),
+    }
 
 class RoleChangeRequestForm(forms.ModelForm, BaseFormWithCSS):
   class Meta:
@@ -287,6 +301,7 @@ class IndividualGroupForm(ModelFormBasedOnUser):
     widgets = {
       'name': forms.TextInput(attrs={
         'class': 'form-control',
+        'autofocus': True,
       }),
       'members': forms.SelectMultiple(attrs={
         'class': 'custom-multi-selectbox',

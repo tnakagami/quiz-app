@@ -135,7 +135,7 @@ class QuizQuerySet(models.QuerySet):
       for key, val in conditions.items():
         q_cond.add(models.Q(**{key: val}), cond_op)
       # Filtering
-      queryset = queryset.filter(q_cond).distinct()
+      queryset = queryset.filter(q_cond).order_by('pk').distinct()
     # Ordering by genre's name
     queryset = queryset.order_by('genre__name')
 
@@ -266,7 +266,7 @@ class Quiz(BaseModel):
       diff_creator = creator_set - target_creator
 
       if diff_genre:
-        genres = Genre.objects.filter(pk__in=list(diff_genre))
+        genres = Genre.objects.filter(pk__in=list(diff_genre)).order_by('name')
         genres = ','.join([str(instance) for instance in genres])
         # Create output data
         is_valid = False
@@ -276,7 +276,7 @@ class Quiz(BaseModel):
           params={'genres': genres},
         )
       elif diff_creator:
-        creators = UserModel.objects.filter(pk__in=list(diff_creator))
+        creators = UserModel.objects.filter(pk__in=list(diff_creator)).order_by('pk')
         creators = ','.join([str(instance) for instance in creators])
         # Create output data
         is_valid = False
@@ -389,7 +389,7 @@ class QuizRoom(BaseModel):
     related_name='quiz_rooms',
   )
   name = models.CharField(
-    gettext_lazy('Quiz name'),
+    gettext_lazy('Quiz room name'),
     max_length=128,
     help_text=gettext_lazy('Required. 128 characters or fewer.'),
   )
@@ -438,7 +438,17 @@ class QuizRoom(BaseModel):
     return f'{self.name}({self.owner})'
 
   ##
+  # @brief Check whether the request user is owner or not
+  # @param user Requested user
+  # @return bool Judmgement result
+  # @retval True  The request user is owner
+  # @retval False The request user is not owner
+  def is_owner(self, user):
+    return self.owner.pk == user.pk
+
+  ##
   # @brief Check whether the request user can access to the quiz room or not
+  # @param user Requested user
   # @return bool Judmgement result
   # @retval True  The request user can access
   # @retval False The request user cannot access
@@ -448,9 +458,26 @@ class QuizRoom(BaseModel):
       user.is_player(),
       any([
         self.members.all().filter(pk__in=[user.pk]).exists(),
-        self.owner.pk == user.pk
+        self.is_owner(user),
       ])
     ])
+
+  ##
+  # @brief Reset score
+  def reset(self):
+    if self.is_enabled:
+      quiz_ids = Quiz.objects.collect_quizzes(
+        creators=self.creators.all(),
+        genres=self.genres.all(),
+      ).order_by('?').values_list('pk', flat=True)
+      member_ids = self.members.all().order_by('pk').values_list('pk', flat=True)
+      all_ids = list(member_ids) + [self.owner.pk]
+      enable_data_counts = min(self.max_question, len(quiz_ids))
+      self.score.index = 1
+      self.score.status = QuizStatusType.START
+      self.score.sequence = dict([(idx + 1, str(quiz_ids[idx])) for idx in range(enable_data_counts)])
+      self.score.detail = dict([(str(pk), 0) for pk in all_ids])
+      self.score.save()
 
   ##
   # @brief Validate whether all members are creators or not
@@ -533,7 +560,7 @@ class QuizStatusType(models.IntegerChoices):
   # [format] name = value, label
   START            = 1, gettext_lazy('Start')
   WAITING          = 2, gettext_lazy('Waiting')
-  SET_QUESTION     = 3, gettext_lazy('Set question')
+  SENT_QUESTION    = 3, gettext_lazy('Sent question')
   Answering        = 4, gettext_lazy('Answering')
   RECEIVED_ANSWERS = 5, gettext_lazy('Received answers')
   JUDGING          = 6, gettext_lazy('Judging')

@@ -10,6 +10,14 @@ handler(){
 }
 trap handler 1 2 3 15
 
+# Copy javascript files to nginx static directory
+readonly from_path="/var/static/js"
+readonly to_path="/opt/nginx-static/js"
+if [ ! -e ${to_path} ]; then
+  mkdir -p ${to_path}
+fi
+cp -f ${from_path}/*.js ${to_path}
+
 # In the case of development environment
 if [ "${DJANGO_EXECUTABLE_TYPE}" = "development" ]; then
   python manage.py runserver 0.0.0.0:8001 &

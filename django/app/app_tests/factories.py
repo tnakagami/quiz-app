@@ -1,4 +1,5 @@
 import factory
+from django.db.models.signals import post_save
 from django.utils import timezone
 from faker import Factory as FakerFactory
 from account import models as account_models
@@ -69,7 +70,7 @@ class GenreFactory(factory.django.DjangoModelFactory):
   class Meta:
     model = quiz_models.Genre
 
-  name = factory.LazyAttribute(lambda instance: faker.pystr(min_chars=1, max_chars=128))
+  name = factory.Sequence(lambda idx: '{}{}'.format(faker.pystr(min_chars=1, max_chars=64), idx))
   is_enabled = True
 
 class QuizFactory(factory.django.DjangoModelFactory):
@@ -82,6 +83,7 @@ class QuizFactory(factory.django.DjangoModelFactory):
   answer = factory.LazyAttribute(lambda instance: faker.pystr(min_chars=1, max_chars=1024))
   is_completed = False
 
+@factory.django.mute_signals(post_save)
 class QuizRoomFactory(factory.django.DjangoModelFactory):
   class Meta:
     model = quiz_models.QuizRoom
@@ -90,6 +92,7 @@ class QuizRoomFactory(factory.django.DjangoModelFactory):
   name = factory.LazyAttribute(lambda instance: faker.pystr(min_chars=1, max_chars=128))
   max_question = factory.LazyAttribute(lambda instance: faker.pyint(min_value=1, max_value=256, step=1))
   is_enabled = False
+  score = factory.RelatedFactory('app_tests.factories.ScoreFactory', factory_related_name='room')
 
   @factory.post_generation
   def genres(self, create, extracted, **kwargs):
@@ -127,11 +130,12 @@ def gen_dict(max_count):
 
   return ret
 
+@factory.django.mute_signals(post_save)
 class ScoreFactory(factory.django.DjangoModelFactory):
   class Meta:
     model = quiz_models.Score
 
-  room = factory.SubFactory(QuizRoomFactory)
+  room = factory.SubFactory(QuizRoomFactory, score=None)
   index = factory.LazyAttribute(lambda instance: faker.pyint(min_value=1, max_value=256, step=1))
   sequence = factory.LazyAttribute(lambda instance: gen_dict(3))
   detail = factory.LazyAttribute(lambda instance: gen_dict(5))

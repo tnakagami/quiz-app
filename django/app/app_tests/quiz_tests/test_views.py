@@ -871,7 +871,7 @@ class TestQuizRoomView(Common):
     if data_type == 'both-genres-and-creators-are-none':
       params['genres'] = []
       params['creators'] = []
-      err_msg = 'You have to assign at least one of genres and creators to the quiz room.'
+      err_msg = 'You have to assign at least one of genres or creators to the quiz room.'
     elif data_type == 'set-invalid-creator':
       other = factories.UserFactory(is_active=True, role=RoleType.CREATOR)
       params['creators'] = [str(other.pk)]
@@ -996,6 +996,9 @@ class TestQuizRoomView(Common):
     members = (list(creators) + guests + [user]) if is_assigned and user.is_player() else (list(creators) + guests)
     members = UserModel.objects.filter(pk__in=self.pk_convertor(members)).order_by('pk')
     owner = user if is_owner and user.is_player() else factories.UserFactory(is_active=True, role=RoleType.GUEST)
+    for creator in creators:
+      for genre in genres:
+        _ = factories.QuizFactory(creator=creator, genre=genre, is_completed=True)
     instance = factories.QuizRoomFactory(
       owner=owner,
       genres=list(genres),
@@ -1003,6 +1006,7 @@ class TestQuizRoomView(Common):
       members=list(members),
       is_enabled=is_enabled,
     )
+    instance.reset()
     expected_status_code = expected_type[key]
     client.force_login(user)
     response = client.get(self.detail_view_url(instance.pk))

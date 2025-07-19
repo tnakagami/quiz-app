@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     'django.contrib.humanize',
     'django.forms',
     'channels',
+    'corsheaders',
     # User's app
     'utils.apps.UtilsConfig',
     'account.apps.AccountConfig',
@@ -43,6 +44,7 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.locale.LocaleMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -70,6 +72,7 @@ TEMPLATES = [
             ],
             'libraries': {
                 'custom_tags': 'utils.tags.custom_tags',
+                'room_tags': 'utils.tags.room_tags',
             },
         },
     },
@@ -139,6 +142,7 @@ USE_TZ = True
 LOCALE_PATHS = (
     os.path.join(BASE_DIR, 'account', 'locale'),
     os.path.join(BASE_DIR, 'config', 'locale'),
+    os.path.join(BASE_DIR, 'quiz', 'locale'),
     os.path.join(BASE_DIR, 'templates', 'locale'),
     os.path.join(BASE_DIR, 'utils', 'locale'),
     os.path.join(BASE_DIR, 'utils', 'templates', 'locale'),
@@ -158,6 +162,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # ========================================
 # = Custom settings defined by developer =
 # ========================================
+# Security setting
+CORS_ALLOWED_ORIGINS = []
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_PORT = True
 # Define cach setting
 CACHES = {
     'default': {
