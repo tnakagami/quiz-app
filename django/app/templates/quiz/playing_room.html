@@ -9,7 +9,7 @@
     overflow-y: scroll;
     -ms-overflow-style: none;
     scrollbar-width: none;
-    height: 16rem;
+    height: 12rem;
   }
   #question-sentences::-webkit-scrollbar {
     display:none;
@@ -22,6 +22,13 @@
   }
   #chat-log-sentences::-webkit-scrollbar {
     display:none;
+  }
+  .chat-messages {
+    height: calc(100% - 5rem);
+    overflow-y: auto;
+  }
+  .message {
+    max-width: 75%;
   }
 </style>
 {% endblock %}
@@ -92,10 +99,10 @@
           <div class="card-body">
             <div class="row row-cols-1 row-cols-md-2">
               <div class="col card-text text-wrap">
-                <span class="fw-bold text-decoration-underline">{% trans "Your answer" %}</span><span name="own-answer"></span>
+                <span class="fw-bold text-decoration-underline">{% trans "Your answer" %}: </span><span name="own-answer"></span>
               </div>
               <div class="col card-text text-wrap">
-                <span class="fw-bold text-decoration-underline">{% trans "Correct answer" %}</span><span name="correct-answer"></span>
+                <span class="fw-bold text-decoration-underline">{% trans "Correct answer" %}: </span><span name="correct-answer"></span>
               </div>
             </div>
           </div>
@@ -108,10 +115,10 @@
           <div class="card-header">
             <div class="row row-cols-2">
               <div class="col text-start fw-bold text-decoration-underline">
-                {% trans "Question" %}(<span id="question-index">0</span> / {{ room.max_question }})
+                {% trans "Question" %}(<span id="question-index">{{ room.score.index }}</span> / {{ room.max_question }})
               </div>
               <div class="col text-end fw-bold text-decoration-underline">
-                {% trans "Score" %}: <span id="own-score">0</span>
+                {% trans "Score" %}: <span id="own-score">{{ room.score|get_user_score:user.pk }}</span>
               </div>
             </div>
           </div>
@@ -195,14 +202,14 @@
                   </tr>
                 </thead>
                 <tbody class="table-group-divider">
-                  <tr>
+                  <tr class="align-middle">
                     <td scope="row">{{ room.owner|stringformat:"s" }}</td>
-                    <td>{{ room.score|get_user_score:room.owner.pk }}</td>
+                    <td class="js-player-score" data-pk="{{ room.owner.pk }}">{{ room.score|get_user_score:room.owner.pk }}</td>
                   </tr>
                   {% for member in room.members.all %}
-                  <tr>
+                  <tr class="align-middle">
                     <td scope="row">{{ member|stringformat:"s" }}</td>
-                    <td class="js-player-score" data-pk="user{{ member.pk }}">{{ room.score|get_user_score:member.pk }}</td>
+                    <td class="js-player-score" data-pk="{{ member.pk }}">{{ room.score|get_user_score:member.pk }}</td>
                   </tr>
                   {% endfor %}
                 </tbody>
@@ -247,26 +254,26 @@
                   </tr>
                 </thead>
                 <tbody class="table-group-divider">
-                  <tr class="js-judgement-item" data-pk="user{{ room.owner.pk }}">
+                  <tr class="align-middle js-judgement-item" data-pk="{{ room.owner.pk }}">
                     <td scope="row">{{ room.owner|stringformat:"s" }}</td>
                     <td name="answer"></td>
                     <td><input type="number" name="score" class="form-control" min="1" step="1" /></td>
                     <td>
-                      <input type="radio" class="btn-check" name="judgement-options" id="judgement-correct0" autocomplete="off">
+                      <input type="radio" class="btn-check" name="judgement-options0" data-type="correct" id="judgement-correct0" autocomplete="off">
                       <label class="btn btn-outline-primary text-nowrap" for="judgement-correct0">{% trans "Correct" %}</label>
-                      <input type="radio" class="btn-check" name="judgement-options" id="judgement-incorrect0" autocomplete="off" checked>
+                      <input type="radio" class="btn-check" name="judgement-options0" data-type="incorrect" id="judgement-incorrect0" autocomplete="off" checked>
                       <label class="btn btn-outline-danger text-nowrap" for="judgement-incorrect0">{% trans "Incorrect" %}</label>
                     </td>
                   </tr>
                   {% for member in room.members.all %}
-                  <tr class="js-judgement-item" data-pk="user{{ member.pk }}">
+                  <tr class="align-middle js-judgement-item" data-pk="{{ member.pk }}">
                     <td scope="row">{{ member|stringformat:"s" }}</td>
                     <td name="answer"></td>
                     <td><input type="number" name="score" class="form-control" min="1" step="1" /></td>
                     <td>
-                      <input type="radio" class="btn-check" name="judgement-options" id="judgement-correct{{ forloop.counter }}" autocomplete="off">
+                      <input type="radio" class="btn-check" name="judgement-options{{ forloop.counter }}" data-type="correct" id="judgement-correct{{ forloop.counter }}" autocomplete="off">
                       <label class="btn btn-outline-primary text-nowrap" for="judgement-correct{{ forloop.counter }}">{% trans "Correct" %}</label>
-                      <input type="radio" class="btn-check" name="judgement-options" id="judgement-incorrect{{ forloop.counter }}" autocomplete="off" checked>
+                      <input type="radio" class="btn-check" name="judgement-options{{ forloop.counter }}" data-type="incorrect" id="judgement-incorrect{{ forloop.counter }}" autocomplete="off" checked>
                       <label class="btn btn-outline-danger text-nowrap" for="judgement-incorrect{{ forloop.counter }}">{% trans "Incorrect" %}</label>
                     </td>
                   </tr>
@@ -278,7 +285,7 @@
         </div>
       </div>
       <div class="modal-footer">
-        <div class="mt-1 row">
+        <div class="mt-1 row w-100">
           <div class="col-12">
             <button type="button" class="btn btn-primary w-100 custom-boxshadow owner-events" data-cmd="register">
               {% trans "Send" %}
@@ -293,9 +300,13 @@
 
 {# Define chat-log template #}
 <template id="chat-template">
-<div class="chat-message">
-  <time name="datetime" class="fs-6" datetime=""></time>
-  <div name="message" class="text-danger"></div>
+<div class="chat-message p-1">
+  <div class="message align-self-end">
+    <div class="text-white rounded p-2" name="message"></div>
+    <small class="text-muted">
+      <time name="datetime" datetime=""></time>
+    </small>
+  </div>
 </div>
 </template>
 {% endblock %}
@@ -308,28 +319,39 @@
   // Setup callbacks of WebSocket
   class Callbacks {
     constructor(userID) {
-      this.userID = `user${userID}`;
+      this.uid = userID;
       this.question = '';
-      this.typeWriter = new TypeIt('#question-sentences', {
+      this.options = {
         speed: 75,
         nextStringDelay: 50,
         cursor: false,
         loop: false,
-      });
+      };
+      this.typeWriter = new TypeIt('#question-sentences', this.options);
+      this._initTypeWriter = this._initTypeWriter.bind(this);
       this.chatLog = this.chatLog.bind(this);
+      this.resetPlayerScore = this.resetPlayerScore.bind(this);
       this.setQuiz = this.setQuiz.bind(this);
       this.notifyReceivedQuiz = this.notifyReceivedQuiz.bind(this);
       this.start = this.start.bind(this);
       this.stop = this.stop.bind(this);
       this.updateScoreTable = this.updateScoreTable.bind(this);
       {% if room|is_owner:user %}
+      //
+      // Only owner
+      //
       this.resetQuiz = this.resetQuiz.bind(this);
       this.registeredQuizForAllMembers = this.registeredQuizForAllMembers.bind(this);
-      this.execJudgement = this.execJudgement.bind(this);
+      this.executeJudgement = this.executeJudgement.bind(this);
       this.endJudgement = this.endJudgement.bind(this);
       {% endif %}
     }
-    chatLog(datetime, message) {
+    _initTypeWriter() {
+      const element = document.querySelector('#question-sentences');
+      element.innerHTML = '';
+      this.typeWriter = new TypeIt('#question-sentences', this.options);
+    }
+    chatLog(datetime, message, bgStyle='bg-success') {
       const chatLog = document.querySelector('#chat-log');
       const template = document.querySelector('#chat-template');
       const clone = template.content.cloneNode(true);
@@ -339,12 +361,22 @@
       timeElement.dateTime = datetime;
       timeElement.textContent = datetime.replace('-', '/');
       msgElement.textContent = message;
+      msgElement.classList.add(bgStyle);
       chatLog.appendChild(clone);
+      chatLog.scrollTop = chatLog.scrollHeight;
+    }
+    resetPlayerScore() {
+      const playerScores = document.querySelectorAll('.js-player-score');
+      // Reset player score
+      for (const element of playerScores) {
+        const pk = element.dataset.pk;
+        element.textContent = 0;
+      }
     }
     setQuiz(val) {
       this.question = val;
     }
-    notifyReceivedQuiz(index) {
+    notifyReceivedQuiz(datetime, index, message) {
       const ownAnswer = document.querySelector('span[name="own-answer"]');
       const correctAnswer = document.querySelector('span[name="correct-answer"]');
 
@@ -357,8 +389,9 @@
       const quizIndex = document.querySelector('#question-index');
       quizIndex.textContent = index;
       QuizRoom.ReceivedQuiz();
+      this.chatLog(datetime, message);
     }
-    start() {
+    start(datetime) {
       const inputArea = document.querySelector('#player-answer');
       const sendButton = document.querySelector('#send-answer');
       inputArea.disabled = false;
@@ -366,22 +399,24 @@
       const sentences = this.question.split(/\r\n|\n/);
       // Register quiz sentences
       for (const sentence of sentences) {
-        this.typeWriter.type(sentence);
+        this.typeWriter.type(`${sentence}`).break();
       }
       this.typeWriter.go();
     }
-    stop() {
+    stop(datetime, message) {
       const inputArea = document.querySelector('#player-answer');
       const sendButton = document.querySelector('#send-answer');
       inputArea.disabled = true;
       sendButton.disabled = true;
-      self.setQuiz('');
+      this.typeWriter.freeze();
+      this.setQuiz('');
+      this.chatLog(datetime, message);
     }
-    registerExactAnswer(answer) {
+    registerExactAnswer(datetime, answer) {
       const correctAnswer = document.querySelector('span[name="correct-answer"]');
       correctAnswer.textContent = answer;
     }
-    updateScoreTable(results) {
+    updateScoreTable(datetime, results) {
       const playerScores = document.querySelectorAll('.js-player-score');
       // Update player score
       for (const element of playerScores) {
@@ -389,68 +424,107 @@
         element.textContent = results[pk];
       }
       const ownScore = document.querySelector('#own-score');
-      ownScore.textContent = results[self.userID];
-      const question = document.querySelector('#question-sentences');
-      question.innerHTML = '';
+      ownScore.textContent = results[this.uid];
+      // Initialize type writer
+      this._initTypeWriter();
+      const inputArea = document.querySelector('#player-answer');
+      inputArea.value = '';
+      const message = '{% trans "The score table is updated. Please check it." %}';
+      this.chatLog(datetime, message);
     }
     {% if room|is_owner:user %}
-    resetQuiz() {
+    resetQuiz(datetime, message) {
+      this.resetPlayerScore();
       // Enable next button
       const element = document.querySelector('[data-cmd="next"].owner-events');
       element.disabled = false;
+      this.chatLog(datetime, `[Owner only] ${message}`, 'bg-danger');
     }
-    registeredQuizForAllMembers() {
+    registeredQuizForAllMembers(datetime, message) {
       let element = document.querySelector('[data-cmd="next"].owner-events');
       element.disabled = true;
       // Enable start quiz button
       element = document.querySelector('[data-cmd="question"].owner-events');
       element.disabled = false;
+      this.chatLog(datetime, `[Owner only] ${message}`, 'bg-danger');
     }
-    executeJudgement(results, correctAnswer) {
+    executeJudgement(datetime, message, results, correctAnswer) {
       const trElements = document.querySelectorAll('.js-judgement-item');
       // Update each player's answer
       for (const element of trElements) {
         const pk = element.dataset.pk;
-        const answer = element.querySelector('td[name="answer"]');
-        answer.textContent = results[pk];
+        const name = `user${pk}`
+        const answer = element.querySelector('[name="answer"]');
+        answer.textContent = results[name];
       }
-      const correctAnswer = document.querySelector('span[name="correct-answer"]'); 
-      correctAnswer.textContent = correctAnswer;
+      const answerElement = document.querySelector('span[name="correct-answer"]'); 
+      answerElement.textContent = correctAnswer;
+      this.chatLog(datetime, `[Owner only] ${message}`, 'bg-danger');
     }
-    endJudgement(isEnded) {
+    endJudgement(datetime, message, isEnded) {
       if (isEnded) {
         const operateBtns = document.querySelectorAll('.owner-events');
-        // Update button state
+        // Change button states to disabled
         for (const btn of operateBtns) {
           btn.disabled = true;
         }
-        const element = operateBtns.querySelector('[data-cmd="reset"]');
-        element.disabled = false;
+        // Change specific button states from disabled to enabled
+        for (const cmd of ['reset', 'register']) {
+          const element = document.querySelector(`[data-cmd="${cmd}"].owner-events`);
+          element.disabled = false;
+        }
       }
+      this.chatLog(datetime, `[Owner only] ${message}`, 'bg-danger');
     }
     {% endif %}
   }
 
   const init = () => {
     const callbacks = new Callbacks('{{ user.pk }}');
-    const iwOwner = {% if room|is_owner:user %}true{% else %}false{% endif %};
+    const isOwner = {% if room|is_owner:user %}true{% else %}false{% endif %};
     QuizRoom.Init(
       window.location,
       '{{ room.pk }}',
-      iwOwner,
+      isOwner,
       callbacks,
     );
+    //
+    // Send answer
+    //
     const sendAnswerButton = document.querySelector('#send-answer');
+    const inputArea = document.querySelector('#player-answer');
+    inputArea.addEventListener('keyup', (event) => {
+      if (event.key === 'Enter') {
+        sendAnswerButton.click();
+      }
+    }, false);
     sendAnswerButton.addEventListener('click', (event) => {
-      const inputArea = document.querySelector('#player-answer');
       const ownAnswer = document.querySelector('span[name="own-answer"]');
       const data = inputArea.value;
       // Send answer
       QuizRoom.AnswerQuiz(data);
       // Update own answer
-      ownAnswer.textContent = data;
+      if (ownAnswer) {
+        ownAnswer.textContent = data;
+      }
+      const datetime = (() => {
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = today.getMonth() + 1;
+        const date = today.getDate();
+        const hours = today.getHours();
+        const minutes = today.getMinutes();
+        const seconds = today.getSeconds();
+        const formatDateTime =  `${year}-${month}-${date} ${hours}:${minutes}:${seconds}`;
+
+        return formatDateTime;
+      })();
+      callbacks.chatLog(datetime, data, 'bg-primary');
     });
     {% if room|is_owner:user %}
+    //
+    // Only owner
+    //
     (() => {
       // Define callback functions for owner
       const modal = new bootstrap.Modal('#judgement-modal');
@@ -461,20 +535,22 @@
       };
       const nextEvent = (btn) => {
         QuizRoom.GetNextQuiz();
+        const element = document.querySelector('[data-cmd="reset"].owner-events');
+        element.disabled = true;
       };
       const questionEvent = (btn) => {
         QuizRoom.StartAnswer();
         btn.disabled = true;
-        const element = operateBtns.querySelector('[data-cmd="timeup"]');
+        const element = document.querySelector('[data-cmd="timeup"].owner-events');
         element.disabled = false;
       };
       const timeUpEvent = (btn) => {
         QuizRoom.StopAnswer();
         btn.disabled = true;
-        const element = operateBtns.querySelector('[data-cmd="judge"]');
+        const element = document.querySelector('[data-cmd="judge"].owner-events');
         element.disabled = false;
       };
-      const judgeEvent = (btn) => {
+      const judgeEvent = () => {
         // Initialize judgement table
         const correctAnswer = document.querySelectorAll('span[name="correct-answer"]');
         correctAnswer.textContent = '{% trans "Collecting... Please wait..." %}';
@@ -488,11 +564,12 @@
           const score = element.querySelector('[name="score"]');
           score.value = 1;
           // Reset selected judgement result
-          const judgement = element.querySelector('[name="judgement-options"].btn-outline-danger');
-          judgement.checked = true;
+          for (const [switchType, status] of [['correct', false], ['incorrect', true]]) {
+            const judgement = element.querySelector(`[data-type="${switchType}"]`);
+            judgement.checked = status;
+          }
         }
         QuizRoom.GetAnswers();
-        btn.disabled = true;
         modal.show();
       };
       const sendScore = () => {
@@ -503,7 +580,7 @@
         for (const element of trElements) {
           const pk = element.dataset.pk;
           const score = element.querySelector('[name="score"]');
-          const judgement = element.querySelector('[name="judgement-options"].btn-outline-danger');
+          const judgement = element.querySelector('[data-type="incorrect"]');
           // In the case of that target member's answer is incorrect
           if (judgement.checked) {
             results[pk] = 0;
@@ -514,8 +591,10 @@
         }
         QuizRoom.SendResult(results);
         modal.hide();
-        const element = operateBtns.querySelector('[data-cmd="next"]');
-        element.disabled = false;
+        const judgeBtn = document.querySelector('[data-cmd="judge"].owner-events');
+        judgeBtn.disabled = true;
+        const nextBtn = document.querySelector('[data-cmd="next"].owner-events');
+        nextBtn.disabled = false;
       };
       const operations = Object.freeze({
         'reset':    (btn) => resetEvent(btn),    // resetQuiz

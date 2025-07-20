@@ -11,8 +11,10 @@ services:
     container_name: https-portal.quiz-app
     restart: always
     environment:
+      - DEBUG=true
       - STAGE=local
-      - DOMAINS=${APP_DOMAINS:-'localhost -> http://nginx:80'}
+      - NUMBITS=2048
+      - DOMAINS=${APP_DOMAINS:-'localhost -> http://django:8001'}
       - ACCESS_LOG=stdout
       - ERROR_LOG=stderr
       - HSTS_MAX_AGE=60
@@ -21,9 +23,12 @@ services:
     volumes:
       - https-portal-data:/var/lib/https-portal
       - static:/etc/nginx/static:ro
-      - ./https_portal/html:/var/www/html
-      - ./https_portal/default.conf.erb:/var/lib/nginx-conf/default.conf.erb
-      - ./https_portal/default.ssl.conf.erb:/var/lib/nginx-conf/default.ssl.conf.erb
+      - ./https-portal/custom/open_ssl.rb:/opt/certs_manager/lib/open_ssl.rb:ro
+      - ./https-portal/custom/x509.conf:/opt/certs_manager/x509.conf:ro
+      - ./https-portal/bashrc:/root/.bashrc:ro
+      - ./https-portal/html:/var/www/html:ro
+      - ./https-portal/default.conf.erb:/var/lib/nginx-conf/default.conf.erb:ro
+      - ./https-portal/default.ssl.conf.erb:/var/lib/nginx-conf/default.ssl.conf.erb:ro
     depends_on:
       - django
     networks:

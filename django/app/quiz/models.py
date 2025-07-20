@@ -475,8 +475,8 @@ class QuizRoom(BaseModel):
       enable_data_counts = min(self.max_question, len(quiz_ids))
       self.score.index = 1
       self.score.status = QuizStatusType.START
-      self.score.sequence = dict([(idx + 1, str(quiz_ids[idx])) for idx in range(enable_data_counts)])
-      self.score.detail = dict([(str(pk), 0) for pk in all_ids])
+      self.score.sequence = dict([(str(idx + 1), str(quiz_ids[idx])) for idx in range(enable_data_counts)])
+      self.score.detail = dict([(str(pk), '0') for pk in all_ids])
       self.score.save()
 
   ##

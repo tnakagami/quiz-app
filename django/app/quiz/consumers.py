@@ -7,6 +7,8 @@ import logging
 
 QuizStatusType = models.QuizStatusType
 
+_g_log = logging.getLogger('QuizState')
+
 class QuizState:
   ##
   # @brief Constructor of QuizState
@@ -51,20 +53,17 @@ class QuizState:
   # @return index The current index of quiz
   @database_sync_to_async
   def get_quiz(self, max_question):
-    status = self.score.status
     index = self.score.index
     self.answers = {}
 
-    if status in [QuizStatusType.START, QuizStatusType.WAITING] and index <= max_question:
-      pk = self.score.sequence[index]
-      self.quiz = models.Quiz.objects.get(pk=pk)
-      sentence = self.quiz.question
-      # Update records
-      self.score.index = index + 1
-      self.score.status = QuizStatusType.SENT_QUESTION
-      self.score.save()
-    else:
-      sentence = ''
+    if index > max_question:
+      index = 1
+    pk = self.score.sequence.get(str(index))
+    self.quiz = models.Quiz.objects.get(pk=pk)
+    sentence = self.quiz.question
+    # Update records
+    self.score.status = QuizStatusType.SENT_QUESTION
+    self.score.save()
 
     return sentence, index
 
@@ -128,19 +127,23 @@ class QuizState:
   # @breif Update scores for each player
   # @param max_question The number of maximum quizzes
   # @param judgement Judgement result for player's answer
+  # @return detail The updated score of each player
+  # @return is_enabled Judgement result of whether all quizzes have been asked or not.
   @database_sync_to_async
   def update_state(self, max_question, judgement):
     index = self.score.index
     detail = self.score.detail
     # Update status
-    for key, additional_count in judgement.items():
-      detail[key] += additional_count
+    for name, additional_count in judgement.items():
+      value = detail[name]
+      detail[name] = int(value) + additional_count
     self.score.detail = dict(detail)
     # Update status if needed
     if index >= max_question:
       self.score.status = QuizStatusType.END
       is_enabled = True
     else:
+      self.score.index = index + 1
       self.score.status = QuizStatusType.WAITING
       is_enabled = False
     # Save record
@@ -160,12 +163,12 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
   # @param args Positional arguments
   # @param kwargs Named arguments
   def __init__(self, *args, **kwargs):
-    super().__init__(*args, **kwargs)
     self.room = None
     self.group_name = None
     self.prefix = 'quiz'
     self.logger = logging.getLogger(__name__)
     self.now = lambda: convert_timezone(get_current_time(), is_string=True, strformat='Y-m-d H:i:s')
+    super().__init__(*args, **kwargs)
 
   ##
   # @brief Get client key
@@ -183,6 +186,20 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
   @database_sync_to_async
   def is_owner(self, user):
     return self.room.is_owner(user)
+
+  ##
+  # @brief Get room's score
+  # @return The instance of room's score
+  @database_sync_to_async
+  def get_score(self):
+    return self.room.score
+
+  ##
+  # @brief Get room's score
+  # @return The number of maximum quizzes
+  @database_sync_to_async
+  def get_max_question(self):
+    return self.room.max_question
 
   ##
   # @brief Connection process
@@ -204,19 +221,6 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
       self.logger.error(f'[{group_name}]Connect: {ex}')
 
   ##
-  # @brief Get room's score
-  # @return The instance of room's score
-  @database_sync_to_async
-  def get_score(self):
-    return self.room.score
-
-  ##
-  # @brief Get room's score
-  # @return The number of maximum quizzes
-  def get_max_question(self):
-    return self.room.max_question
-
-  ##
   # @brief Conduct post-accept process
   # @param user Request user
   async def post_accept(self, user):
@@ -226,10 +230,10 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
       score = await self.get_score()
       target = QuizState()
       target.update_score(score)
+      # Update status
+      g_quizstates[self.group_name] = target
     # Add user data to player list
     target.update_player(self.get_client_key(user))
-    # Update status
-    g_quizstates[self.group_name] = target
     # Send system message
     message = gettext_lazy('Join {name} to {room}').format(name=str(user), room=self.room.name)
     await self.channel_layer.group_send(
@@ -308,14 +312,14 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
       score = await self.get_score()
       # Update score and register relevant instance
       target.update_score(score)
-      g_quizstates[self.group_name] = target
       # Send message
+      message = gettext_lazy('Status reset is completed')
       await self.channel_layer.group_send(
         self.group_name, {
           'type': 'send_group_message',
-          'msg_type': 'resetQuiz',
+          'msg_type': 'resetCompleted',
           'ids': ['message'],
-          'message': 'completed',
+          'message': str(message),
         }
       )
 
@@ -328,23 +332,20 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
     is_owner = await self.is_owner(user)
 
     if is_owner:
-      max_question = await database_sync_to_async(self.get_max_question)()
+      max_question = await self.get_max_question()
       quiz, index = await target.get_quiz(max_question)
-      g_quizstates[self.group_name] = target
       # Send 
-      try:
-        # Send message
-        await self.channel_layer.group_send(
-          self.group_name, {
-            'type': 'send_group_message',
-            'msg_type': 'sentNextQuiz',
-            'ids': ['data', 'index'],
-            'data': quiz,
-            'index': index,
-          }
-        )
-      except Exception as ex:
-        self.logger.error(f'[{self.group_name}]Get next quiz: {ex}')
+      message = gettext_lazy('The next quiz is received.')
+      await self.channel_layer.group_send(
+        self.group_name, {
+          'type': 'send_group_message',
+          'msg_type': 'sentNextQuiz',
+          'ids': ['data', 'index', 'message'],
+          'data': quiz,
+          'index': index,
+          'message': str(message),
+        }
+      )
 
   ##
   # @brief Received quiz
@@ -353,14 +354,15 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
   # @param data dummy data (Not used)
   async def received_quiz(self, user, target, data):
     is_completed = target.update_member_status(self.get_client_key(user))
-    g_quizstates[self.group_name] = target
 
     if is_completed:
+      message = gettext_lazy('All players received the quiz.')
       await self.channel_layer.group_send(
         self.group_name, {
           'type': 'send_group_message',
           'msg_type': 'sentAllQuizzes',
-          'ids': [],
+          'ids': ['message'],
+          'message': str(message),
         }
       )
 
@@ -373,12 +375,11 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
     is_owner = await self.is_owner(user)
 
     if is_owner:
-      await target.revceived_all_answers_phase()
-      g_quizstates[self.group_name] = target
+      await target.answering_phase()
       await self.channel_layer.group_send(
         self.group_name, {
           'type': 'send_group_message',
-          'msg_type': 'stopAnswer',
+          'msg_type': 'startedAnswering',
           'ids': [],
         }
       )
@@ -393,7 +394,6 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
 
     if can_answer:
       target.update_answer(self.get_client_key(user), data)
-      g_quizstates[self.group_name] = target
 
   ##
   # @brief Change state from the members can answer quiz to the members cannot do that.
@@ -404,13 +404,14 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
     is_owner = await self.is_owner(user)
 
     if is_owner:
-      await target.answering_phase()
-      g_quizstates[self.group_name] = target
+      await target.revceived_all_answers_phase()
+      message = gettext_lazy('Responses have ended. No more responses will be accepted.')
       await self.channel_layer.group_send(
         self.group_name, {
           'type': 'send_group_message',
-          'msg_type': 'startAnswer',
-          'ids': [],
+          'msg_type': 'stoppedAnswering',
+          'ids': ['message'],
+          'message': str(message),
         }
       )
 
@@ -424,14 +425,15 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
 
     if is_owner:
       answers, correct_answer = await target.get_answers()
-      g_quizstates[self.group_name] = target
+      message = gettext_lazy('All player’s answers are received.')
       await self.channel_layer.group_send(
         self.group_name, {
           'type': 'send_group_message',
           'msg_type': 'sentAnswers',
-          'ids': ['data', 'correctAnswer'],
+          'ids': ['data', 'correctAnswer', 'message'],
           'data': answers,
           'correctAnswer': correct_answer,
+          'message': str(message),
         }
       )
 
@@ -444,16 +446,22 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
     is_owner = await self.is_owner(user)
 
     if is_owner:
-      max_question = await database_sync_to_async(self.get_max_question)()
+      max_question = await self.get_max_question()
       results, is_ended = await target.update_state(max_question, data)
-      g_quizstates[self.group_name] = target
+      # Create response message
+      if is_ended:
+        message = gettext_lazy('All quizzes have been asked. Please press the reset button.')
+      else:
+        message = gettext_lazy('The score is updated. Please next quiz.')
+
       await self.channel_layer.group_send(
         self.group_name, {
           'type': 'send_group_message',
           'msg_type': 'shareResult',
-          'ids': ['data', 'isEnded'],
+          'ids': ['data', 'isEnded', 'message'],
           'data': results,
           'isEnded': is_ended,
+          'message': str(message),
         }
       )
 
@@ -463,7 +471,7 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
   async def receive_json(self, content):
     try:
       command = content['command']
-      data = content['data']
+      data = content.get('data', None)
       target = g_quizstates.get(self.group_name)
       func_table = {
         'resetQuiz': self.reset_quiz,
@@ -475,7 +483,8 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
         'getAnswers': self.get_answers,
         'sendResult': self.send_result,
       }
+      self.logger.info(f'command: {command}, data: {data}')
       # execute command
       await func_table[command](self.scope['user'], target, data)
     except Exception as ex:
-      self.logger.error(f'[{self.group_name}]Receive json: {ex}')
+      self.logger.error(f'[{self.group_name}] {ex}')
