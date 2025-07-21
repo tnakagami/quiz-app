@@ -41,7 +41,7 @@
       {# Information field #}
       {% if room|is_owner:user %}
       <div class="col">
-        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-2">
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-5 g-2">
           <div class="col">
             <button
               type="button"
@@ -67,7 +67,7 @@
               data-cmd="question"
               disabled
             >
-              {% trans "Question" %}
+              {% trans "Start Question" %}
             </button>
           </div>
           <div class="col">
@@ -87,8 +87,16 @@
               data-cmd="judge"
               disabled
             >
-              {% trans "Judge each choice" %}
+              {% trans "Conduct Judgement" %}
             </button>
+          </div>
+          <div class="col flex-grow-1">
+            <div class="btn btn-outline-secondary w-100 disabled">
+              <div class="row">
+                <div class="col-4 col-md-6 col-lg-2 fw-bold text-decoration-underline text-nowrap">{% trans "Your answer" %}:</div>
+                <div class="col-8 col-md-6 col-lg-10 text-truncate"><span name="own-answer"></span></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -98,11 +106,17 @@
           <div class="card-header">{% trans "Status" %}</div>
           <div class="card-body">
             <div class="row row-cols-1 row-cols-md-2">
-              <div class="col card-text text-wrap">
-                <span class="fw-bold text-decoration-underline">{% trans "Your answer" %}: </span><span name="own-answer"></span>
+              <div class="col card-text">
+                <div class="row">
+                  <div class="col-4 fw-bold text-decoration-underline text-nowrap">{% trans "Your answer" %}:</div>
+                  <div class="col-8 text-truncate"><span name="own-answer"></span></div>
+                </div>
               </div>
-              <div class="col card-text text-wrap">
-                <span class="fw-bold text-decoration-underline">{% trans "Correct answer" %}: </span><span name="correct-answer"></span>
+              <div class="col card-text">
+                <div class="row">
+                  <div class="col-4 fw-bold text-decoration-underline text-nowrap">{% trans "Correct answer" %}:</div>
+                  <div class="col-8"><span name="correct-answer"></span></div>
+                </div>
               </div>
             </div>
           </div>
@@ -137,7 +151,7 @@
             </div>
             <div class="col">
               <button style="button" class="btn btn-primary w-100 custom-boxshadow" id="send-answer" disabled>
-                {% trans "Send" %}
+                {% trans "Send (Enter)" %}
               </button>
             </div>
           </div>
@@ -177,44 +191,42 @@
         </ul>
         <div class="tab-content" id="status-tab-content">
           <div
-            class="tab-pane fade show active"
+            class="tab-pane fade show active bg-white border border-top-0"
             id="chat-tab-pane"
             role="tabpanel"
             aria-labelledby="chat-tab"
             tabindex="0"
           >
-            <p>{% trans "Chat log" %}</p>
+            <p class="align-middle mb-0 p-1">{% trans "Chat log" %}</p>
             <div id="chat-log"></div>
           </div>
           <div
-            class="tab-pane fade"
+            class="tab-pane fade border-start border-end"
             id="status-tab-pane"
             role="tabpanel"
             aria-labelledby="status-tab"
             tabindex="0"
           >
-            <div class="table-responsive">
-              <table class="table">
-                <thead>
-                  <tr>
-                    <th scope="col">{% trans "Member" %}</th>
-                    <th scope="col">{% trans "Score" %}</th>
-                  </tr>
-                </thead>
-                <tbody class="table-group-divider">
-                  <tr class="align-middle">
-                    <td scope="row">{{ room.owner|stringformat:"s" }}</td>
-                    <td class="js-player-score" data-pk="{{ room.owner.pk }}">{{ room.score|get_user_score:room.owner.pk }}</td>
-                  </tr>
-                  {% for member in room.members.all %}
-                  <tr class="align-middle">
-                    <td scope="row">{{ member|stringformat:"s" }}</td>
-                    <td class="js-player-score" data-pk="{{ member.pk }}">{{ room.score|get_user_score:member.pk }}</td>
-                  </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            </div>
+            <table class="table mb-0">
+              <thead>
+                <tr>
+                  <th scope="col">{% trans "Member" %}</th>
+                  <th scope="col">{% trans "Score" %}</th>
+                </tr>
+              </thead>
+              <tbody class="table-group-divider">
+                <tr class="align-middle">
+                  <td scope="row">{{ room.owner|stringformat:"s" }}</td>
+                  <td class="js-player-score" data-pk="{{ room.owner.pk }}">{{ room.score|get_user_score:room.owner.pk }}</td>
+                </tr>
+                {% for member in room.members.all %}
+                <tr class="align-middle">
+                  <td scope="row">{{ member|stringformat:"s" }}</td>
+                  <td class="js-player-score" data-pk="{{ member.pk }}">{{ room.score|get_user_score:member.pk }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -236,51 +248,62 @@
             <div class="card">
               <div class="card-header">{% trans "Correct answer" %}</div>
               <div class="card-body">
-                <div class="card-text fs-3">
-                  <span name="correct-answer"></span>
-                </div>
+                <div class="card-text fs-3" name="correct-answer"></div>
               </div>
             </div>
           </div>
           <div class="col">
-            <div class="table-responsive">
-              <table class="table">
-                <thead>
-                  <tr>
-                    <th scope="col">{% trans "Member" %}</th>
-                    <th scope="col">{% trans "Answer" %}</th>
-                    <th scope="col">{% trans "Score" %}</th>
-                    <th scope="col">{% trans "Judgement" %}</th>
-                  </tr>
-                </thead>
-                <tbody class="table-group-divider">
-                  <tr class="align-middle js-judgement-item" data-pk="{{ room.owner.pk }}">
-                    <td scope="row">{{ room.owner|stringformat:"s" }}</td>
-                    <td name="answer"></td>
-                    <td><input type="number" name="score" class="form-control" min="1" step="1" /></td>
-                    <td>
-                      <input type="radio" class="btn-check" name="judgement-options0" data-type="correct" id="judgement-correct0" autocomplete="off">
-                      <label class="btn btn-outline-primary text-nowrap" for="judgement-correct0">{% trans "Correct" %}</label>
-                      <input type="radio" class="btn-check" name="judgement-options0" data-type="incorrect" id="judgement-incorrect0" autocomplete="off" checked>
-                      <label class="btn btn-outline-danger text-nowrap" for="judgement-incorrect0">{% trans "Incorrect" %}</label>
-                    </td>
-                  </tr>
-                  {% for member in room.members.all %}
-                  <tr class="align-middle js-judgement-item" data-pk="{{ member.pk }}">
-                    <td scope="row">{{ member|stringformat:"s" }}</td>
-                    <td name="answer"></td>
-                    <td><input type="number" name="score" class="form-control" min="1" step="1" /></td>
-                    <td>
-                      <input type="radio" class="btn-check" name="judgement-options{{ forloop.counter }}" data-type="correct" id="judgement-correct{{ forloop.counter }}" autocomplete="off">
-                      <label class="btn btn-outline-primary text-nowrap" for="judgement-correct{{ forloop.counter }}">{% trans "Correct" %}</label>
-                      <input type="radio" class="btn-check" name="judgement-options{{ forloop.counter }}" data-type="incorrect" id="judgement-incorrect{{ forloop.counter }}" autocomplete="off" checked>
-                      <label class="btn btn-outline-danger text-nowrap" for="judgement-incorrect{{ forloop.counter }}">{% trans "Incorrect" %}</label>
-                    </td>
-                  </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            </div>
+            <table class="table border-top">
+              <thead>
+                <tr>
+                  <th scope="col" class="text-nowrap">{% trans "Member" %}</th>
+                  <th scope="col" class="text-nowrap">{% trans "Answer" %}</th>
+                  <th scope="col" class="text-nowrap">{% trans "Elapsed time" %}</th>
+                  <th scope="col" class="text-nowrap">{% trans "Additional score" %}</th>
+                  <th scope="col" class="text-nowrap">{% trans "Judgement" %}</th>
+                </tr>
+              </thead>
+              <tbody class="table-group-divider">
+                <tr class="align-middle js-judgement-item" data-pk="{{ room.owner.pk }}">
+                  <td scope="row" class="p-1">{{ room.owner|stringformat:"s" }}</td>
+                  <td class="text-wrap p-1" name="answer"></td>
+                  <td name="time"></td>
+                  <td class="p-1"><input type="number" name="score" class="form-control" min="1" step="1" /></td>
+                  <td class="align-middle">
+                    <div class="row row-cols-1 row-cols-lg-2 g-1">
+                      <div class="col">
+                        <input type="radio" class="btn-check" name="judgement-options0" data-type="correct" id="judgement-correct0" autocomplete="off">
+                        <label class="btn btn-outline-primary text-nowrap w-100" for="judgement-correct0">{% trans "Correct" %}</label>
+                      </div>
+                      <div class="col">
+                        <input type="radio" class="btn-check" name="judgement-options0" data-type="incorrect" id="judgement-incorrect0" autocomplete="off" checked>
+                        <label class="btn btn-outline-danger text-nowrap w-100" for="judgement-incorrect0">{% trans "Incorrect" %}</label>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+                {% for member in room.members.all %}
+                <tr class="align-middle js-judgement-item" data-pk="{{ member.pk }}">
+                  <td scope="row" class="p-1">{{ member|stringformat:"s" }}</td>
+                  <td class="text-wrap p-1" name="answer"></td>
+                  <td name="time"></td>
+                  <td class="p-1"><input type="number" name="score" class="form-control" min="1" step="1" /></td>
+                  <td class="align-middle">
+                    <div class="row row-cols-1 row-cols-lg-2 g-1">
+                      <div class="col">
+                        <input type="radio" class="btn-check" name="judgement-options{{ forloop.counter }}" data-type="correct" id="judgement-correct{{ forloop.counter }}" autocomplete="off">
+                        <label class="btn btn-outline-primary text-nowrap w-100" for="judgement-correct{{ forloop.counter }}">{% trans "Correct" %}</label>
+                      </div>
+                      <div class="col">
+                        <input type="radio" class="btn-check" name="judgement-options{{ forloop.counter }}" data-type="incorrect" id="judgement-incorrect{{ forloop.counter }}" autocomplete="off" checked>
+                        <label class="btn btn-outline-danger text-nowrap w-100" for="judgement-incorrect{{ forloop.counter }}">{% trans "Incorrect" %}</label>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -302,7 +325,7 @@
 <template id="chat-template">
 <div class="chat-message p-1">
   <div class="message align-self-end">
-    <div class="text-white rounded p-2" name="message"></div>
+    <div class="text-white rounded p-2 text-truncate" name="message"></div>
     <small class="text-muted">
       <time name="datetime" datetime=""></time>
     </small>
@@ -318,6 +341,10 @@
 (function () {
   // Setup callbacks of WebSocket
   class Callbacks {
+    /**
+     * @brief Constructor of Callbacks
+     * @param userID Logged-in user's primary key
+    */
     constructor(userID) {
       this.uid = userID;
       this.question = '';
@@ -329,6 +356,7 @@
       };
       this.typeWriter = new TypeIt('#question-sentences', this.options);
       this._initTypeWriter = this._initTypeWriter.bind(this);
+      this._addCorrectAnswer = this._addCorrectAnswer.bind(this);
       this.chatLog = this.chatLog.bind(this);
       this.resetPlayerScore = this.resetPlayerScore.bind(this);
       this.setQuiz = this.setQuiz.bind(this);
@@ -346,11 +374,37 @@
       this.endJudgement = this.endJudgement.bind(this);
       {% endif %}
     }
+    /**
+     * @brief Initialize type wirter
+    */
     _initTypeWriter() {
       const element = document.querySelector('#question-sentences');
       element.innerHTML = '';
       this.typeWriter = new TypeIt('#question-sentences', this.options);
     }
+    /**
+     * @brief Add correct answer
+     * @param[in] element Target DOM element
+     * @param[in] answer  Correct answer
+    */
+    _addCorrectAnswer(element, answer) {
+      element.innerHTML = '';
+      const node = document.createElement('div');
+      const data = answer.split(/\r\n|\n/);
+      // Add each sentence to node
+      for (const sentence of data) {
+        const divElement = document.createElement('div');
+        divElement.textContent = sentence;
+        node.appendChild(divElement);
+      }
+      element.appendChild(node);
+    }
+    /**
+     * @brief Add message to chat log
+     * @param[in] datetime Datetime which received message
+     * @param[in] message  Received message
+     * @param[in] byStyle  Background style of message
+    */
     chatLog(datetime, message, bgStyle='bg-success') {
       const chatLog = document.querySelector('#chat-log');
       const template = document.querySelector('#chat-template');
@@ -365,6 +419,9 @@
       chatLog.appendChild(clone);
       chatLog.scrollTop = chatLog.scrollHeight;
     }
+    /**
+     * @brief Reset player score table
+    */
     resetPlayerScore() {
       const playerScores = document.querySelectorAll('.js-player-score');
       // Reset player score
@@ -373,9 +430,19 @@
         element.textContent = 0;
       }
     }
+    /**
+     * @brief Set quiz received from WebSocket server
+     * @param[in] val Quiz data
+    */
     setQuiz(val) {
       this.question = val;
     }
+    /**
+     * @brife Notifies the user that a message has been received and reply message to WebSocket server
+     * @param[in] datetime Datetime which received message
+     * @param[in] index    Quiz index
+     * @param[in] message  Received message
+    */
     notifyReceivedQuiz(datetime, index, message) {
       const ownAnswer = document.querySelector('span[name="own-answer"]');
       const correctAnswer = document.querySelector('span[name="correct-answer"]');
@@ -384,14 +451,17 @@
         ownAnswer.textContent = '';
       }
       if (correctAnswer) {
-        correctAnswer.textContent = '';
+        correctAnswer.innerHTML = '';
       }
       const quizIndex = document.querySelector('#question-index');
       quizIndex.textContent = index;
       QuizRoom.ReceivedQuiz();
       this.chatLog(datetime, message);
     }
-    start(datetime) {
+    /**
+     * @brief Start answering quiz
+    */
+    start() {
       const inputArea = document.querySelector('#player-answer');
       const sendButton = document.querySelector('#send-answer');
       inputArea.disabled = false;
@@ -403,6 +473,11 @@
       }
       this.typeWriter.go();
     }
+    /**
+     * @brief Stopped answering quiz
+     * @param[in] datetime Datetime which received message
+     * @param[in] message  Received message
+    */
     stop(datetime, message) {
       const inputArea = document.querySelector('#player-answer');
       const sendButton = document.querySelector('#send-answer');
@@ -412,10 +487,20 @@
       this.setQuiz('');
       this.chatLog(datetime, message);
     }
+    /**
+     * @brief Register correct answer
+     * @param[in] datetime Datetime which received message
+     * @param[in] answer   Correct answer
+    */
     registerExactAnswer(datetime, answer) {
       const correctAnswer = document.querySelector('span[name="correct-answer"]');
-      correctAnswer.textContent = answer;
+      this._addCorrectAnswer(correctAnswer, answer);
     }
+    /**
+     * @brief Update player's score table
+     * @param[in] datetime Datetime which received message
+     * @param[in] results  The current scores which include each player one
+    */
     updateScoreTable(datetime, results) {
       const playerScores = document.querySelectorAll('.js-player-score');
       // Update player score
@@ -433,6 +518,11 @@
       this.chatLog(datetime, message);
     }
     {% if room|is_owner:user %}
+    /**
+     * @brief Reset score status of this room
+     * @param[in] datetime Datetime which received message
+     * @param[in] message  Received message
+    */
     resetQuiz(datetime, message) {
       this.resetPlayerScore();
       // Enable next button
@@ -440,6 +530,11 @@
       element.disabled = false;
       this.chatLog(datetime, `[Owner only] ${message}`, 'bg-danger');
     }
+    /**
+     * @brief Notify owner that the next quiz is registered to each player's storage
+     * @param[in] datetime Datetime which received message
+     * @param[in] message  Received message
+    */
     registeredQuizForAllMembers(datetime, message) {
       let element = document.querySelector('[data-cmd="next"].owner-events');
       element.disabled = true;
@@ -448,6 +543,13 @@
       element.disabled = false;
       this.chatLog(datetime, `[Owner only] ${message}`, 'bg-danger');
     }
+    /**
+     * @brief Judge results for each player's answer
+     * @param[in] datetime      Datetime which received message
+     * @param[in] message       Received message
+     * @param[in] results       All player's answers
+     * @param[in] correctAnswer Correct answer
+    */
     executeJudgement(datetime, message, results, correctAnswer) {
       const trElements = document.querySelectorAll('.js-judgement-item');
       // Update each player's answer
@@ -455,12 +557,29 @@
         const pk = element.dataset.pk;
         const name = `user${pk}`
         const answer = element.querySelector('[name="answer"]');
-        answer.textContent = results[name];
+        answer.textContent = results[name].answer.slice(0, 20+1);
+        const time = element.querySelector('[name="time"]');
+        const elapsedTime = (() => {
+          const totalSeconds = results[name].time;
+          const remain = totalSeconds - (Math.floor(totalSeconds / 3600.0) * 3600);
+          const minutes = Math.floor(remain / 60.0);
+          const seconds = (remain - (minutes * 60)).toFixed(2);
+          const ret = (minutes > 0) ? `${minutes}min${seconds}sec` : `${seconds}sec`;
+
+          return ret;
+        })();
+        time.textContent = elapsedTime;
       }
-      const answerElement = document.querySelector('span[name="correct-answer"]'); 
-      answerElement.textContent = correctAnswer;
+      const answerElement = document.querySelector('div[name="correct-answer"]');
+      this._addCorrectAnswer(answerElement, correctAnswer);
       this.chatLog(datetime, `[Owner only] ${message}`, 'bg-danger');
     }
+    /**
+     * @brief Judge whether all quizzes have been asked or not
+     * @param[in] datetime Datetime which received message
+     * @param[in] message  Received message
+     * @param[in] isEnded  Describe whether all quizzes have been asked or not
+    */
     endJudgement(datetime, message, isEnded) {
       if (isEnded) {
         const operateBtns = document.querySelectorAll('.owner-events');
@@ -479,6 +598,9 @@
     {% endif %}
   }
 
+  /**
+   * @brief Initialization
+  */
   const init = () => {
     const callbacks = new Callbacks('{{ user.pk }}');
     const isOwner = {% if room|is_owner:user %}true{% else %}false{% endif %};
@@ -500,7 +622,7 @@
     }, false);
     sendAnswerButton.addEventListener('click', (event) => {
       const ownAnswer = document.querySelector('span[name="own-answer"]');
-      const data = inputArea.value;
+      const data = inputArea.value.trim();
       // Send answer
       QuizRoom.AnswerQuiz(data);
       // Update own answer
@@ -523,7 +645,7 @@
     });
     {% if room|is_owner:user %}
     //
-    // Only owner
+    // Owner only
     //
     (() => {
       // Define callback functions for owner
@@ -552,14 +674,16 @@
       };
       const judgeEvent = () => {
         // Initialize judgement table
-        const correctAnswer = document.querySelectorAll('span[name="correct-answer"]');
-        correctAnswer.textContent = '{% trans "Collecting... Please wait..." %}';
+        const correctAnswer = document.querySelector('div[name="correct-answer"]');
+        correctAnswer.innerHTML = '';
         const trElements = document.querySelectorAll('.js-judgement-item');
 
         for (const element of trElements) {
           // Reset answer
           const answer = element.querySelector('[name="answer"]');
           answer.textContent = '';
+          const time = element.querySelector('[name="time"]');
+          time.textContent = '';
           // Init score
           const score = element.querySelector('[name="score"]');
           score.value = 1;
@@ -604,7 +728,7 @@
         'judge':    (btn) => judgeEvent(btn),    // getAnswers
         'register': (btn) => sendScore(btn),     // sendResult
       });
-
+      // Add click event
       for (const btn of operateBtns) {
         btn.addEventListener('click', (event) => {
           const target = event.target;

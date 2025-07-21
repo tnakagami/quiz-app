@@ -4,10 +4,9 @@ from django.utils.translation import gettext_lazy
 from . import models
 from utils.models import get_current_time, convert_timezone
 import logging
+from datetime import datetime
 
 QuizStatusType = models.QuizStatusType
-
-_g_log = logging.getLogger('QuizState')
 
 class QuizState:
   ##
@@ -17,6 +16,7 @@ class QuizState:
     self.quiz = None
     self.players = {}
     self.answers = {}
+    self.current_time = datetime.now()
 
   ##
   # @brief Update score
@@ -81,9 +81,10 @@ class QuizState:
   # @brief Change answering phase
   @database_sync_to_async
   def answering_phase(self):
-    self.answers = dict([(key, '') for key in self.players.keys()])
+    self.answers = dict([(key, {'answer': '', 'time': 0}) for key in self.players.keys()])
     self.score.status = QuizStatusType.Answering
     self.score.save()
+    self.current_time = datetime.now()
 
   ##
   # @brief Check whether hte members can answer quiz or not
@@ -101,7 +102,11 @@ class QuizState:
   # @param pk The request user's primary key
   # @param answer The request user's answer
   def update_answer(self, pk, answer):
-    self.answers[pk] = answer
+    elapsed_time = datetime.now() - self.current_time
+    self.answers[pk] = {
+      'answer': answer,
+      'time': elapsed_time.total_seconds(),
+    }
 
   ##
   # @brief Change received all answers phase
@@ -451,6 +456,9 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
       # Create response message
       if is_ended:
         message = gettext_lazy('All quizzes have been asked. Please press the reset button.')
+        await database_sync_to_async(self.room.reset)()
+        score = await self.get_score()
+        target.update_score(score)
       else:
         message = gettext_lazy('The score is updated. Please next quiz.')
 
@@ -483,7 +491,6 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
         'getAnswers': self.get_answers,
         'sendResult': self.send_result,
       }
-      self.logger.info(f'command: {command}, data: {data}')
       # execute command
       await func_table[command](self.scope['user'], target, data)
     except Exception as ex:

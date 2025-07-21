@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-07-17 22:26+0900\n"
+"POT-Creation-Date: 2025-07-21 18:35+0900\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,6 +17,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
+
 #: templates/403.html:5
 msgid "403 Forbidden"
 msgstr "403 Forbidden"
@@ -81,7 +82,7 @@ msgstr "アカウント仮登録"
 #: templates/quiz/download_genre.html:27 templates/quiz/download_quiz.html:34
 #: templates/quiz/genre_form.html:27 templates/quiz/quiz_form.html:27
 #: templates/quiz/quiz_list.html:149 templates/quiz/room_form.html:31
-#: templates/quiz/room_list.html:140 templates/quiz/upload_quiz.html:76
+#: templates/quiz/room_list.html:142 templates/quiz/upload_quiz.html:76
 msgid "Cancel"
 msgstr "キャンセル"
 
@@ -92,7 +93,8 @@ msgstr "アカウントの仮登録完了"
 #: templates/account/done_account_creation.html:8
 msgid ""
 "Send message to your e-mail address to conduct a definitive registration."
-msgstr "本登録を行うために、入力されたメールアドレスにメッセージを送信しました。"
+msgstr ""
+"本登録を行うために、入力されたメールアドレスにメッセージを送信しました。"
 
 #: templates/account/done_account_creation.html:10
 #: templates/account/passwords/done_password_reset.html:10
@@ -110,7 +112,6 @@ msgstr "パスワードを忘れた方"
 
 #: templates/account/mail_template/password_reset/message.txt:1
 #: templates/account/mail_template/provisional_registration/message.txt:1
-#, python-format
 msgid "Dear %(email)s"
 msgstr "%(email)s さん"
 
@@ -165,7 +166,8 @@ msgstr "パスワードのリセット"
 
 #: templates/account/passwords/complete_password_reset.html:8
 msgid "Your password was reset. Please login with new password."
-msgstr "パスワードがリセットされました。新しいパスワードでログインしてください。"
+msgstr ""
+"パスワードがリセットされました。新しいパスワードでログインしてください。"
 
 #: templates/account/passwords/complete_password_reset.html:11
 msgid "Go to login page"
@@ -181,6 +183,7 @@ msgstr "パスワードリセットの確認"
 
 #: templates/account/passwords/confirm_password_form.html:24
 #: templates/account/passwords/password_reset_form.html:20
+#: templates/quiz/playing_room.html:294
 msgid "Send"
 msgstr "送信"
 
@@ -206,7 +209,8 @@ msgstr "パスワードリセットのリクエスト送信"
 
 #: templates/account/passwords/done_password_reset.html:8
 msgid "The request of password reset was sent to your email."
-msgstr "パスワードリセットのリクエストが指定されたメールアドレスに送信されました。"
+msgstr ""
+"パスワードリセットのリクエストが指定されたメールアドレスに送信されました。"
 
 #: templates/account/passwords/password_change_form.html:5
 #: templates/account/profiles/user_profile.html:80
@@ -306,19 +310,19 @@ msgstr "メンバ数"
 #: templates/account/profiles/role_change_requests.html:17
 #: templates/account/profiles/user_profile.html:16
 #: templates/quiz/genre_list.html:25 templates/quiz/quiz_list.html:77
-#: templates/quiz/room_list.html:41
+#: templates/quiz/room_list.html:42
 msgid "Operation"
 msgstr "操作"
 
 #: templates/account/profiles/group_list.html:38
 #: templates/quiz/genre_list.html:40 templates/quiz/quiz_list.html:94
-#: templates/quiz/room_list.html:65 templates/quiz/room_list.html:73
+#: templates/quiz/room_list.html:67 templates/quiz/room_list.html:75
 msgid "Edit"
 msgstr "更新"
 
 #: templates/account/profiles/group_list.html:48
-#: templates/quiz/quiz_list.html:104 templates/quiz/room_list.html:85
-#: templates/quiz/room_list.html:95
+#: templates/quiz/quiz_list.html:104 templates/quiz/room_list.html:87
+#: templates/quiz/room_list.html:97
 msgid "Delete"
 msgstr "削除"
 
@@ -505,31 +509,33 @@ msgstr "クイズ制作者"
 msgid "Genre"
 msgstr "ジャンル"
 
-#: templates/quiz/download_quiz.html:51 templates/quiz/quiz_list.html:75
+#: templates/quiz/download_quiz.html:51 templates/quiz/playing_room.html:118
+#: templates/quiz/quiz_list.html:75
 msgid "Question"
 msgstr "問題"
 
-#: templates/quiz/download_quiz.html:52 templates/quiz/quiz_list.html:76
+#: templates/quiz/download_quiz.html:52 templates/quiz/playing_room.html:133
+#: templates/quiz/playing_room.html:251 templates/quiz/quiz_list.html:76
 msgid "Answer"
 msgstr "解答"
 
-#: templates/quiz/download_quiz.html:53
+#: templates/quiz/download_quiz.html:53 templates/quiz/playing_room.html:98
 msgid "Status"
 msgstr "作成状況"
 
-#: templates/quiz/download_quiz.html:107
+#: templates/quiz/download_quiz.html:108
 msgid "Checked"
 msgstr "選択済み"
 
-#: templates/quiz/download_quiz.html:113
+#: templates/quiz/download_quiz.html:114
 msgid "Un-checked"
 msgstr "未選択"
 
-#: templates/quiz/download_quiz.html:145
+#: templates/quiz/download_quiz.html:142
 msgid "Created"
 msgstr "作成完了"
 
-#: templates/quiz/download_quiz.html:146
+#: templates/quiz/download_quiz.html:143
 msgid "Creating"
 msgstr "作成中"
 
@@ -556,6 +562,90 @@ msgstr "作成済みクイズ数"
 #: templates/quiz/genre_list.html:54
 msgid "There is no genres."
 msgstr "ジャンルが存在しません。"
+
+#: templates/quiz/playing_room.html:51
+msgid "Reset status"
+msgstr "初期化"
+
+#: templates/quiz/playing_room.html:60
+msgid "Next quiz"
+msgstr "クイズ取得"
+
+#: templates/quiz/playing_room.html:70
+msgid "Start Question"
+msgstr "クイズ出題"
+
+#: templates/quiz/playing_room.html:80
+msgid "End answer"
+msgstr "回答終了"
+
+#: templates/quiz/playing_room.html:90
+msgid "Conduct Judgement"
+msgstr "判定実施"
+
+#: templates/quiz/playing_room.html:102
+msgid "Your answer"
+msgstr "あなたの回答"
+
+#: templates/quiz/playing_room.html:105 templates/quiz/playing_room.html:237
+msgid "Correct answer"
+msgstr "正解"
+
+#: templates/quiz/playing_room.html:121 templates/quiz/playing_room.html:201
+msgid "Score"
+msgstr "得点"
+
+#: templates/quiz/playing_room.html:140
+msgid "Send (Enter)"
+msgstr "送信（Enter）"
+
+#: templates/quiz/playing_room.html:160
+msgid "Chat"
+msgstr "チャット"
+
+#: templates/quiz/playing_room.html:174
+msgid "Status of each member"
+msgstr "各メンバのステータス"
+
+#: templates/quiz/playing_room.html:186
+msgid "Chat log"
+msgstr "チャットログ"
+
+#: templates/quiz/playing_room.html:200 templates/quiz/playing_room.html:250
+msgid "Member"
+msgstr "メンバ"
+
+#: templates/quiz/playing_room.html:230
+msgid "Judge each answer"
+msgstr "各回答を判定"
+
+#: templates/quiz/playing_room.html:252
+msgid "Elapsed time"
+msgstr "経過時間"
+
+#: templates/quiz/playing_room.html:253
+msgid "Additional score"
+msgstr "加点"
+
+#: templates/quiz/playing_room.html:254
+msgid "Judgement"
+msgstr "判定"
+
+#: templates/quiz/playing_room.html:265 templates/quiz/playing_room.html:278
+msgid "Correct"
+msgstr "正解"
+
+#: templates/quiz/playing_room.html:267 templates/quiz/playing_room.html:280
+msgid "Incorrect"
+msgstr "不正解"
+
+#: templates/quiz/playing_room.html:479
+msgid "The score table is updated. Please check it."
+msgstr "スコアテーブルが更新されました。確認してください。"
+
+#: templates/quiz/playing_room.html:640
+msgid "Collecting... Please wait..."
+msgstr "回答収集中。しばらくお待ちください。"
 
 #: templates/quiz/quiz_form.html:5
 msgid "Create/Update quiz"
@@ -593,7 +683,7 @@ msgstr "クイズのフィルタリング"
 msgid "Select genres or creators"
 msgstr "ジャンルまたはクイズ制作者を選択"
 
-#: templates/quiz/quiz_list.html:144 templates/quiz/room_list.html:135
+#: templates/quiz/quiz_list.html:144 templates/quiz/room_list.html:137
 msgid "Search (Enter)"
 msgstr "検索（Enter）"
 
@@ -621,15 +711,19 @@ msgstr "ルーム名"
 msgid "Creators"
 msgstr "クイズ制作者"
 
-#: templates/quiz/room_list.html:110
+#: templates/quiz/room_list.html:41
+msgid "#Quizzes"
+msgstr "クイズ数"
+
+#: templates/quiz/room_list.html:112
 msgid "There is no quiz rooms."
 msgstr "クイズルームが存在しません。"
 
-#: templates/quiz/room_list.html:121
+#: templates/quiz/room_list.html:123
 msgid "Filtering rooms"
 msgstr "クイズルームのフィルタリング"
 
-#: templates/quiz/room_list.html:125
+#: templates/quiz/room_list.html:127
 msgid "Enter the room name (partial match search possible)"
 msgstr "クイズルーム名の入力（部分一致検索も可能）"
 
@@ -641,7 +735,9 @@ msgstr "ロール：　クイズ制作者"
 msgid ""
 "You can only upload own quizzes. Your account ID is shown below and you can "
 "copy it using upper-right button."
-msgstr "自身が作成したクイズのみアップロードできます。また、右上のボタンからあなたのアカウントIDをコピーできます。"
+msgstr ""
+"自身が作成したクイズのみアップロードできます。また、右上のボタンからあなたの"
+"アカウントIDをコピーできます。"
 
 #: templates/quiz/upload_quiz.html:41
 msgid "Your account ID (secret)"
@@ -658,3 +754,6 @@ msgstr "すべてのクイズ制作者のクイズをアップロードできま
 #: templates/quiz/upload_quiz.html:69
 msgid "Upload"
 msgstr "アップロード"
+
+#~ msgid "Judge each choice"
+#~ msgstr "判定"

@@ -46,7 +46,7 @@ const QuizRoom = {};
             callbacks.notifyReceivedQuiz(response.datetime, response.index, response.message);
             break;
           case 'startedAnswering':
-            callbacks.start(response.datetime);
+            callbacks.start();
             break;
           case 'stoppedAnswering':
             callbacks.stop(response.datetime, response.message);
@@ -58,7 +58,7 @@ const QuizRoom = {};
             break;
         }
         //
-        // Only owner
+        // Owner only
         //
         if (isOwner) {
           switch (msgType) {
@@ -66,7 +66,6 @@ const QuizRoom = {};
               callbacks.resetQuiz(response.datetime, response.message);
               break;
             case 'sentAllQuizzes':
-              // Its response is only owner, but the response is sent to other members due to technical problem
               callbacks.registeredQuizForAllMembers(response.datetime, response.message);
               break;
             case 'sentAnswers':
@@ -80,7 +79,7 @@ const QuizRoom = {};
           }
         }
         //
-        // Only player
+        // Player only
         //
         else {
           switch (msgType) {
