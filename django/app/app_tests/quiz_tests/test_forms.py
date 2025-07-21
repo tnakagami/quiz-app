@@ -875,7 +875,7 @@ class TestQuizRoomForm(Common):
     elif input_type == 'both-genres-and-creators-are-empty':
       del params['genres']
       del params['creators']
-      err_msg = 'You have to assign at least one of genres and creators to the quiz room.'
+      err_msg = 'You have to assign at least one of genres or creators to the quiz room.'
     elif input_type == 'max-question-is-empty':
       del params['max_question']
       err_msg = 'This field is required.'
@@ -1064,3 +1064,63 @@ class TestQuizRoomForm(Common):
     assert all([val.pk in ids_genre for val in instance.genres.all()])
     assert all([val.pk in ids_creator for val in instance.creators.all()])
     assert all([val.pk in ids_member for val in instance.members.all()])
+
+  def test_check_call_reset_method_in_postprocess(self, mocker, get_genres):
+    owner = factories.UserFactory(is_active=True)
+    genres = get_genres[:4]
+    genres = models.Genre.objects.filter(pk__in=self.pk_convertor(genres)).order_by('-pk')
+    creators = factories.UserFactory.create_batch(3, is_active=True, role=RoleType.CREATOR)
+    creators = UserModel.objects.filter(pk__in=self.pk_convertor(creators)).order_by('-pk')
+    members = factories.UserFactory.create_batch(5, is_active=True, role=RoleType.GUEST)
+    members = UserModel.objects.filter(pk__in=self.pk_convertor(members)).order_by('-pk')
+    # Make quiz
+    quizzes = [
+      factories.QuizFactory(creator=creators[0], genre=genres[0], is_completed=True),  # 0
+      factories.QuizFactory(creator=creators[0], genre=genres[1], is_completed=True),  # 1
+      factories.QuizFactory(creator=creators[0], genre=genres[2], is_completed=True),  # 2
+      factories.QuizFactory(creator=creators[1], genre=genres[0], is_completed=True),  # 3, Is not selected
+      factories.QuizFactory(creator=creators[1], genre=genres[1], is_completed=False), # 4, Is not selected
+      factories.QuizFactory(creator=creators[1], genre=genres[2], is_completed=True),  # 5
+      factories.QuizFactory(creator=creators[2], genre=genres[3], is_completed=False), # 6, Is not selected
+      factories.QuizFactory(creator=creators[2], genre=genres[1], is_completed=True),  # 7
+      factories.QuizFactory(creator=creators[2], genre=genres[2], is_completed=True),  # 8
+    ]
+    exacts = [quizzes[idx] for idx in [0, 1, 2, 5, 7, 8]]
+    # Create parameter
+    params = {
+      'name': 'hoge',
+      'genres': [genres[1], genres[2]],
+      'creators': [creators[0], creators[2]],
+      'members': members,
+      'max_question': 6,
+      'is_enabled': True,
+    }
+    # Mock
+    quizzes = models.Quiz.objects.filter(pk__in=self.pk_convertor(quizzes))
+    def _mock_filter(*args, **kwargs):
+      if kwargs.get('is_completed', False):
+        ret = quizzes.filter(is_completed=True)
+      else:
+        ret = quizzes.filter(is_completed=True).filter(*args, **kwargs)
+      return ret
+    mocker.patch('quiz.models.Quiz.objects.filter', side_effect=_mock_filter)
+    mocker.patch('quiz.models.GenreQuerySet.collect_valid_genres', return_value=genres)
+    mocker.patch('account.models.CustomUserManager.collect_valid_creators', return_value=creators)
+    mocker.patch('account.models.CustomUserManager.collect_valid_normal_users', return_value=members)
+    # Create form
+    form = forms.QuizRoomForm(user=owner, data=params)
+    is_valid = form.is_valid()
+    instance = form.save()
+
+    try:
+      models.QuizRoom.objects.get(pk=instance.pk)
+    except Exception as ex:
+      pytest.fail(f'Unexpected Error: {ex}')
+    sequence_ids = [str(item.pk) for item in exacts]
+    detail_ids = [str(owner.pk)] + [str(pk) for pk in members.values_list('pk', flat=True)]
+
+    assert is_valid
+    assert instance.score.index == 1
+    assert instance.score.status == models.QuizStatusType.START
+    assert all([pk in sequence_ids for pk in list(instance.score.sequence.values())])
+    assert all([pk in detail_ids for pk in list(instance.score.detail.keys())])

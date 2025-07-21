@@ -34,16 +34,17 @@
           <table class="table">
             <thead>
               <tr>
-                <th scope="col">{% trans "Room name" %}</th>
-                <th scope="col">{% trans "#Members" %}</th>
-                <th scope="col">{% trans "Genre" %}</th>
-                <th scope="col">{% trans "Creators" %}</th>
+                <th scope="col" class="text-nowrap">{% trans "Room name" %}</th>
+                <th scope="col" class="text-nowrap">{% trans "#Members" %}</th>
+                <th scope="col" class="text-nowrap">{% trans "Genre" %}</th>
+                <th scope="col" class="text-nowrap">{% trans "Creators" %}</th>
+                <th scope="col" class="text-nowrap">{% trans "#Quizzes" %}</th>
                 <th colspan="2">{% trans "Operation" %}</th>
               </tr>
             </thead>
             <tbody class="table-group-divider">
             {% for instance in rooms %}
-              <tr>
+              <tr class="align-middle">
                 {% with table_css=instance.is_enabled|yesno:',table-secondary' %}
                 <td scope="row" class="{{ table_css }}">
                   {% if user.is_player %}
@@ -55,6 +56,7 @@
                 <td class="{{ table_css }}">{{ instance.members.all.count }}</td>
                 <td class="{{ table_css }}">{{ instance.get_genres }}</td>
                 <td class="{{ table_css }}">{{ instance.get_creators }}</td>
+                <td class="{{ table_css }}">{{ instance.max_question }}</td>
                 {% endwith %}
                 <td>
                   {% if instance|can_update:user %}

@@ -1,13 +1,747 @@
 {% extends 'base.html' %}
+{% load static %}
+{% load room_tags %}
 {% load i18n %}
+
+{% block header %}
+<style>
+  #question-sentences {
+    overflow-y: scroll;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    height: 12rem;
+  }
+  #question-sentences::-webkit-scrollbar {
+    display:none;
+  }
+  #chat-log {
+    overflow-y: scroll;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    height: 8rem;
+  }
+  #chat-log-sentences::-webkit-scrollbar {
+    display:none;
+  }
+  .chat-messages {
+    height: calc(100% - 5rem);
+    overflow-y: auto;
+  }
+  .message {
+    max-width: 75%;
+  }
+</style>
+{% endblock %}
 
 {% block content %}
 {% include 'breadcrumbs.html' with title=room.name %}
 <div class="row justify-content-center">
   <div class="col">
+    <div class="mt-1 row row-cols-1 g-2">
+      {# Information field #}
+      {% if room|is_owner:user %}
+      <div class="col">
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-5 g-2">
+          <div class="col">
+            <button
+              type="button"
+              class="btn btn-outline-primary w-100 custom-boxshadow owner-events"
+              data-cmd="reset"
+            >
+              {% trans "Reset status" %}
+            </button>
+          </div>
+          <div class="col">
+            <button
+              type="button"
+              class="btn btn-outline-primary w-100 custom-boxshadow owner-events"
+              data-cmd="next"
+            >
+              {% trans "Next quiz" %}
+            </button>
+          </div>
+          <div class="col">
+            <button
+              type="button"
+              class="btn btn-outline-primary w-100 custom-boxshadow owner-events"
+              data-cmd="question"
+              disabled
+            >
+              {% trans "Start Question" %}
+            </button>
+          </div>
+          <div class="col">
+            <button
+              type="button"
+              class="btn btn-outline-primary w-100 custom-boxshadow owner-events"
+              data-cmd="timeup"
+              disabled
+            >
+              {% trans "End answer" %}
+            </button>
+          </div>
+          <div class="col">
+            <button
+              type="button"
+              class="btn btn-outline-primary w-100 custom-boxshadow owner-events"
+              data-cmd="judge"
+              disabled
+            >
+              {% trans "Conduct Judgement" %}
+            </button>
+          </div>
+          <div class="col flex-grow-1">
+            <div class="btn btn-outline-secondary w-100 disabled">
+              <div class="row">
+                <div class="col-4 col-md-6 col-lg-2 fw-bold text-decoration-underline text-nowrap">{% trans "Your answer" %}:</div>
+                <div class="col-8 col-md-6 col-lg-10 text-truncate"><span name="own-answer"></span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="col">
+        <div class="card">
+          <div class="card-header">{% trans "Status" %}</div>
+          <div class="card-body">
+            <div class="row row-cols-1 row-cols-md-2">
+              <div class="col card-text">
+                <div class="row">
+                  <div class="col-4 fw-bold text-decoration-underline text-nowrap">{% trans "Your answer" %}:</div>
+                  <div class="col-8 text-truncate"><span name="own-answer"></span></div>
+                </div>
+              </div>
+              <div class="col card-text">
+                <div class="row">
+                  <div class="col-4 fw-bold text-decoration-underline text-nowrap">{% trans "Correct answer" %}:</div>
+                  <div class="col-8"><span name="correct-answer"></span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+      {# Question field #}
+      <div class="col">
+        <div class="card">
+          <div class="card-header">
+            <div class="row row-cols-2">
+              <div class="col text-start fw-bold text-decoration-underline">
+                {% trans "Question" %}(<span id="question-index">{{ room.score.index }}</span> / {{ room.max_question }})
+              </div>
+              <div class="col text-end fw-bold text-decoration-underline">
+                {% trans "Score" %}: <span id="own-score">{{ room.score|get_user_score:user.pk }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div id="question-sentences" class="card-text"></div>
+          </div>
+        </div>
+      </div>
+      {# Answer field #}
+      <div class="col">
+        <div class="card">
+          <div class="card-header">{% trans "Answer" %}</div>
+          <div class="card-body row row-cols-1 g-2">
+            <div class="col">
+              <input type="text" id="player-answer" class="form-control" disabled />
+            </div>
+            <div class="col">
+              <button style="button" class="btn btn-primary w-100 custom-boxshadow" id="send-answer" disabled>
+                {% trans "Send (Enter)" %}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      {# Message and status field #}
+      <div class="col">
+        <ul class="nav nav-tabs" id="status-tab" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button
+              type="button"
+              class="nav-link active"
+              id="chat-tab"
+              data-bs-toggle="tab"
+              data-bs-target="#chat-tab-pane"
+              role="tab"
+              aria-controls="chat-tab-pane"
+              aria-selected="true"
+            >
+              {% trans "Chat" %}
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button
+              type="button"
+              class="nav-link"
+              id="status-tab"
+              data-bs-toggle="tab"
+              data-bs-target="#status-tab-pane"
+              role="tab"
+              aria-controls="status-tab-pane"
+              aria-selected="false"
+            >
+              {% trans "Status of each member" %}
+            </button>
+          </li>
+        </ul>
+        <div class="tab-content" id="status-tab-content">
+          <div
+            class="tab-pane fade show active bg-white border border-top-0"
+            id="chat-tab-pane"
+            role="tabpanel"
+            aria-labelledby="chat-tab"
+            tabindex="0"
+          >
+            <p class="align-middle mb-0 p-1">{% trans "Chat log" %}</p>
+            <div id="chat-log"></div>
+          </div>
+          <div
+            class="tab-pane fade border-start border-end"
+            id="status-tab-pane"
+            role="tabpanel"
+            aria-labelledby="status-tab"
+            tabindex="0"
+          >
+            <table class="table mb-0">
+              <thead>
+                <tr>
+                  <th scope="col">{% trans "Member" %}</th>
+                  <th scope="col">{% trans "Score" %}</th>
+                </tr>
+              </thead>
+              <tbody class="table-group-divider">
+                <tr class="align-middle">
+                  <td scope="row">{{ room.owner|stringformat:"s" }}</td>
+                  <td class="js-player-score" data-pk="{{ room.owner.pk }}">{{ room.score|get_user_score:room.owner.pk }}</td>
+                </tr>
+                {% for member in room.members.all %}
+                <tr class="align-middle">
+                  <td scope="row">{{ member|stringformat:"s" }}</td>
+                  <td class="js-player-score" data-pk="{{ member.pk }}">{{ room.score|get_user_score:member.pk }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
+
+{% if room|is_owner:user %}
+<div class="modal" id="judgement-modal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="judgement-label" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <p class="modal-title fs-5" id="judgement-label">{% trans "Judge each answer" %}</p>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row row-cols-1 g-2">
+          <div class="col">
+            <div class="card">
+              <div class="card-header">{% trans "Correct answer" %}</div>
+              <div class="card-body">
+                <div class="card-text fs-3" name="correct-answer"></div>
+              </div>
+            </div>
+          </div>
+          <div class="col">
+            <table class="table border-top">
+              <thead>
+                <tr>
+                  <th scope="col" class="text-nowrap">{% trans "Member" %}</th>
+                  <th scope="col" class="text-nowrap">{% trans "Answer" %}</th>
+                  <th scope="col" class="text-nowrap">{% trans "Elapsed time" %}</th>
+                  <th scope="col" class="text-nowrap">{% trans "Additional score" %}</th>
+                  <th scope="col" class="text-nowrap">{% trans "Judgement" %}</th>
+                </tr>
+              </thead>
+              <tbody class="table-group-divider">
+                <tr class="align-middle js-judgement-item" data-pk="{{ room.owner.pk }}">
+                  <td scope="row" class="p-1">{{ room.owner|stringformat:"s" }}</td>
+                  <td class="text-wrap p-1" name="answer"></td>
+                  <td name="time"></td>
+                  <td class="p-1"><input type="number" name="score" class="form-control" min="1" step="1" /></td>
+                  <td class="align-middle">
+                    <div class="row row-cols-1 row-cols-lg-2 g-1">
+                      <div class="col">
+                        <input type="radio" class="btn-check" name="judgement-options0" data-type="correct" id="judgement-correct0" autocomplete="off">
+                        <label class="btn btn-outline-primary text-nowrap w-100" for="judgement-correct0">{% trans "Correct" %}</label>
+                      </div>
+                      <div class="col">
+                        <input type="radio" class="btn-check" name="judgement-options0" data-type="incorrect" id="judgement-incorrect0" autocomplete="off" checked>
+                        <label class="btn btn-outline-danger text-nowrap w-100" for="judgement-incorrect0">{% trans "Incorrect" %}</label>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+                {% for member in room.members.all %}
+                <tr class="align-middle js-judgement-item" data-pk="{{ member.pk }}">
+                  <td scope="row" class="p-1">{{ member|stringformat:"s" }}</td>
+                  <td class="text-wrap p-1" name="answer"></td>
+                  <td name="time"></td>
+                  <td class="p-1"><input type="number" name="score" class="form-control" min="1" step="1" /></td>
+                  <td class="align-middle">
+                    <div class="row row-cols-1 row-cols-lg-2 g-1">
+                      <div class="col">
+                        <input type="radio" class="btn-check" name="judgement-options{{ forloop.counter }}" data-type="correct" id="judgement-correct{{ forloop.counter }}" autocomplete="off">
+                        <label class="btn btn-outline-primary text-nowrap w-100" for="judgement-correct{{ forloop.counter }}">{% trans "Correct" %}</label>
+                      </div>
+                      <div class="col">
+                        <input type="radio" class="btn-check" name="judgement-options{{ forloop.counter }}" data-type="incorrect" id="judgement-incorrect{{ forloop.counter }}" autocomplete="off" checked>
+                        <label class="btn btn-outline-danger text-nowrap w-100" for="judgement-incorrect{{ forloop.counter }}">{% trans "Incorrect" %}</label>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div class="mt-1 row w-100">
+          <div class="col-12">
+            <button type="button" class="btn btn-primary w-100 custom-boxshadow owner-events" data-cmd="register">
+              {% trans "Send" %}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{# Define chat-log template #}
+<template id="chat-template">
+<div class="chat-message p-1">
+  <div class="message align-self-end">
+    <div class="text-white rounded p-2 text-truncate" name="message"></div>
+    <small class="text-muted">
+      <time name="datetime" datetime=""></time>
+    </small>
+  </div>
+</div>
+</template>
 {% endblock %}
 
 {% block bodyjs %}
+<script src="https://unpkg.com/typeit@8.7.1/dist/index.umd.js"></script>
+<script src="{% static 'js/quiz-websocket.js' %}"></script>
+<script>
+(function () {
+  // Setup callbacks of WebSocket
+  class Callbacks {
+    /**
+     * @brief Constructor of Callbacks
+     * @param userID Logged-in user's primary key
+    */
+    constructor(userID) {
+      this.uid = userID;
+      this.question = '';
+      this.options = {
+        speed: 75,
+        nextStringDelay: 50,
+        cursor: false,
+        loop: false,
+      };
+      this.typeWriter = new TypeIt('#question-sentences', this.options);
+      this._initTypeWriter = this._initTypeWriter.bind(this);
+      this._addCorrectAnswer = this._addCorrectAnswer.bind(this);
+      this.chatLog = this.chatLog.bind(this);
+      this.resetPlayerScore = this.resetPlayerScore.bind(this);
+      this.setQuiz = this.setQuiz.bind(this);
+      this.notifyReceivedQuiz = this.notifyReceivedQuiz.bind(this);
+      this.start = this.start.bind(this);
+      this.stop = this.stop.bind(this);
+      this.updateScoreTable = this.updateScoreTable.bind(this);
+      {% if room|is_owner:user %}
+      //
+      // Only owner
+      //
+      this.resetQuiz = this.resetQuiz.bind(this);
+      this.registeredQuizForAllMembers = this.registeredQuizForAllMembers.bind(this);
+      this.executeJudgement = this.executeJudgement.bind(this);
+      this.endJudgement = this.endJudgement.bind(this);
+      {% endif %}
+    }
+    /**
+     * @brief Initialize type wirter
+    */
+    _initTypeWriter() {
+      const element = document.querySelector('#question-sentences');
+      element.innerHTML = '';
+      this.typeWriter = new TypeIt('#question-sentences', this.options);
+    }
+    /**
+     * @brief Add correct answer
+     * @param[in] element Target DOM element
+     * @param[in] answer  Correct answer
+    */
+    _addCorrectAnswer(element, answer) {
+      element.innerHTML = '';
+      const node = document.createElement('div');
+      const data = answer.split(/\r\n|\n/);
+      // Add each sentence to node
+      for (const sentence of data) {
+        const divElement = document.createElement('div');
+        divElement.textContent = sentence;
+        node.appendChild(divElement);
+      }
+      element.appendChild(node);
+    }
+    /**
+     * @brief Add message to chat log
+     * @param[in] datetime Datetime which received message
+     * @param[in] message  Received message
+     * @param[in] byStyle  Background style of message
+    */
+    chatLog(datetime, message, bgStyle='bg-success') {
+      const chatLog = document.querySelector('#chat-log');
+      const template = document.querySelector('#chat-template');
+      const clone = template.content.cloneNode(true);
+      const timeElement = clone.querySelector('[name="datetime"]');
+      const msgElement = clone.querySelector('[name="message"]');
+      // Update data based on arguments
+      timeElement.dateTime = datetime;
+      timeElement.textContent = datetime.replace('-', '/');
+      msgElement.textContent = message;
+      msgElement.classList.add(bgStyle);
+      chatLog.appendChild(clone);
+      chatLog.scrollTop = chatLog.scrollHeight;
+    }
+    /**
+     * @brief Reset player score table
+    */
+    resetPlayerScore() {
+      const playerScores = document.querySelectorAll('.js-player-score');
+      // Reset player score
+      for (const element of playerScores) {
+        const pk = element.dataset.pk;
+        element.textContent = 0;
+      }
+    }
+    /**
+     * @brief Set quiz received from WebSocket server
+     * @param[in] val Quiz data
+    */
+    setQuiz(val) {
+      this.question = val;
+    }
+    /**
+     * @brife Notifies the user that a message has been received and reply message to WebSocket server
+     * @param[in] datetime Datetime which received message
+     * @param[in] index    Quiz index
+     * @param[in] message  Received message
+    */
+    notifyReceivedQuiz(datetime, index, message) {
+      const ownAnswer = document.querySelector('span[name="own-answer"]');
+      const correctAnswer = document.querySelector('span[name="correct-answer"]');
+
+      if (ownAnswer) {
+        ownAnswer.textContent = '';
+      }
+      if (correctAnswer) {
+        correctAnswer.innerHTML = '';
+      }
+      const quizIndex = document.querySelector('#question-index');
+      quizIndex.textContent = index;
+      QuizRoom.ReceivedQuiz();
+      this.chatLog(datetime, message);
+    }
+    /**
+     * @brief Start answering quiz
+    */
+    start() {
+      const inputArea = document.querySelector('#player-answer');
+      const sendButton = document.querySelector('#send-answer');
+      inputArea.disabled = false;
+      sendButton.disabled = false;
+      const sentences = this.question.split(/\r\n|\n/);
+      // Register quiz sentences
+      for (const sentence of sentences) {
+        this.typeWriter.type(`${sentence}`).break();
+      }
+      this.typeWriter.go();
+    }
+    /**
+     * @brief Stopped answering quiz
+     * @param[in] datetime Datetime which received message
+     * @param[in] message  Received message
+    */
+    stop(datetime, message) {
+      const inputArea = document.querySelector('#player-answer');
+      const sendButton = document.querySelector('#send-answer');
+      inputArea.disabled = true;
+      sendButton.disabled = true;
+      this.typeWriter.freeze();
+      this.setQuiz('');
+      this.chatLog(datetime, message);
+    }
+    /**
+     * @brief Register correct answer
+     * @param[in] datetime Datetime which received message
+     * @param[in] answer   Correct answer
+    */
+    registerExactAnswer(datetime, answer) {
+      const correctAnswer = document.querySelector('span[name="correct-answer"]');
+      this._addCorrectAnswer(correctAnswer, answer);
+    }
+    /**
+     * @brief Update player's score table
+     * @param[in] datetime Datetime which received message
+     * @param[in] results  The current scores which include each player one
+    */
+    updateScoreTable(datetime, results) {
+      const playerScores = document.querySelectorAll('.js-player-score');
+      // Update player score
+      for (const element of playerScores) {
+        const pk = element.dataset.pk;
+        element.textContent = results[pk];
+      }
+      const ownScore = document.querySelector('#own-score');
+      ownScore.textContent = results[this.uid];
+      // Initialize type writer
+      this._initTypeWriter();
+      const inputArea = document.querySelector('#player-answer');
+      inputArea.value = '';
+      const message = '{% trans "The score table is updated. Please check it." %}';
+      this.chatLog(datetime, message);
+    }
+    {% if room|is_owner:user %}
+    /**
+     * @brief Reset score status of this room
+     * @param[in] datetime Datetime which received message
+     * @param[in] message  Received message
+    */
+    resetQuiz(datetime, message) {
+      this.resetPlayerScore();
+      // Enable next button
+      const element = document.querySelector('[data-cmd="next"].owner-events');
+      element.disabled = false;
+      this.chatLog(datetime, `[Owner only] ${message}`, 'bg-danger');
+    }
+    /**
+     * @brief Notify owner that the next quiz is registered to each player's storage
+     * @param[in] datetime Datetime which received message
+     * @param[in] message  Received message
+    */
+    registeredQuizForAllMembers(datetime, message) {
+      let element = document.querySelector('[data-cmd="next"].owner-events');
+      element.disabled = true;
+      // Enable start quiz button
+      element = document.querySelector('[data-cmd="question"].owner-events');
+      element.disabled = false;
+      this.chatLog(datetime, `[Owner only] ${message}`, 'bg-danger');
+    }
+    /**
+     * @brief Judge results for each player's answer
+     * @param[in] datetime      Datetime which received message
+     * @param[in] message       Received message
+     * @param[in] results       All player's answers
+     * @param[in] correctAnswer Correct answer
+    */
+    executeJudgement(datetime, message, results, correctAnswer) {
+      const trElements = document.querySelectorAll('.js-judgement-item');
+      // Update each player's answer
+      for (const element of trElements) {
+        const pk = element.dataset.pk;
+        const name = `user${pk}`
+        const answer = element.querySelector('[name="answer"]');
+        answer.textContent = results[name].answer.slice(0, 20+1);
+        const time = element.querySelector('[name="time"]');
+        const elapsedTime = (() => {
+          const totalSeconds = results[name].time;
+          const remain = totalSeconds - (Math.floor(totalSeconds / 3600.0) * 3600);
+          const minutes = Math.floor(remain / 60.0);
+          const seconds = (remain - (minutes * 60)).toFixed(2);
+          const ret = (minutes > 0) ? `${minutes}min${seconds}sec` : `${seconds}sec`;
+
+          return ret;
+        })();
+        time.textContent = elapsedTime;
+      }
+      const answerElement = document.querySelector('div[name="correct-answer"]');
+      this._addCorrectAnswer(answerElement, correctAnswer);
+      this.chatLog(datetime, `[Owner only] ${message}`, 'bg-danger');
+    }
+    /**
+     * @brief Judge whether all quizzes have been asked or not
+     * @param[in] datetime Datetime which received message
+     * @param[in] message  Received message
+     * @param[in] isEnded  Describe whether all quizzes have been asked or not
+    */
+    endJudgement(datetime, message, isEnded) {
+      if (isEnded) {
+        const operateBtns = document.querySelectorAll('.owner-events');
+        // Change button states to disabled
+        for (const btn of operateBtns) {
+          btn.disabled = true;
+        }
+        // Change specific button states from disabled to enabled
+        for (const cmd of ['reset', 'register']) {
+          const element = document.querySelector(`[data-cmd="${cmd}"].owner-events`);
+          element.disabled = false;
+        }
+      }
+      this.chatLog(datetime, `[Owner only] ${message}`, 'bg-danger');
+    }
+    {% endif %}
+  }
+
+  /**
+   * @brief Initialization
+  */
+  const init = () => {
+    const callbacks = new Callbacks('{{ user.pk }}');
+    const isOwner = {% if room|is_owner:user %}true{% else %}false{% endif %};
+    QuizRoom.Init(
+      window.location,
+      '{{ room.pk }}',
+      isOwner,
+      callbacks,
+    );
+    //
+    // Send answer
+    //
+    const sendAnswerButton = document.querySelector('#send-answer');
+    const inputArea = document.querySelector('#player-answer');
+    inputArea.addEventListener('keyup', (event) => {
+      if (event.key === 'Enter') {
+        sendAnswerButton.click();
+      }
+    }, false);
+    sendAnswerButton.addEventListener('click', (event) => {
+      const ownAnswer = document.querySelector('span[name="own-answer"]');
+      const data = inputArea.value.trim();
+      // Send answer
+      QuizRoom.AnswerQuiz(data);
+      // Update own answer
+      if (ownAnswer) {
+        ownAnswer.textContent = data;
+      }
+      const datetime = (() => {
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = today.getMonth() + 1;
+        const date = today.getDate();
+        const hours = today.getHours();
+        const minutes = today.getMinutes();
+        const seconds = today.getSeconds();
+        const formatDateTime =  `${year}-${month}-${date} ${hours}:${minutes}:${seconds}`;
+
+        return formatDateTime;
+      })();
+      callbacks.chatLog(datetime, data, 'bg-primary');
+    });
+    {% if room|is_owner:user %}
+    //
+    // Owner only
+    //
+    (() => {
+      // Define callback functions for owner
+      const modal = new bootstrap.Modal('#judgement-modal');
+      const operateBtns = document.querySelectorAll('.owner-events');
+      const resetEvent = (btn) => {
+        QuizRoom.ResetQuiz();
+        btn.disabled = true;
+      };
+      const nextEvent = (btn) => {
+        QuizRoom.GetNextQuiz();
+        const element = document.querySelector('[data-cmd="reset"].owner-events');
+        element.disabled = true;
+      };
+      const questionEvent = (btn) => {
+        QuizRoom.StartAnswer();
+        btn.disabled = true;
+        const element = document.querySelector('[data-cmd="timeup"].owner-events');
+        element.disabled = false;
+      };
+      const timeUpEvent = (btn) => {
+        QuizRoom.StopAnswer();
+        btn.disabled = true;
+        const element = document.querySelector('[data-cmd="judge"].owner-events');
+        element.disabled = false;
+      };
+      const judgeEvent = () => {
+        // Initialize judgement table
+        const correctAnswer = document.querySelector('div[name="correct-answer"]');
+        correctAnswer.innerHTML = '';
+        const trElements = document.querySelectorAll('.js-judgement-item');
+
+        for (const element of trElements) {
+          // Reset answer
+          const answer = element.querySelector('[name="answer"]');
+          answer.textContent = '';
+          const time = element.querySelector('[name="time"]');
+          time.textContent = '';
+          // Init score
+          const score = element.querySelector('[name="score"]');
+          score.value = 1;
+          // Reset selected judgement result
+          for (const [switchType, status] of [['correct', false], ['incorrect', true]]) {
+            const judgement = element.querySelector(`[data-type="${switchType}"]`);
+            judgement.checked = status;
+          }
+        }
+        QuizRoom.GetAnswers();
+        modal.show();
+      };
+      const sendScore = () => {
+        // Collect scores for each member
+        const trElements = document.querySelectorAll('.js-judgement-item');
+        const results = {};
+
+        for (const element of trElements) {
+          const pk = element.dataset.pk;
+          const score = element.querySelector('[name="score"]');
+          const judgement = element.querySelector('[data-type="incorrect"]');
+          // In the case of that target member's answer is incorrect
+          if (judgement.checked) {
+            results[pk] = 0;
+          }
+          else {
+            results[pk] = Number(score.value);
+          }
+        }
+        QuizRoom.SendResult(results);
+        modal.hide();
+        const judgeBtn = document.querySelector('[data-cmd="judge"].owner-events');
+        judgeBtn.disabled = true;
+        const nextBtn = document.querySelector('[data-cmd="next"].owner-events');
+        nextBtn.disabled = false;
+      };
+      const operations = Object.freeze({
+        'reset':    (btn) => resetEvent(btn),    // resetQuiz
+        'next':     (btn) => nextEvent(btn),     // getNextQuiz
+        'question': (btn) => questionEvent(btn), // startAnswer
+        'timeup':   (btn) => timeUpEvent(btn),   // stopAnswer
+        'judge':    (btn) => judgeEvent(btn),    // getAnswers
+        'register': (btn) => sendScore(btn),     // sendResult
+      });
+      // Add click event
+      for (const btn of operateBtns) {
+        btn.addEventListener('click', (event) => {
+          const target = event.target;
+          const cmd = target.dataset.cmd;
+          const callback = operations[cmd];
+          callback(target);
+        });
+      }
+    })();
+    {% endif %}
+  };
+  // Add DOM event
+  document.addEventListener('DOMContentLoaded', init);
+})();
+</script>
 {% endblock %}

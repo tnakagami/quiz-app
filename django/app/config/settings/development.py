@@ -4,6 +4,9 @@ from .base import *
 DEBUG = True
 ALLOWED_HOSTS = ['*']
 CSRF_TRUSTED_ORIGINS = os.getenv('DJANGO_TRUSTED_ORIGINS').split(',')
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
+CORS_ALLOW_ALL_ORIGINS = True
 
 DATABASES = {
     'default': {

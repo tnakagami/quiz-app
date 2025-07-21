@@ -79,7 +79,7 @@
             </thead>
             <tbody class="table-group-divider">
             {% for instance in quizzes %}
-              <tr>
+              <tr class="align-middle">
                 {% with table_css=instance.is_completed|yesno:',table-secondary' %}
                 <td scope="row" class="{{ table_css }}">{{ instance.creator|stringformat:"s" }}</td>
                 <td class="{{ table_css }}">{{ instance.genre|stringformat:"s" }}</td>

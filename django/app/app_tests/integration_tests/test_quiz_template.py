@@ -233,7 +233,7 @@ class TestQuiz(Common):
     user = get_editors
     app = csrf_exempt_django_app
     page = app.get(self.index_url, user=user)
-    response = page.click('Check/Create/Update quizzes')
+    response = page.click('Check/Create/Update/Delete quizzes')
 
     assert response.status_code == status.HTTP_200_OK
     assert get_current_path(response) == self.quiz_list_url
@@ -244,7 +244,7 @@ class TestQuiz(Common):
     page = app.get(self.index_url, user=user)
 
     with pytest.raises(IndexError):
-      _ = page.click('Check/Create/Update quizzes')
+      _ = page.click('Check/Create/Update/Delete quizzes')
 
   def test_can_move_to_quiz_create_page(self, csrf_exempt_django_app, get_creator):
     user = get_creator
@@ -702,7 +702,7 @@ class TestQuizRoom(Common):
 
     assert response.status_code == status.HTTP_200_OK
     assert get_current_path(response) == self.create_room_url
-    assert 'You have to assign at least one of genres and creators to the quiz room.' in str(errors)
+    assert 'You have to assign at least one of genres or creators to the quiz room.' in str(errors)
 
   def test_can_move_to_room_update_page(self, csrf_exempt_django_app, create_members, get_managers):
     creators, guests, genres = create_members
@@ -931,15 +931,19 @@ class TestQuizRoom(Common):
   ])
   def test_can_enter_the_assigned_room(self, csrf_exempt_django_app, create_members, get_players, is_owner, is_assigned):
     user = get_players
+    genre = factories.GenreFactory(is_enabled=True)
     creators, guests, genres = create_members
     owner = user if is_owner else creators[0]
     member = user if is_assigned else guests[1]
+    for creator in creators:
+      _ = factories.QuizFactory(creator=creator, genre=genre, is_completed=True)
     instance = factories.QuizRoomFactory(
       owner=owner,
       creators=[creators[0], creators[1]],
       members=[member, creators[1]],
       is_enabled=True,
     )
+    instance.reset()
     app = csrf_exempt_django_app
     url = self.enter_room_url(instance.pk)
     response = app.get(url, user=user)

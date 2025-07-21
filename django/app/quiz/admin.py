@@ -28,7 +28,7 @@ class QuizRoomAdmin(admin.ModelAdmin):
 @admin.register(Score)
 class ScoreAdmin(admin.ModelAdmin):
   model = Score
-  fields = ('room', 'status')
-  list_display = ('room', 'status')
-  list_filter = ('room', 'status')
+  fields = ('room', 'status', 'index', 'sequence', 'detail')
+  list_display = ('room', 'status', 'index')
+  list_filter = ('room', 'status', 'index')
   search_fields = ('room__name', 'status')
