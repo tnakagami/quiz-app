@@ -93,8 +93,6 @@ server {
   }
   <% else %>
   location / {
-    #root   <%= domain.www_root %>;
-    #index  <%= ENV['INDEX_FILES'] || 'index.html' %>;
     return 404;
   }
   <% end %>

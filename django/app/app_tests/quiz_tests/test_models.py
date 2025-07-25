@@ -620,8 +620,8 @@ class TestQuizRoom(Common):
     'is-enabled-with-creator',
     'is-not-enabled-with-guest',
   ])
-  def test_check_reset_method(self, get_genres, is_enabled, role):
-    genres = get_genres[:4]
+  def test_check_reset_method(self, is_enabled, role):
+    genres = factories.GenreFactory.create_batch(4, is_enabled=True)
     creators = factories.UserFactory.create_batch(4, is_active=True, role=RoleType.CREATOR)
     members = factories.UserFactory.create_batch(6, is_active=True)
     members = UserModel.objects.filter(pk__in=self.pk_convertor(members)).order_by('pk')

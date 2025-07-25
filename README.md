@@ -37,9 +37,9 @@ Please see [direct_edit](./nginx/direct_edit/) for details.
     | :---- | :---- | :---- |
     | `APP_DOMAINS` | `localhost -> http://nginx:80` | See [https-portal](https://github.com/SteveLTN/https-portal) for details. |
     | `APP_ACCESS_PORT` | 8443 | from 1025 to 65535 |
-    | `APP_BACKDOOR_PORT` | 3000 | from 1025 to 65535 |
     | `APP_ARCHITECTURE` | arm64v8 | amd64, arm32v5, arm32v6, arm32v7, arm64v8, i386, mips64le, ppc64le, riscv64, s390x |
     | `APP_TIMEZONE` | Asia/Tokyo | UTC, Asia/Tokyo, etc. |
+    | `APP_VPN_ACCESS_IP` | 10.100.0.3 | 10.100.0.3, 10.17.31.123, etc. |
 
     Please see [env.sample](./env.sample) for details.
 
@@ -50,3 +50,27 @@ Run the following command to create docker images.
 ./wrapper.sh build
 # or docker-compose build --build-arg UID="$(id -u)" --build-arg GID="$(id -g)"
 ```
+
+## Create containers
+Execute the following command to start relevant services.
+
+```bash
+./wrapper start
+```
+
+### In the case of development
+To access web page using `https:` request, you need to copy relevant certificate which is registered in `https-portal` to client machine. The detail is shown below.
+
+1. Copy target certificate from `https-portal`
+
+    ```bash
+    # In the host environment
+    ./wrapper start
+    # Several minutes later... Specifically, the https-portal’s output log includes "s6-rc: info: service legacy-services successfully started".
+    docker cp https-portal.quiz-app:/var/lib/https-portal/default_server/default_server.crt .
+    ```
+
+1. Download the certificate to client machine.
+1. Install the certificate as "Trusted Root Certification Authorities".
+
+## Access to web site

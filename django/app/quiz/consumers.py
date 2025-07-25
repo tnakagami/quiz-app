@@ -1,10 +1,9 @@
+from logging import getLogger
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.utils.translation import gettext_lazy
-from . import models
 from utils.models import get_current_time, convert_timezone
-import logging
-from datetime import datetime
+from . import models
 
 QuizStatusType = models.QuizStatusType
 
@@ -16,7 +15,7 @@ class QuizState:
     self.quiz = None
     self.players = {}
     self.answers = {}
-    self.current_time = datetime.now()
+    self.current_time = get_current_time()
 
   ##
   # @brief Update score
@@ -28,11 +27,11 @@ class QuizState:
   ##
   # @brief Update player list
   # @param pk Player's primary key
-  # @param is_delete Delete target player from player list if true (Default: False)
-  def update_player(self, pk, is_delete=False):
-    if is_delete and self.players.get(pk, False):
+  # @param do_delete Delete target player from player list if true (Default: False)
+  def update_player(self, pk, do_delete=False):
+    if do_delete and self.players.get(pk, False):
       del self.players[pk]
-    else:
+    elif not do_delete:
       self.players[pk] = True
 
   ##
@@ -84,7 +83,7 @@ class QuizState:
     self.answers = dict([(key, {'answer': '', 'time': 0}) for key in self.players.keys()])
     self.score.status = QuizStatusType.Answering
     self.score.save()
-    self.current_time = datetime.now()
+    self.current_time = get_current_time()
 
   ##
   # @brief Check whether hte members can answer quiz or not
@@ -102,7 +101,7 @@ class QuizState:
   # @param pk The request user's primary key
   # @param answer The request user's answer
   def update_answer(self, pk, answer):
-    elapsed_time = datetime.now() - self.current_time
+    elapsed_time = get_current_time() - self.current_time
     self.answers[pk] = {
       'answer': answer,
       'time': elapsed_time.total_seconds(),
@@ -111,7 +110,7 @@ class QuizState:
   ##
   # @brief Change received all answers phase
   @database_sync_to_async
-  def revceived_all_answers_phase(self):
+  def received_all_answers_phase(self):
     self.score.status = QuizStatusType.RECEIVED_ANSWERS
     self.score.save()
 
@@ -157,11 +156,38 @@ class QuizState:
 
     return detail, is_enabled
 
+class ConsumerState:
+  ##
+  # @brief Constructor of ConsumerState
+  def __init__(self):
+    self.states = {}
+
+  ##
+  # @brief Get target state based on given name
+  # @param name Target instance name
+  # @return Instance of QuizState
+  def get_state(self, name):
+    return self.states.get(name)
+
+  ##
+  # @brief Set QuizState's instance based on given name
+  # @param name Target instance name
+  # @param instance Target QuizState's instance
+  def set_state(self, name, instance):
+    self.states[name] = instance
+
+  ##
+  # @brief Delete QuizState's instance based on given name
+  # @param name Target instance name
+  def del_state(self, name):
+    if name in self.states.keys():
+      del self.states[name]
+
+g_quizstates = ConsumerState()
+
 # ================
 # = QuizConsumer =
 # ================
-g_quizstates = {}
-
 class QuizConsumer(AsyncJsonWebsocketConsumer):
   ##
   # @brief Constructor of QuizConsumer
@@ -171,7 +197,7 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
     self.room = None
     self.group_name = None
     self.prefix = 'quiz'
-    self.logger = logging.getLogger(__name__)
+    self.logger = getLogger(__name__)
     self.now = lambda: convert_timezone(get_current_time(), is_string=True, strformat='Y-m-d H:i:s')
     super().__init__(*args, **kwargs)
 
@@ -229,14 +255,14 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
   # @brief Conduct post-accept process
   # @param user Request user
   async def post_accept(self, user):
-    target = g_quizstates.get(self.group_name)
+    target = g_quizstates.get_state(self.group_name)
 
     if target is None:
       score = await self.get_score()
       target = QuizState()
       target.update_score(score)
       # Update status
-      g_quizstates[self.group_name] = target
+      g_quizstates.set_state(self.group_name, target)
     # Add user data to player list
     target.update_player(self.get_client_key(user))
     # Send system message
@@ -280,15 +306,15 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
   # @param user Request user
   async def post_disconnect(self, user):
     # Delete user data from player list
-    target = g_quizstates.get(self.group_name)
-    target.update_player(self.get_client_key(user), is_delete=True)
+    target = g_quizstates.get_state(self.group_name)
+    target.update_player(self.get_client_key(user), do_delete=True)
 
     if not target.has_player():
-      del g_quizstates[self.group_name]
+      g_quizstates.del_state(self.group_name)
 
   ##
   # @brief Send group message
-  # @param event event data
+  # @param event Event data
   async def send_group_message(self, event):
     try:
       content = {
@@ -308,7 +334,7 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
   # @brief Reset current quiz status
   # @param user Request user
   # @param target Instance of QuizState
-  # @param data dummy data (Not used)
+  # @param data Dummy data (Not used)
   async def reset_quiz(self, user, target, data):
     is_owner = await self.is_owner(user)
 
@@ -332,7 +358,7 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
   # @brief Reset current quiz status
   # @param user Request user
   # @param target Instance of QuizState
-  # @param data dummy data (Not used)
+  # @param data Dummy data (Not used)
   async def get_next_quiz(self, user, target, data):
     is_owner = await self.is_owner(user)
 
@@ -356,7 +382,7 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
   # @brief Received quiz
   # @param user Request user
   # @param target Instance of QuizState
-  # @param data dummy data (Not used)
+  # @param data Dummy data (Not used)
   async def received_quiz(self, user, target, data):
     is_completed = target.update_member_status(self.get_client_key(user))
 
@@ -375,7 +401,7 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
   # @brief Change state from the members cannot answer quiz to the members can do that.
   # @param user Request user
   # @param target Instance of QuizState
-  # @param data dummy data (Not used)
+  # @param data Dummy data (Not used)
   async def start_answer(self, user, target, data):
     is_owner = await self.is_owner(user)
 
@@ -404,12 +430,12 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
   # @brief Change state from the members can answer quiz to the members cannot do that.
   # @param user Request user
   # @param target Instance of QuizState
-  # @param data dummy data (Not used)
+  # @param data Dummy data (Not used)
   async def stop_answer(self, user, target, data):
     is_owner = await self.is_owner(user)
 
     if is_owner:
-      await target.revceived_all_answers_phase()
+      await target.received_all_answers_phase()
       message = gettext_lazy('Responses have ended. No more responses will be accepted.')
       await self.channel_layer.group_send(
         self.group_name, {
@@ -424,7 +450,7 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
   # @brief Collect all player's answer and send them to owner
   # @param user Request user
   # @param target Instance of QuizState
-  # @param data dummy data (Not used)
+  # @param data Dummy data (Not used)
   async def get_answers(self, user, target, data):
     is_owner = await self.is_owner(user)
 
@@ -446,7 +472,7 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
   # @brief Update player's score
   # @param user Request user
   # @param target Instance of QuizState
-  # @param data judgement result for each player
+  # @param data Judgement result for each player
   async def send_result(self, user, target, data):
     is_owner = await self.is_owner(user)
 
@@ -475,12 +501,12 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
 
   ##
   # @brief Receive message from WebSocket
-  # @param event event data
+  # @param content Event data
   async def receive_json(self, content):
     try:
       command = content['command']
       data = content.get('data', None)
-      target = g_quizstates.get(self.group_name)
+      target = g_quizstates.get_state(self.group_name)
       func_table = {
         'resetQuiz': self.reset_quiz,
         'getNextQuiz': self.get_next_quiz,

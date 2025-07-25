@@ -7,5 +7,6 @@ Dear {{ email }}
 {{ protocol }}://{{ domain }}{% url 'account:confirm_password_reset' uid token %}
 
 {% blocktranslate %}Caution: The above url is valid for {{ timelimit }} minutes.{% endblocktranslate %}
+{% trans "This email was sent from a send-only address, so replies will not be delivered." %}
 
 {% trans "Administrator of Quiz app" %}

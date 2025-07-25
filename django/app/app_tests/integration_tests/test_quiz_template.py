@@ -389,6 +389,10 @@ class TestQuiz(Common):
     user = get_managers
     app = csrf_exempt_django_app
     page = app.get(self.quiz_list_url, user=user)
+    quizzes = page.context['quizzes']
+    # Set output url
+    if len(quizzes) > 0:
+      instance = quizzes[0]
     output_url = self.update_quiz_url(instance.pk)
     response = page.click('Edit', href=output_url)
 

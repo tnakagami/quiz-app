@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-07-21 18:35+0900\n"
+"POT-Creation-Date: 2025-07-26 00:35+0900\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -129,8 +129,15 @@ msgstr "パスワードリセット用URL"
 msgid "Caution: The above url is valid for %(timelimit)s minutes."
 msgstr "注意：上記のURLは、%(timelimit)s 分間のみ有効です。"
 
-#: templates/account/mail_template/password_reset/message.txt:11
-#: templates/account/mail_template/provisional_registration/message.txt:13
+#: templates/account/mail_template/password_reset/message.txt:10
+#: templates/account/mail_template/provisional_registration/message.txt:12
+msgid ""
+"This email was sent from a send-only address, so replies will not be "
+"delivered."
+msgstr "このメールは送信専用アドレスから送信されているため、返信メールは届きません。"
+
+#: templates/account/mail_template/password_reset/message.txt:12
+#: templates/account/mail_template/provisional_registration/message.txt:14
 msgid "Administrator of Quiz app"
 msgstr "クイズアプリのサーバ管理者"
 
@@ -183,7 +190,7 @@ msgstr "パスワードリセットの確認"
 
 #: templates/account/passwords/confirm_password_form.html:24
 #: templates/account/passwords/password_reset_form.html:20
-#: templates/quiz/playing_room.html:294
+#: templates/quiz/playing_room.html:314
 msgid "Send"
 msgstr "送信"
 
@@ -509,17 +516,17 @@ msgstr "クイズ制作者"
 msgid "Genre"
 msgstr "ジャンル"
 
-#: templates/quiz/download_quiz.html:51 templates/quiz/playing_room.html:118
+#: templates/quiz/download_quiz.html:51 templates/quiz/playing_room.html:132
 #: templates/quiz/quiz_list.html:75
 msgid "Question"
 msgstr "問題"
 
-#: templates/quiz/download_quiz.html:52 templates/quiz/playing_room.html:133
-#: templates/quiz/playing_room.html:251 templates/quiz/quiz_list.html:76
+#: templates/quiz/download_quiz.html:52 templates/quiz/playing_room.html:147
+#: templates/quiz/playing_room.html:260 templates/quiz/quiz_list.html:76
 msgid "Answer"
 msgstr "解答"
 
-#: templates/quiz/download_quiz.html:53 templates/quiz/playing_room.html:98
+#: templates/quiz/download_quiz.html:53 templates/quiz/playing_room.html:106
 msgid "Status"
 msgstr "作成状況"
 
@@ -583,69 +590,65 @@ msgstr "回答終了"
 msgid "Conduct Judgement"
 msgstr "判定実施"
 
-#: templates/quiz/playing_room.html:102
+#: templates/quiz/playing_room.html:96 templates/quiz/playing_room.html:111
 msgid "Your answer"
 msgstr "あなたの回答"
 
-#: templates/quiz/playing_room.html:105 templates/quiz/playing_room.html:237
+#: templates/quiz/playing_room.html:117 templates/quiz/playing_room.html:249
 msgid "Correct answer"
 msgstr "正解"
 
-#: templates/quiz/playing_room.html:121 templates/quiz/playing_room.html:201
+#: templates/quiz/playing_room.html:135 templates/quiz/playing_room.html:214
 msgid "Score"
 msgstr "得点"
 
-#: templates/quiz/playing_room.html:140
+#: templates/quiz/playing_room.html:154
 msgid "Send (Enter)"
 msgstr "送信（Enter）"
 
-#: templates/quiz/playing_room.html:160
+#: templates/quiz/playing_room.html:174
 msgid "Chat"
 msgstr "チャット"
 
-#: templates/quiz/playing_room.html:174
+#: templates/quiz/playing_room.html:188
 msgid "Status of each member"
 msgstr "各メンバのステータス"
 
-#: templates/quiz/playing_room.html:186
+#: templates/quiz/playing_room.html:200
 msgid "Chat log"
 msgstr "チャットログ"
 
-#: templates/quiz/playing_room.html:200 templates/quiz/playing_room.html:250
+#: templates/quiz/playing_room.html:213 templates/quiz/playing_room.html:259
 msgid "Member"
 msgstr "メンバ"
 
-#: templates/quiz/playing_room.html:230
+#: templates/quiz/playing_room.html:242
 msgid "Judge each answer"
 msgstr "各回答を判定"
 
-#: templates/quiz/playing_room.html:252
+#: templates/quiz/playing_room.html:261
 msgid "Elapsed time"
 msgstr "経過時間"
 
-#: templates/quiz/playing_room.html:253
+#: templates/quiz/playing_room.html:262
 msgid "Additional score"
 msgstr "加点"
 
-#: templates/quiz/playing_room.html:254
+#: templates/quiz/playing_room.html:263
 msgid "Judgement"
 msgstr "判定"
 
-#: templates/quiz/playing_room.html:265 templates/quiz/playing_room.html:278
+#: templates/quiz/playing_room.html:276 templates/quiz/playing_room.html:295
 msgid "Correct"
 msgstr "正解"
 
-#: templates/quiz/playing_room.html:267 templates/quiz/playing_room.html:280
+#: templates/quiz/playing_room.html:280 templates/quiz/playing_room.html:299
 msgid "Incorrect"
 msgstr "不正解"
 
-#: templates/quiz/playing_room.html:479
+#: templates/quiz/playing_room.html:517
 msgid "The score table is updated. Please check it."
 msgstr "スコアテーブルが更新されました。確認してください。"
-
-#: templates/quiz/playing_room.html:640
-msgid "Collecting... Please wait..."
-msgstr "回答収集中。しばらくお待ちください。"
 
 #: templates/quiz/quiz_form.html:5
 msgid "Create/Update quiz"
@@ -754,6 +757,3 @@ msgstr "すべてのクイズ制作者のクイズをアップロードできま
 #: templates/quiz/upload_quiz.html:69
 msgid "Upload"
 msgstr "アップロード"
-
-#~ msgid "Judge each choice"
-#~ msgstr "判定"

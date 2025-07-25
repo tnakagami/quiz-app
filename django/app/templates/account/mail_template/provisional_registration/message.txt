@@ -9,5 +9,6 @@ Dear {{ email }}
 {{ protocol }}://{{ domain }}{% url 'account:complete_account_creation' token %}
 
 {% blocktranslate %}Caution: The above url is valid for {{ timelimit }} minutes.{% endblocktranslate %}
+{% trans "This email was sent from a send-only address, so replies will not be delivered." %}
 
 {% trans "Administrator of Quiz app" %}

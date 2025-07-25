@@ -60,6 +60,7 @@ markers = [
   "utils: mark tests as utils application",
   "account: mark tests as account application",
   "quiz: mark tests as quiz application",
+  "consumer: mark tests as consumer application",
   "webtest: mark tests as django-webtest",
 ]
 cache_dir = "/opt/home/.cache"
