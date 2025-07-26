@@ -19,7 +19,7 @@ g_err_msg = 'Your password must contain at least four types which are an alphabe
   ('0aZ~',), ('1bY!',), ('2cX@',), ('3dW#',), ('4eV$',), ('5fU%',), ('6gT^',), ('7hS&',), ('8iR*',), ('9jQ_',),
   ('0kP-',), ('1lO+',), ('2mN=',), ('3nM`',), ('4oL|',), ('5pK(',), ('6qJ)',), ('7rI{',), ('8sH}',), ('9tG[',),
   ('0uF]',), ('1vE:',), ('2wD;',), ('3xC"',), ("4yB'",), ('5zA<',), ('6aZ>',), ('7aZ,',), ('8aZ.',), ('9aZ?',),
-  ('0aZ/',), 
+  ('0aZ/',),
 ], ids=lambda vals: vals[-2:])
 def test_valid_patterns_of_password_validator(password):
   validator = validators.CustomPasswordValidator()

@@ -19,6 +19,24 @@ g_wrong_password = 'h0o$jAx4#Pi5'
 # ====================
 @pytest.mark.account
 @pytest.mark.form
+@pytest.mark.parametrize([
+  'forwarding_port',
+  'expected',
+], [
+  ('', ''),
+  ('8234', ':8234'),
+], ids=[
+  'set-forwarding-port-number',
+  'does-not-set-forwarding-port-number',
+])
+def test_check_get_forwarding_port(settings, forwarding_port, expected):
+  settings.NGINX_FORWARDING_PORT = forwarding_port
+  port_num = forms._get_forwarding_port()
+
+  assert port_num == expected
+
+@pytest.mark.account
+@pytest.mark.form
 def test_valid_digest_validator(mocker):
   exact_digest = 'abc123'
   mocker.patch('account.forms.get_digest', return_value=exact_digest)
@@ -213,7 +231,16 @@ def test_check_save_method_of_user_creation_form(mocker):
 @pytest.mark.account
 @pytest.mark.form
 @pytest.mark.django_db
-def test_check_send_email_method_of_user_creation_form(mocker):
+@pytest.mark.parametrize([
+  'port_num',
+], [
+  (':8443',),
+  ('',),
+], ids=[
+  'set-port-number',
+  'does-not-set-port-number',
+])
+def test_check_send_email_method_of_user_creation_form(mocker, port_num):
   class FakeObj:
     def __init__(self):
       self.scheme = 'https'
@@ -226,6 +253,7 @@ def test_check_send_email_method_of_user_creation_form(mocker):
   fake_obj = FakeObj()
   mocker.patch('account.forms.get_current_site', return_value=fake_obj)
   mocker.patch('account.forms.dumps', return_value=fake_obj.token)
+  mocker.patch('account.forms._get_forwarding_port', return_value=port_num)
   email_user_mock = mocker.patch.object(user, 'email_user', return_value=None)
   # Call send_email
   form = forms.UserCreationForm()
@@ -241,7 +269,7 @@ def test_check_send_email_method_of_user_creation_form(mocker):
 
   # Prepare for expected values
   relevant_link = reverse('account:complete_account_creation', kwargs={'token': fake_obj.token})
-  exact_url = f'{fake_obj.scheme}://{fake_obj.domain}{relevant_link}'
+  exact_url = f'{fake_obj.scheme}://{fake_obj.domain}{port_num}{relevant_link}'
   exact_timelimit = f'The above url is valid for 3 minutes'  # Based on "{'timelimit': 3,} in config"
   # Check whether this method is only called at once
   email_user_mock.assert_called_once()
@@ -336,6 +364,26 @@ def test_check_password_reset_form(email, is_valid):
   form = forms.CustomPasswordResetForm(data=params)
 
   assert form.is_valid() == is_valid
+
+def test_check_save_method(mocker):
+  class FakeObj:
+    def __init__(self):
+      self.domain = 'hoge'
+  # Define test code
+  fake_obj = FakeObj()
+  mocker.patch('account.forms.get_current_site', return_value=fake_obj)
+  mocker.patch('account.forms._get_forwarding_port', return_value=':3256')
+  save_mock = mocker.patch('django.contrib.auth.forms.PasswordResetForm.save', return_value=None)
+  params = {
+    'email': 'hoge@example.com',
+  }
+  form = forms.CustomPasswordResetForm(data=params)
+  form.save(request=None)
+  _, kwargs = save_mock.call_args
+  domain_override = kwargs.get('domain_override')
+  expected = 'hoge:3256'
+
+  assert domain_override == expected
 
 # =========================
 # = CustomSetPasswordForm =

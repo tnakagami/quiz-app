@@ -8,10 +8,6 @@ I assume that host environment is satisfied with the following conditions.
 | Architecture | aarch64 (64bit) | `uname -m` |
 | OS | Ubuntu 22.04.4 LTS | `cat /etc/os-release \| grep -oP '(?<=PRETTY_NAME=")(.*)(?=")'` |
 
-In addition, I also assume that we use dynamic DNS based on `MyDNS`. Therefore, we use `direct_edit` script to update SSL certification provided from `Let's encrypt`.
-
-Please see [direct_edit](./nginx/direct_edit/) for details.
-
 ## Preparation
 ### Common
 1. Install `git`, `docker`, and `docker-compose` to your machine and enable each service because I execute python application, nginx, redis, and PostgreSQL via Docker containers.
@@ -26,12 +22,10 @@ Please see [direct_edit](./nginx/direct_edit/) for details.
 
     | Target | Path | Detail |
     | :---- | :---- | :---- |
-    | common | `./container_envs/common/.env` | [README.md](./container_envs/common/README.md) |
-    | nginx | `./container_envs/nginx/.env` | [README.md](./container_envs/nginx/README.md) |
     | django | `./container_envs/django/.env` | [README.md](./container_envs/django/README.md) |
     | postgres | `./container_envs/postgres/.env` | [README.md](./container_envs/postgres/README.md) |
 
-    After that, create also `.env` file in the top directory of current project. The `.env` file consists of five environment variables.
+1. After that, create also `.env` file in the top directory of current project. The `.env` file consists of the following environment variables.
 
     | Envrionment variable name | Example | Enables (option) |
     | :---- | :---- | :---- |
@@ -40,8 +34,35 @@ Please see [direct_edit](./nginx/direct_edit/) for details.
     | `APP_ARCHITECTURE` | arm64v8 | amd64, arm32v5, arm32v6, arm32v7, arm64v8, i386, mips64le, ppc64le, riscv64, s390x |
     | `APP_TIMEZONE` | Asia/Tokyo | UTC, Asia/Tokyo, etc. |
     | `APP_VPN_ACCESS_IP` | 10.100.0.3 | 10.100.0.3, 10.17.31.123, etc. |
+    | `APP_WIREGUARD_IP` | 10.100.0.2 | 10.100.0.2, 10.17.31.2, etc. |
+    | `APP_WIREGUARD_PORT` | 51820 | 51012, 51013, etc. |
 
     Please see [env.sample](./env.sample) for details.
+
+### Create local-network
+Execute the following command and press "Enter" key.
+
+```bash
+./wrapper.sh create-network
+```
+
+### Setup wireguard environment variables
+1. Create the `wireguard/container_env/.env` file.
+
+    | Envrionment variable name | Overview | Example |
+    | :---- | :---- | :---- |
+    | `SERVERURL` | Public domain name on your server | `SERVERURL=example.com` |
+    | `PEERS` | Peer names which are separated by comma | `PEERS=PublicServer,OtherServer` |
+    | `PEERDNS` | Peer DNS server. In general, you don't have to change this field. | `PEERDNS=8.8.8.8,10.0.11.1` |
+    | `INTERNAL_SUBNET` | Internal subnet address. In general you don't have to change this field.  | `INTERNAL_SUBNET=10.0.11.0/24` |
+    | `MTU` | Maximum Transmission Unit. In general you don't have to change this field. | `MTU=1380` |
+    | `KEEP_ALIVE` | Keep alive. In general you don't have to change this field. | `KEEP_ALIVE=25` |
+    | `ALLOWEDIPS` | Allowd ips to access this network. In general you don't have to change this field. | `ALLOWEDIPS=10.0.11.0/24` |
+    | `SERVER_ALLOWEDIPS_PEER_${PEER_NAME}` | Peer's subnet mask. Please correspond this field to subnet mask of `APP_VPN_ACCESS_IP` | `SERVER_ALLOWEDIPS_PEER_PublicServer=10.100.0.0/24` |
+
+    Please see [env.sample](./wireguard/container_env/env.sample) for details.
+
+1. Create `01-routing-localnet.conf` file to `wireguard/configs/iptables_script/conf.up.d` and `wireguard/configs/iptables_script/conf.down.d`. Please see [README.md](./wireguard/configs/iptables_script/README.md) for details.
 
 ## Build
 Run the following command to create docker images.
@@ -74,3 +95,6 @@ To access web page using `https:` request, you need to copy relevant certificate
 1. Install the certificate as "Trusted Root Certification Authorities".
 
 ## Access to web site
+Enter your domain to address-bar of web browser and move to the target page.
+
+For example, access to `http://your-domain-name:8443/` via web browser.

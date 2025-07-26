@@ -644,7 +644,7 @@ class TestUpdateFriends(Common):
 
   def test_invalid_post_request(self, csrf_exempt_django_app):
     # In the case of that target user has individual group which includes user's friends
-    other = factories.UserFactory(is_active=True, role=RoleType.GUEST) 
+    other = factories.UserFactory(is_active=True, role=RoleType.GUEST)
     friends = list(factories.UserFactory.create_batch(2, is_active=True, role=RoleType.GUEST))
     friends = UserModel.objects.filter(pk__in=[val.pk for val in friends]).order_by('pk')
     user = factories.UserFactory(

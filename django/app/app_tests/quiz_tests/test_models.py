@@ -59,7 +59,7 @@ class TestGenre(Common):
     assert isinstance(genre, models.Genre)
 
   @pytest.mark.parametrize([
-    'name', 
+    'name',
     'is_enabled',
   ], [
     ('hoge', True),
@@ -181,7 +181,7 @@ class TestQuiz(Common):
     assert isinstance(quiz, models.Quiz)
 
   @pytest.mark.parametrize([
-    'question', 
+    'question',
     'answer',
     'is_completed',
     'short_question',
@@ -627,7 +627,7 @@ class TestQuizRoom(Common):
     members = UserModel.objects.filter(pk__in=self.pk_convertor(members)).order_by('pk')
     owner = factories.UserFactory(is_active=True, role=role)
     quizzes = [
-      factories.QuizFactory(creator=creators[0], genre=genres[0], is_completed=True),  # 0 
+      factories.QuizFactory(creator=creators[0], genre=genres[0], is_completed=True),  # 0
       factories.QuizFactory(creator=creators[0], genre=genres[1], is_completed=False), # 1, Is not selected
       factories.QuizFactory(creator=creators[1], genre=genres[0], is_completed=True),  # 2, Is not selected
       factories.QuizFactory(creator=creators[1], genre=genres[1], is_completed=True),  # 3
@@ -645,7 +645,7 @@ class TestQuizRoom(Common):
       max_question=4,
       is_enabled=is_enabled,
     )
-    room.score.status = models.QuizStatusType.Answering
+    room.score.status = models.QuizStatusType.ANSWERING
     room.score.index = 2
     room.score.sequence = {}
     room.score.detail = {}
@@ -665,7 +665,7 @@ class TestQuizRoom(Common):
         'index': 2,
         'len_seq': 0,
         'len_detail': 0,
-        'status': models.QuizStatusType.Answering,
+        'status': models.QuizStatusType.ANSWERING,
         'seq': [],
         'detail': [],
       },
@@ -947,7 +947,7 @@ class TestScore:
     (models.QuizStatusType.START, 'Start'),
     (models.QuizStatusType.WAITING, 'Waiting'),
     (models.QuizStatusType.SENT_QUESTION, 'Sent question'),
-    (models.QuizStatusType.Answering, 'Answering'),
+    (models.QuizStatusType.ANSWERING, 'Answering'),
     (models.QuizStatusType.RECEIVED_ANSWERS, 'Received answers'),
     (models.QuizStatusType.JUDGING, 'Judging'),
     (models.QuizStatusType.END, 'End'),

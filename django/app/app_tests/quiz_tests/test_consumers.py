@@ -187,7 +187,7 @@ class Common:
         )
         room.reset()
         room.score.index = 3
-        room.score.status = models.QuizStatusType.Answering
+        room.score.status = models.QuizStatusType.ANSWERING
         room.score.save()
 
       return owner, creators, guests, room
@@ -297,24 +297,14 @@ class TestQuizConsumer(Common):
     with pytest.raises(TimeoutError):
       _ = await communicator.connect()
 
-  @pytest.mark.parametrize([
-    'target_method',
-    'err_msg_getter',
-  ], [
-    ('quiz.models.QuizRoom.objects.get', lambda room: '[(Not set)]Connect: Invalid'),
-    ('quiz.consumers.QuizConsumer.accept', lambda room: f'[quiz-{room.pk}]Connect: Invalid'),
-  ], ids=[
-    'before-setting-group-name',
-    'after-setting-group-name',
-  ])
   @pytest.mark.asyncio
-  async def test_connect_exception(self, mock_logger_and_now_method, get_guest, get_room_instances, target_method, err_msg_getter):
+  async def test_connect_exception(self, mock_logger_and_now_method, get_guest, get_room_instances):
     logger, mocker = mock_logger_and_now_method
     user = await get_guest()
     _, _, _, room = await get_room_instances(user)
     communicator = await self.get_communicator(room, user)
-    err_msg = err_msg_getter(room)
-    mocker.patch(target_method, side_effect=Exception('Invalid'))
+    err_msg = f'[quiz-{room.pk}]Connect: Invalid'
+    mocker.patch('quiz.consumers.QuizConsumer.accept', side_effect=Exception('Invalid'))
     # Call connect method
     with pytest.raises(TimeoutError):
       _ = await communicator.connect()
@@ -442,7 +432,7 @@ class TestQuizConsumer(Common):
       member_msg = await member_socket.receive_json_from()
       callback = lambda msg: msg['type'] == 'resetCompleted'
     else:
-      expected_status = models.QuizStatusType.Answering
+      expected_status = models.QuizStatusType.ANSWERING
       expected_index = 3
       await member_socket.send_json_to(data)
       owner_msg = await owner_socket.receive_nothing()
@@ -707,22 +697,31 @@ class TestQuizConsumer(Common):
   ])
   @pytest.mark.asyncio
   async def test_send_result_method(self, monkeypatch, common_process, is_ended):
+    is_owner, owner_socket, member_socket, room = common_process
+
     class DummyQStat(DummyBaseQuizState):
       @database_sync_to_async
       def update_state(self, max_question, judgement):
+        if is_ended:
+          self.score.index = 5
+          self.score.status = models.QuizStatusType.END
+          self.score.save()
         details = {'owner': 1, 'member': 2}
 
         return details, is_ended
 
     def get_callback(name):
-      return DummyQStat()
+      instance = DummyQStat()
+      instance.update_score(room.score)
+
+      return instance
+
     def del_callback(name):
       pass
 
     # Define test code
     monkeypatch.setattr('quiz.consumers.g_quizstates.get_state', get_callback)
     monkeypatch.setattr('quiz.consumers.g_quizstates.del_state', del_callback)
-    is_owner, owner_socket, member_socket, room = common_process
     data = {'command': 'sendResult', 'data': {}}
     # Call send_result method
     if is_owner:
@@ -732,12 +731,12 @@ class TestQuizConsumer(Common):
       # Define expected value
       if is_ended:
         message = 'All quizzes have been asked. Please press the reset button.'
-        expected_index = 1
-        expected_status = models.QuizStatusType.START
+        expected_index = 5
+        expected_status = models.QuizStatusType.END.value
       else:
         message = 'The score is updated. Please next quiz.'
         expected_index = 3
-        expected_status = models.QuizStatusType.Answering
+        expected_status = models.QuizStatusType.ANSWERING.value
 
       def callback(msg):
         ret = all([
@@ -755,7 +754,7 @@ class TestQuizConsumer(Common):
       member_msg = await member_socket.receive_nothing()
       callback = lambda msg: msg
       expected_index = 3
-      expected_status = models.QuizStatusType.Answering
+      expected_status = models.QuizStatusType.ANSWERING.value
     # Get score data
     score = await self.get_score(room=room)
 
@@ -782,7 +781,7 @@ class TestQuizState(Common):
 
     assert default_score is None
     assert await self.get_score_index(score) == 3
-    assert await self.get_score_status(score) == models.QuizStatusType.Answering.value
+    assert await self.get_score_status(score) == models.QuizStatusType.ANSWERING.value
     assert instance.quiz is None
 
   @pytest.mark.parametrize([
@@ -901,7 +900,7 @@ class TestQuizState(Common):
     score = await self.get_score(room)
     status = await self.get_score_status(score)
 
-    assert status == models.QuizStatusType.Answering.value
+    assert status == models.QuizStatusType.ANSWERING.value
     assert instance.current_time.strftime(_format) == dummy_time.strftime(_format)
     assert len(instance.answers) == len(inputs)
     assert all([all([key in inputs.keys(), item['answer'] == '', item['time'] == 0]) for key, item in instance.answers.items()])
@@ -913,7 +912,7 @@ class TestQuizState(Common):
     (models.QuizStatusType.START,            False),
     (models.QuizStatusType.WAITING,          False),
     (models.QuizStatusType.SENT_QUESTION,    False),
-    (models.QuizStatusType.Answering,        True),
+    (models.QuizStatusType.ANSWERING,        True),
     (models.QuizStatusType.RECEIVED_ANSWERS, False),
     (models.QuizStatusType.JUDGING,          False),
     (models.QuizStatusType.END,              False),
@@ -1044,7 +1043,7 @@ class TestQuizState(Common):
       expected = {
         'output': {'foo': 4, 'bar': 3},
         'status': models.QuizStatusType.END.value,
-        'index': 3,
+        'index': 4,
         'is_ended': True,
       }
 

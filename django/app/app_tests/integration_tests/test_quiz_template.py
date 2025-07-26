@@ -182,6 +182,10 @@ class TestGenre(Common):
     user = get_managers
     app = csrf_exempt_django_app
     page = app.get(self.genre_list_url, user=user)
+    genres = page.context['genres']
+    # Set output url
+    if len(genres) > 0:
+      instance = genres[0]
     output_url = self.update_genre_url(instance.pk)
     response = page.click('Edit', href=output_url)
 

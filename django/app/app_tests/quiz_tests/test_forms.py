@@ -565,9 +565,9 @@ class TestQuizUploadForm(Common):
 ])
 def test_custom_multiple_choicefield(data):
   field = forms.CustomMultipleChoiceField(
-    label='', 
-    choices=[], 
-    required=False, 
+    label='',
+    choices=[],
+    required=False,
   )
 
   assert field.valid_value(data)

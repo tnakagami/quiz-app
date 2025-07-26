@@ -18,7 +18,9 @@ services:
       - ERROR_LOG=stderr
       - HSTS_MAX_AGE=60
       - CLIENT_MAX_BODY_SIZE=32M
+      - ACCESS_LOG_INCLUDE_HOST=on
       - WEBSOCKET=true
+      - VPN_ACCESS_IP=${APP_VPN_ACCESS_IP:-10.100.0.3}
     volumes:
       - https-portal-data:/var/lib/https-portal
       - static:/etc/nginx/static:ro
@@ -28,6 +30,7 @@ services:
       - ./https-portal/html:/var/www/html:ro
       - ./https-portal/quiz.local.ssl.conf.erb:/var/lib/nginx-conf/quiz.local.ssl.conf.erb:ro
       - ./https-portal/default.ssl.conf.erb:/var/lib/nginx-conf/default.ssl.conf.erb:ro
+      - ./https-portal/nginx.conf.erb:/var/lib/nginx-conf/nginx.conf.erb:ro
     depends_on:
       - django
     networks:
@@ -65,9 +68,10 @@ services:
       - DJANGO_REDIS_PORT=6379
       - DJANGO_DATABASE_HOST=postgres
       - DJANGO_DATABASE_PORT=5432
+      - DJANGO_NGINX_FORWARDING_PORT=8443
     volumes:
       - static:/opt/nginx-static
-      - ./statics:/var/static
+      - ./statics:/var/static:ro
       - ./django/bashrc:/opt/home/.bashrc:ro
       - ./django/app:/opt/app
       - ./django/pyproject.toml:/opt/pyproject.toml

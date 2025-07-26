@@ -45,7 +45,7 @@ python manage.py collectstatic
 Run the following commands to reflect translation messages.
 
 ```bash
-# 
+#
 # If you need to create/update translated file, type the following commands and execute them.
 
 # In the docker environment

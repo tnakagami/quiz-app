@@ -165,7 +165,28 @@ def test_check_send_email_method_of_usermodel(mocker, kwargs, expected):
   user.email_user(subject, message, **kwargs)
 
   assert sender_mock.call_count == 1
-  sender_mock.assert_called_with(subject, message, expected, [user.email]) 
+  sender_mock.assert_called_with(subject, message, expected, [user.email])
+
+@pytest.mark.account
+@pytest.mark.model
+@pytest.mark.django_db
+def test_check_send_email_exception(mocker):
+  class DummyLogger:
+    def __init__(self):
+      self.message = ''
+    def error(self, message):
+      self.message = message
+  # Define test code
+  mocker.patch('account.models.send_mail', side_effect=Exception('Failed'))
+  mock_logger = mocker.patch('account.models.getLogger', return_value=DummyLogger())
+  user = factories.UserFactory()
+  # Call target method
+  subject = 'test-subject'
+  message = 'test message in pytest'
+  user.email_user(subject, message)
+  message = mock_logger.return_value.message
+
+  assert message == f'Failed to send email to {user.email}'
 
 @pytest.mark.account
 @pytest.mark.model

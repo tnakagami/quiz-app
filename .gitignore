@@ -194,4 +194,8 @@ cython_debug/
 .cursorindexingignore
 
 # User definition
+is_maintenance
 default_server.crt
+.ids-env
+/statics/img/*
+!/statics/img/.git-keep

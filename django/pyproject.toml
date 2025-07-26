@@ -39,6 +39,7 @@ factory-boy = "^3.3.3"
 mock = "^5.2.0"
 coverage = "^7.8.0"
 django-webtest = "^1.9.13"
+websockets = "^15.0.1"
 
 [tool.pytest_env]
 PYTHONPATH = "/opt/app"

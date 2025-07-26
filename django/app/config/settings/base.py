@@ -219,6 +219,7 @@ USE_X_FORWARDED_PORT = True
 # User definition variables
 MAX_CSV_FILESIZE = 1024 * 1024 * 8
 CSV_DOWNLOAD_MAX_AGE = 5 * 60
+NGINX_FORWARDING_PORT = os.getenv('DJANGO_NGINX_FORWARDING_PORT', '')
 
 # Log setting
 LOGGING = {

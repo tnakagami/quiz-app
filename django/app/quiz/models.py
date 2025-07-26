@@ -94,7 +94,7 @@ class QuizQuerySet(models.QuerySet):
   ##
   # @brief Collect quizzes based on user
   # @param user Instance of UserModel
-  # @return Queryset 
+  # @return Queryset
   def user_relevant_quizzes(self, user):
     if user.has_manager_role():
       queryset = self.select_related('creator', 'genre').all()
@@ -561,7 +561,7 @@ class QuizStatusType(models.IntegerChoices):
   START            = 1, gettext_lazy('Start')
   WAITING          = 2, gettext_lazy('Waiting')
   SENT_QUESTION    = 3, gettext_lazy('Sent question')
-  Answering        = 4, gettext_lazy('Answering')
+  ANSWERING        = 4, gettext_lazy('Answering')
   RECEIVED_ANSWERS = 5, gettext_lazy('Received answers')
   JUDGING          = 6, gettext_lazy('Judging')
   END              = 7, gettext_lazy('End')

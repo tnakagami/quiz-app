@@ -1190,7 +1190,7 @@ class TestUploadQuizView(Common):
     assert response.status_code == status.HTTP_302_FOUND
     assert response['Location'] == reverse('quiz:quiz_list')
     assert all([
-      queryset.filter(question=question, answer=answer, is_completed=is_completed).exists() 
+      queryset.filter(question=question, answer=answer, is_completed=is_completed).exists()
       for _, _, question, answer, is_completed in valid_data
     ])
     assert mock_csv_validator.call_count == 1

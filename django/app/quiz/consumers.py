@@ -81,7 +81,7 @@ class QuizState:
   @database_sync_to_async
   def answering_phase(self):
     self.answers = dict([(key, {'answer': '', 'time': 0}) for key in self.players.keys()])
-    self.score.status = QuizStatusType.Answering
+    self.score.status = QuizStatusType.ANSWERING
     self.score.save()
     self.current_time = get_current_time()
 
@@ -92,7 +92,7 @@ class QuizState:
   # @retval False The members cannot answer quiz
   @database_sync_to_async
   def can_answer(self):
-    is_valid = self.score.status == QuizStatusType.Answering
+    is_valid = self.score.status == QuizStatusType.ANSWERING
 
     return is_valid
 
@@ -147,9 +147,9 @@ class QuizState:
       self.score.status = QuizStatusType.END
       is_enabled = True
     else:
-      self.score.index = index + 1
       self.score.status = QuizStatusType.WAITING
       is_enabled = False
+    self.score.index = index + 1
     # Save record
     self.score.save()
     self.quiz = None
@@ -239,17 +239,16 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
       # Get accessed user and room primary key
       user = self.scope['user']
       pk = self.scope['url_route']['kwargs']['pk']
+      self.group_name = f'{self.prefix}-{pk}'
       self.room = await database_sync_to_async(models.QuizRoom.objects.get)(pk=pk)
       is_assigned = await database_sync_to_async(self.room.is_assigned)(user)
-      self.group_name = f'{self.prefix}-{pk}'
       # In the case of that request user can access the room
       if is_assigned:
         await self.accept()
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.post_accept(user)
     except Exception as ex:
-      group_name = self.group_name or '(Not set)'
-      self.logger.error(f'[{group_name}]Connect: {ex}')
+      self.logger.error(f'[{self.group_name}]Connect: {ex}')
 
   ##
   # @brief Conduct post-accept process
@@ -307,10 +306,12 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
   async def post_disconnect(self, user):
     # Delete user data from player list
     target = g_quizstates.get_state(self.group_name)
-    target.update_player(self.get_client_key(user), do_delete=True)
 
-    if not target.has_player():
-      g_quizstates.del_state(self.group_name)
+    if target is not None:
+      target.update_player(self.get_client_key(user), do_delete=True)
+
+      if not target.has_player():
+        g_quizstates.del_state(self.group_name)
 
   ##
   # @brief Send group message
@@ -365,7 +366,7 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
     if is_owner:
       max_question = await self.get_max_question()
       quiz, index = await target.get_quiz(max_question)
-      # Send 
+      # Send
       message = gettext_lazy('The next quiz is received.')
       await self.channel_layer.group_send(
         self.group_name, {
@@ -482,9 +483,6 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
       # Create response message
       if is_ended:
         message = gettext_lazy('All quizzes have been asked. Please press the reset button.')
-        await database_sync_to_async(self.room.reset)()
-        score = await self.get_score()
-        target.update_score(score)
       else:
         message = gettext_lazy('The score is updated. Please next quiz.')
 

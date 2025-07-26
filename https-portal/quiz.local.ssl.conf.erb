@@ -6,7 +6,11 @@ server {
   <% end %>
   http2 on;
   charset utf-8;
+  <% if ENV['VPN_ACCESS_IP'] %>
+  server_name <%= ENV['VPN_ACCESS_IP'] %>;
+  <% else %>
   server_name <%= domain.name %>;
+  <% end %>
 
   ssl_certificate <%= domain.chained_cert_path %>;
   ssl_certificate_key <%= domain.key_path %>;
@@ -39,10 +43,11 @@ server {
     proxy_set_header Proxy "";
     proxy_redirect off;
     proxy_set_header Host              $host;
-    proxy_set_header X-Forwarded-Host  $server_name;
+    proxy_set_header X-Forwarded-Host  <%= domain.name %>;
     proxy_set_header X-Real-IP         $remote_addr;
     proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Port  $server_port;
   }
   <% else %>
   location / {

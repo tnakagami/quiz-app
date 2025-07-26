@@ -266,7 +266,15 @@
               <tbody class="table-group-divider">
                 <tr class="align-middle js-judgement-item" data-pk="{{ room.owner.pk }}">
                   <td scope="row" class="p-1">{{ room.owner|stringformat:"s" }}</td>
-                  <td class="text-wrap p-1" name="answer"></td>
+                  <td
+                    class="text-wrap p-1"
+                    name="answer"
+                    tabindex="0"
+                    data-bs-toggle="popover"
+                    data-bs-trigger="focus"
+                    data-bs-placement="bottom"
+                    data-bs-content=""
+                  ></td>
                   <td name="time"></td>
                   <td class="p-1"><input type="number" name="score" class="form-control" min="1" step="1" /></td>
                   <td class="align-middle">
@@ -285,7 +293,15 @@
                 {% for member in room.members.all %}
                 <tr class="align-middle js-judgement-item" data-pk="{{ member.pk }}">
                   <td scope="row" class="p-1">{{ member|stringformat:"s" }}</td>
-                  <td class="text-wrap p-1" name="answer"></td>
+                  <td
+                    class="text-wrap p-1"
+                    name="answer"
+                    tabindex="0"
+                    data-bs-toggle="popover"
+                    data-bs-trigger="focus"
+                    data-bs-placement="bottom"
+                    data-bs-content=""
+                  ></td>
                   <td name="time"></td>
                   <td class="p-1"><input type="number" name="score" class="form-control" min="1" step="1" /></td>
                   <td class="align-middle">
@@ -558,6 +574,7 @@
         const name = `user${pk}`
         const answer = element.querySelector('[name="answer"]');
         answer.textContent = results[name].answer.slice(0, 20+1);
+        answer.setAttribute('data-bs-content', results[name].answer);
         const time = element.querySelector('[name="time"]');
         const elapsedTime = (() => {
           const totalSeconds = results[name].time;
@@ -682,6 +699,7 @@
           // Reset answer
           const answer = element.querySelector('[name="answer"]');
           answer.textContent = '';
+          answer.setAttribute('data-bs-content', '');
           const time = element.querySelector('[name="time"]');
           time.textContent = '';
           // Init score

@@ -3,6 +3,9 @@
 readonly NETWORK_NAME="shared-localnet"
 readonly DJANGO_CONTAINER=django.quiz-app
 readonly BASE_DIR=$(cd $(dirname $0) && pwd)
+readonly HTTPS_PORTAL_HTML_DIR=${BASE_DIR}/https-portal/html
+readonly WIREGUARD_DIR=${BASE_DIR}/wireguard
+readonly WIREGUARD_YAML_FILE=${WIREGUARD_DIR}/docker-compose.yml
 
 function Usage() {
 cat <<- _EOF
@@ -58,6 +61,8 @@ function clean_up() {
   docker ps -a | grep Exited | awk '{print $1;}' | xargs -I{} docker rm -f {}
   # Delete disabled images
   docker images | grep none | awk '{print $3;}' | xargs -I{} docker rmi {}
+  # Delete temporary volumes
+  docker volume ls | grep -oP "\s+[0-9a-f]+$" | awk '{print $1}' | xargs -I{} docker volume rm {}
 }
 
 # ================
@@ -111,13 +116,19 @@ while [ -n "$1" ]; do
       ;;
 
     start )
+      {
+        echo PUID=$(id -u)
+        echo PGID=$(id -g)
+      } > ${WIREGUARD_DIR}/container_env/.ids-env
       docker-compose up -d
+      docker-compose -f ${WIREGUARD_YAML_FILE} --env-file ${BASE_DIR}/.env up -d
 
       shift
       ;;
 
     stop | restart | down )
       docker-compose $1
+      docker-compose -f ${WIREGUARD_YAML_FILE} $1
 
       shift
       ;;
@@ -164,13 +175,14 @@ while [ -n "$1" ]; do
 
     logs )
       docker-compose logs -t | sort -t "|" -k 1,+2d
+      docker-compose -f ${WIREGUARD_YAML_FILE} logs -t | sort -t "|" -k 1,+2d
 
       shift
       ;;
 
     migrate )
       docker-compose up -d
-      apps=$(find backend/src -type f | grep -oP "(?<=/)([a-zA-Z]+)(?=/apps.py$)" | tr '\n' ' ')
+      apps=$(find django/app -type f | grep -oP "(?<=/)([a-zA-Z]+)(?=/apps.py$)" | tr '\n' ' ')
       commands="python manage.py makemigrations ${apps}; python manage.py migrate"
       docker exec ${DJANGO_CONTAINER} bash -c "${commands}"
 
@@ -195,14 +207,16 @@ while [ -n "$1" ]; do
       ;;
 
     maintenance )
-      touch ${BASE_DIR}/nginx/html/is_maintenance
+      touch ${HTTPS_PORTAL_HTML_DIR}/is_maintenance
       echo maintenance mode
+
       shift
       ;;
 
     release )
-      rm -f ${BASE_DIR}/nginx/html/is_maintenance
+      rm -f ${HTTPS_PORTAL_HTML_DIR}/is_maintenance
       echo release mode
+
       shift
       ;;
 

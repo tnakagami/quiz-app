@@ -1,3 +1,4 @@
+from logging import getLogger
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import PermissionsMixin
@@ -253,7 +254,12 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
   # @param from_email Sender of e-mail (default is None)
   # @param kwargs named arguments
   def email_user(self, subject, message, from_email=None, **kwargs):
-    send_mail(subject, message, from_email, [self.email], **kwargs)
+    logger = getLogger(__name__)
+
+    try:
+      send_mail(subject, message, from_email, [self.email], **kwargs)
+    except Exception:
+      logger.error(f'Failed to send email to {self.email}')
 
   ##
   # @brief Activate user

@@ -1,4 +1,5 @@
 from django import forms
+from django.conf import settings
 from django.core.signing import dumps
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import (
@@ -21,6 +22,15 @@ from .validators import CustomDigestValidator
 from . import models
 
 UserModel = get_user_model()
+
+##
+# @brief Get forwarding port number
+# @return port Port number or empty string
+def _get_forwarding_port():
+  val = getattr(settings, 'NGINX_FORWARDING_PORT', '')
+  port = f':{val}' if val else ''
+
+  return port
 
 class LoginForm(AuthenticationForm, BaseFormWithCSS):
   username = forms.EmailField(widget=forms.EmailInput(attrs={'autofocus': True}))
@@ -92,9 +102,10 @@ class UserCreationForm(BaseUserCreationForm, BaseFormWithCSS):
   def send_email(self, req, config):
     user = config['user']
     site_url = get_current_site(req)
+    port = _get_forwarding_port()
     context = {
       'protocol': req.scheme,
-      'domain': site_url.domain,
+      'domain': f'{site_url.domain}{port}',
       'token': dumps(str(user.pk)),
       'user': user,
       'timelimit': config['timelimit'],
@@ -140,6 +151,17 @@ class CustomPasswordResetForm(PasswordResetForm, BaseFormWithCSS):
     }),
   )
 
+  ##
+  # @brief Send email based on input parameters
+  # @param kwargs Named arguments
+  def save(self, **kwargs):
+    req = kwargs.get('request')
+    site_url = get_current_site(req)
+    port = _get_forwarding_port()
+    domain = f'{site_url.domain}{port}'
+
+    super().save(domain_override=domain, **kwargs)
+
 class CustomSetPasswordForm(SetPasswordForm, BaseFormWithCSS):
   class Meta:
     widgets = {
@@ -177,6 +199,7 @@ class RoleChangeRequestForm(forms.ModelForm, BaseFormWithCSS):
 
   ##
   # @brief Save instance
+  # @param commit Describe whether the record is committed or not (Default: True)
   # @pre User's role is either GUEST or MANAGER
   def save(self, commit=True):
     instance = super().save(commit=False)
