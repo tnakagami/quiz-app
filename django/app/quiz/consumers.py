@@ -10,10 +10,11 @@ QuizStatusType = models.QuizStatusType
 class QuizState:
   ##
   # @brief Constructor of QuizState
-  def __init__(self):
+  # @param player_ids All player IDs
+  def __init__(self, player_ids):
     self.score = None
     self.quiz = None
-    self.players = {}
+    self.players = {key: False for key in player_ids}
     self.answers = {}
     self.current_time = get_current_time()
 
@@ -29,10 +30,7 @@ class QuizState:
   # @param pk Player's primary key
   # @param do_delete Delete target player from player list if true (Default: False)
   def update_player(self, pk, do_delete=False):
-    if do_delete and self.players.get(pk, False):
-      del self.players[pk]
-    elif not do_delete:
-      self.players[pk] = True
+    self.players[pk] = not do_delete
 
   ##
   # @brief Check rest players
@@ -40,7 +38,7 @@ class QuizState:
   # @retval True  Some players exist
   # @retval False There is no player in this room
   def has_player(self):
-    return len(self.players) > 0
+    return len([is_entered for is_entered in self.players.values() if is_entered]) > 0
 
   # ===================
   # = Playing process =
@@ -61,6 +59,7 @@ class QuizState:
     self.quiz = models.Quiz.objects.get(pk=pk)
     sentence = self.quiz.question
     # Update records
+    self.score.index = index
     self.score.status = QuizStatusType.SENT_QUESTION
     self.score.save()
 
@@ -146,10 +145,11 @@ class QuizState:
     if index >= max_question:
       self.score.status = QuizStatusType.END
       is_enabled = True
+      self.score.index = max_question + 1
     else:
       self.score.status = QuizStatusType.WAITING
       is_enabled = False
-    self.score.index = index + 1
+      self.score.index = index + 1
     # Save record
     self.score.save()
     self.quiz = None
@@ -233,6 +233,16 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
     return self.room.max_question
 
   ##
+  # @brief Get player's IDs
+  # @return player_ids Player's IDs who can access to this room
+  @database_sync_to_async
+  def get_player_ids(self):
+    players = self.room.members.all()
+    player_ids = list(map(lambda user: self.get_client_key(user), players))
+
+    return player_ids
+
+  ##
   # @brief Connection process
   async def connect(self):
     try:
@@ -257,8 +267,9 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
     target = g_quizstates.get_state(self.group_name)
 
     if target is None:
+      player_ids = await self.get_player_ids()
       score = await self.get_score()
-      target = QuizState()
+      target = QuizState(player_ids)
       target.update_score(score)
       # Update status
       g_quizstates.set_state(self.group_name, target)

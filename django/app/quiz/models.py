@@ -8,6 +8,7 @@ from utils.models import (
   get_current_time,
   BaseModel,
 )
+import uuid
 import urllib.parse
 
 UserModel = get_user_model()
@@ -81,10 +82,10 @@ class Genre(BaseModel):
     name = urllib.parse.quote(filename.encode('utf-8'))
     # Create output data
     queryset = cls.objects.collect_active_genres().order_by('name')
-    rows = ([obj.name, str(obj.pk)] for obj in queryset.iterator())
+    rows = ([obj.name] for obj in queryset.iterator())
     kwargs = {
       'rows': rows,
-      'header': ['name', 'pk'],
+      'header': ['name'],
       'filename': f'genre-{name}.csv',
     }
 
@@ -249,12 +250,14 @@ class Quiz(BaseModel):
   @staticmethod
   def record_checker(rows, user):
     creator_set = {str(pk) for pk, _ in rows}
-    genre_set = {str(pk) for _, pk in rows}
+    genre_set = {name for _, name in rows}
 
     try:
+      # Check whetner creator's pk is uuid or not
+      uuid.UUID(str(rows[0][0]))
       # Get genre set based on database records
-      genre_ids = Genre.objects.collect_active_genres().filter(pk__in=list(genre_set)).values_list('pk', flat=True)
-      target_genre = {str(pk) for pk in genre_ids}
+      genre_names = Genre.objects.collect_active_genres().filter(name__in=list(genre_set)).values_list('name', flat=True)
+      target_genre = {name for name in genre_names}
       # Get creator set based on database records
       if user.has_manager_role():
         creator_ids = UserModel.objects.collect_creators().filter(pk__in=list(creator_set)).values_list('pk', flat=True)
@@ -266,7 +269,7 @@ class Quiz(BaseModel):
       diff_creator = creator_set - target_creator
 
       if diff_genre:
-        genres = Genre.objects.filter(pk__in=list(diff_genre)).order_by('name')
+        genres = Genre.objects.filter(name__in=list(diff_genre)).order_by('name')
         genres = ','.join([str(instance) for instance in genres])
         # Create output data
         is_valid = False
@@ -288,7 +291,7 @@ class Quiz(BaseModel):
       else:
         is_valid = True
         err = None
-    except ValidationError as ex:
+    except (IndexError, ValueError) as ex:
       is_valid = False
       err = ValidationError(
         gettext_lazy('The csv file includes invalid value(s). Details: %(value)s'),
@@ -307,7 +310,7 @@ class Quiz(BaseModel):
   def get_instance_from_list(cls, row):
     item = {
       'creator': UserModel.objects.get(pk=row[0]),
-      'genre': Genre.objects.get(pk=row[1]),
+      'genre': Genre.objects.get(name=row[1]),
       'question': row[2],
       'answer': row[3],
       'is_completed': bool_converter(row[4]),

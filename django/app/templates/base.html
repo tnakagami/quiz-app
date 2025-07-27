@@ -57,7 +57,9 @@
           this.getCookie = this.getCookie.bind(this);
           this.registerDeleteModalEvent = this.registerDeleteModalEvent.bind(this);
           this.copyToClipboard = this.copyToClipboard.bind(this);
+          this.addPopoverEvent = this.addPopoverEvent.bind(this);
           this.initDualListbox = this.initDualListbox.bind(this);
+          this.downloadStatusChecker = this.downloadStatusChecker.bind(this);
         }
         getCookie(name) {
           let cookieValue = null;
@@ -101,6 +103,16 @@
           document.execCommand('copy');
           // Remove textarea element
           document.body.removeChild(textarea);
+        }
+        addPopoverEvent(element, show=100, hide=1500) {
+          const popover = new bootstrap.Popover(element, {
+            delay: {
+              show: show,
+              hide: hide,
+            },
+          });
+
+          return popover;
         }
         initDualListbox(elementName, availableTitle, selectedTitle, options) {
           const dualListbox = new DualListbox(elementName, {

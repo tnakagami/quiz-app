@@ -1034,9 +1034,9 @@ class TestDownloadGenre(Common):
     mocker.patch('quiz.forms.generate_default_filename', return_value='20200102-100518')
     mocker.patch('quiz.models.Genre.objects.collect_active_genres', return_value=genres)
     # Create expected values
-    lines = '\n'.join([','.join([obj.name, str(obj.pk)]) for obj in genres]) + '\n'
+    lines = '\n'.join([','.join([obj.name]) for obj in genres]) + '\n'
     expected = {
-      'data': bytes('name,pk\n' + lines, 'utf-8'),
+      'data': bytes('name\n' + lines, 'utf-8'),
       'filename': exact_fname,
     }
     # Send post request
@@ -1133,7 +1133,7 @@ class TestUploadQuiz(Common):
     else:
       data = []
     data += [
-      f'{creator.pk},{genre.pk},{question},{answer},{is_completed}\n'
+      f'{creator.pk},{genre.name},{question},{answer},{is_completed}\n'
       for creator in members for question, answer, is_completed in inputs
     ]
     # Create form data

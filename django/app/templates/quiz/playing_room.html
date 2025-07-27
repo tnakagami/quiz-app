@@ -209,7 +209,7 @@
           >
             <table class="table mb-0">
               <thead>
-                <tr>
+                <tr class="align-middle">
                   <th scope="col">{% trans "Member" %}</th>
                   <th scope="col">{% trans "Score" %}</th>
                 </tr>
@@ -255,7 +255,7 @@
           <div class="col">
             <table class="table border-top">
               <thead>
-                <tr>
+                <tr class="align-middle">
                   <th scope="col" class="text-nowrap">{% trans "Member" %}</th>
                   <th scope="col" class="text-nowrap">{% trans "Answer" %}</th>
                   <th scope="col" class="text-nowrap">{% trans "Elapsed time" %}</th>
@@ -351,6 +351,7 @@
 {% endblock %}
 
 {% block bodyjs %}
+{{ block.super }}
 <script src="https://unpkg.com/typeit@8.7.1/dist/index.umd.js"></script>
 <script src="{% static 'js/quiz-websocket.js' %}"></script>
 <script>
@@ -619,6 +620,7 @@
    * @brief Initialization
   */
   const init = () => {
+    const helper = new HelperMethods();
     const callbacks = new Callbacks('{{ user.pk }}');
     const isOwner = {% if room|is_owner:user %}true{% else %}false{% endif %};
     QuizRoom.Init(
@@ -753,6 +755,14 @@
           const cmd = target.dataset.cmd;
           const callback = operations[cmd];
           callback(target);
+        });
+      }
+      // Define popper event
+      const answers = document.querySelectorAll('td[name="answer"]');
+      for (const elem of answers) {
+        elem.addEventListener('click', () => {
+          const popover = helper.addPopoverEvent(elem, hide=5500);
+          popover.show();
         });
       }
     })();

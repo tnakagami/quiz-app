@@ -1162,7 +1162,7 @@ class TestUploadQuizView(Common):
     valid_data = []
     for question, answer, is_completed in inputs:
       for creator in members:
-        record = [str(creator.pk), str(genre.pk), question, answer, is_completed]
+        record = [str(creator.pk), genre.name, question, answer, is_completed]
         valid_data += [record]
     csv_file = SimpleUploadedFile('hoge.csv', bytes('foo,bar\n', encoding=encoding))
     # Create form data

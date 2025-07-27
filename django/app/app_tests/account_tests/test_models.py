@@ -147,25 +147,48 @@ def test_check_activation_method_of_usermodel():
 @pytest.mark.model
 @pytest.mark.django_db
 @pytest.mark.parametrize([
-  'kwargs',
+  'params',
+  'default_email',
   'expected',
 ], [
-  ({}, None),
-  ({'from_email': 'hoge@example.com'}, 'hoge@example.com'),
+  ({}, None, None),
+  ({}, 'no-reply@led.quiz.com', 'no-reply@led.quiz.com'),
+  ({'from_email': 'hoge@example.com'}, 'no-reply@led.quiz.com', 'hoge@example.com'),
 ], ids=[
-  'kwargs-is-empty',
+  'params-is-empty',
+  'use-default-email',
   'from_email-is-assigned',
 ])
-def test_check_send_email_method_of_usermodel(mocker, kwargs, expected):
-  sender_mock = mocker.patch('account.models.send_mail', return_value=None)
+def test_check_send_email_method_of_usermodel(settings, mocker, params, default_email, expected):
+  settings.DEFAULT_FROM_EMAIL = default_email
+  sender_mock = mocker.patch('account.models.EmailMessage.__init__', return_value=None)
+  mocker.patch('account.models.EmailMessage.send', return_value=None)
   user = factories.UserFactory()
   # Define positional arguments
   subject = 'test-subject'
   message = 'test message in pytest'
-  user.email_user(subject, message, **kwargs)
+  user.email_user(subject, message, **params)
+  args, kwargs = sender_mock.call_args
+  keys = kwargs.keys()
+
+  if params.get('from_email'):
+    callback = lambda items: items[0] == expected
+  elif default_email:
+    callback = lambda items: items[0] == default_email
+  else:
+    callback = lambda items: items is None
 
   assert sender_mock.call_count == 1
-  sender_mock.assert_called_with(subject, message, expected, [user.email])
+  assert args[0] == subject
+  assert args[1] == message
+  assert 'from_email' in keys
+  assert 'to' in keys
+  assert 'reply_to' in keys
+  assert kwargs['from_email'] == params.get('from_email', default_email)
+  assert isinstance(kwargs['to'], list)
+  assert len(kwargs['to']) == 1
+  assert kwargs['to'][0] == user.email
+  assert callback(kwargs['reply_to'])
 
 @pytest.mark.account
 @pytest.mark.model
@@ -177,7 +200,7 @@ def test_check_send_email_exception(mocker):
     def error(self, message):
       self.message = message
   # Define test code
-  mocker.patch('account.models.send_mail', side_effect=Exception('Failed'))
+  mocker.patch('account.models.EmailMessage.send', side_effect=Exception('Failed'))
   mock_logger = mocker.patch('account.models.getLogger', return_value=DummyLogger())
   user = factories.UserFactory()
   # Call target method

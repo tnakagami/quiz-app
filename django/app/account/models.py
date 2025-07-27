@@ -1,10 +1,11 @@
 from logging import getLogger
 from django.db import models
+from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core.mail import EmailMessage
 from django.contrib.auth.models import PermissionsMixin
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.utils.translation import gettext_lazy
-from django.core.mail import send_mail
 from utils.models import (
   DualListbox,
   get_current_time,
@@ -257,7 +258,21 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
     logger = getLogger(__name__)
 
     try:
-      send_mail(subject, message, from_email, [self.email], **kwargs)
+      default_email = getattr(settings, 'DEFAULT_FROM_EMAIL', None)
+      # Set email address to reply to specific user
+      if from_email:
+        reply_to = [from_email]
+      elif default_email:
+        reply_to = [default_email]
+      else:
+        reply_to = None
+      kwargs.update({
+        'from_email': from_email or default_email,
+        'to': [self.email],
+        'reply_to': reply_to,
+      })
+      email = EmailMessage(subject, message, **kwargs)
+      email.send()
     except Exception:
       logger.error(f'Failed to send email to {self.email}')
 

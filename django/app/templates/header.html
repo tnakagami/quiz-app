@@ -1,77 +1,89 @@
 {% load i18n %}
 
-<nav id="main-navbar" class="navbar navbar-expand-md navbar-light bg-white">
+<nav id="main-navbar" class="navbar navbar-light bg-white">
   <div class="container-fluid align-items-center">
     {# Navbar brand #}
     <a class="navbar-brand" href="{% url 'utils:index' %}">
       <i class="fa-solid fa-circle"></i><span class="px-2">{% trans "L.E.D Quiz" %}</span>
     </a>
-
-    {# Left links #}
-    <ul class="navbar-nav me-auto">
-      {% if not user.is_authenticated %}
-      <li class="nav-item dropdown">
-        <a
-          href="#"
-          class="nav-link dropdown-toggle d-flex align-items-center"
-          role="button"
-          aria-expanded="false"
-          data-bs-toggle="dropdown"
-        >
-          <span>Language</span>
-        </a>
-        <ul class="dropdown-menu">
-          {% get_available_languages as LANGUAGES %}
-          {% get_language_info_list for LANGUAGES as languages %}
-          {% for language in languages %}
-          <li>
-            <a class="dropdown-item" href="/{{ language.code }}">
-              {{ language.name_local }} ({{ language.code }})
+    <button
+      class="navbar-toggler"
+      type="button"
+      data-bs-toggle="offcanvas"
+      data-bs-target="#offcanvas-navbar-header-menu"
+      aria-controls="offcanvas-navbar-header-menu"
+    >
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div
+      class="offcanvas offcanvas-end"
+      tabindex="-1"
+      id="offcanvas-navbar-header-menu"
+      aria-labelledby="offcanvas-navbar-header-label"
+    >
+      <div class="offcanvas-header">
+        <div class="offcanvas-title h5" id="offcanvas-navbar-header-label">{% trans "Contents" %}</div>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+      </div>
+      <div class="offcanvas-body">
+        <ul class="navbar-nav justify-content-end flex-grow-1">
+        {% if not user.is_authenticated %}
+          {# Create account #}
+          <div class="nav-item">
+            <a class="nav-link text-decoration-underline text-primary" href="{% url 'account:create_account' %}">
+              {% trans "Create account" %}
             </a>
-          </li>
-          {% endfor %}
-        </ul>
-      </li>
-      {% endif %}
-    </ul>
-
-    {# Right elements #}
-    <div class="d-flex align-items-center">
-      {% if user.is_authenticated %}
-      {# Avatar #}
-      <div class="dropdown">
-        <a
-          href="#"
-          class="dropdown-toggle d-flex align-items-center hidden-arrow"
-          role="button"
-          aria-expanded="false"
-          data-bs-toggle="dropdown"
-        >
-          <span class="text-primary opacity-75">
-            <i class="far fa-circle-user fa-2x"></i>
-          </span>
-        </a>
-        <ul class="dropdown-menu dropdown-menu-end">
+          </div>
+          {# Login #}
+          <div class="nav-item">
+            <a class="nav-link text-decoration-underline text-primary" href="{% url 'account:login' %}">
+              {% trans "Login" %}
+            </a>
+          </div>
+        {% else %}
           {# User profile #}
-          <li>
-            <a class="dropdown-item" href="{% url 'account:user_profile' %}">
+          <div class="nav-item">
+            <a class="nav-link text-decoration-underline text-primary" href="{% url 'account:user_profile' %}">
               {% trans "User Profile" %}
             </a>
-          </li>
+          </div>
           {# Logout button #}
-          <li><hr class="dropdown-divider" /></li>
-          <li>
-            <form action="{% url 'account:logout' %}" method="POST" id="logout-form">
+          <div class="nav-item">
+            <form
+              class="nav-link text-decoration-underline text-primary"
+              action="{% url 'account:logout' %}"
+              method="POST"
+              id="logout-form"
+            >
               {% csrf_token %}
               <button type="submit" class="dropdown-item">{% trans "Logout" %}</button>
             </form>
-          </li>
+          </div>
+        {% endif %}
+          <div class="nav-item dropdown">
+            <a
+              href="#"
+              class="nav-link dropdown-toggle d-flex align-items-center"
+              role="button"
+              aria-expanded="false"
+              data-bs-toggle="dropdown"
+            >
+              <span>Language</span>
+            </a>
+            <ul class="dropdown-menu">
+              {% get_available_languages as LANGUAGES %}
+              {% get_language_info_list for LANGUAGES as languages %}
+              {% for language in languages %}
+              <li>
+                <a class="dropdown-item" href="/{{ language.code }}">
+                  {{ language.name_local }} ({{ language.code }})
+                </a>
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
         </ul>
       </div>
-      {% else %}
-      <a class="px-3" href="{% url 'account:create_account' %}">{% trans "Create account" %}</a>
-      <a class="px-3" href="{% url 'account:login' %}">{% trans "Login" %}</a>
-      {% endif %}
     </div>
   </div>
 </nav>

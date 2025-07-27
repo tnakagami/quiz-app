@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-07-26 00:35+0900\n"
+"POT-Creation-Date: 2025-07-27 04:39+0900\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -110,34 +110,36 @@ msgstr "ログイン"
 msgid "Forget own password"
 msgstr "パスワードを忘れた方"
 
-#: templates/account/mail_template/password_reset/message.txt:1
-#: templates/account/mail_template/provisional_registration/message.txt:1
+#: templates/account/mail_template/password_reset/message.txt:2
+#: templates/account/mail_template/provisional_registration/message.txt:2
+#, python-format
 msgid "Dear %(email)s"
-msgstr "%(email)s さん"
+msgstr "%(email)s 様"
 
-#: templates/account/mail_template/password_reset/message.txt:4
+#: templates/account/mail_template/password_reset/message.txt:3
 msgid "We&apos;d like you to access the following URL to reset your password."
 msgstr "パスワードをリセットをするには、以下のURLにアクセスしてください。"
 
-#: templates/account/mail_template/password_reset/message.txt:6
+#: templates/account/mail_template/password_reset/message.txt:5
 msgid "Password reset URL"
 msgstr "パスワードリセット用URL"
 
-#: templates/account/mail_template/password_reset/message.txt:9
-#: templates/account/mail_template/provisional_registration/message.txt:11
+#: templates/account/mail_template/password_reset/message.txt:8
+#: templates/account/mail_template/provisional_registration/message.txt:10
 #, python-format
 msgid "Caution: The above url is valid for %(timelimit)s minutes."
 msgstr "注意：上記のURLは、%(timelimit)s 分間のみ有効です。"
 
-#: templates/account/mail_template/password_reset/message.txt:10
-#: templates/account/mail_template/provisional_registration/message.txt:12
+#: templates/account/mail_template/password_reset/message.txt:9
+#: templates/account/mail_template/provisional_registration/message.txt:11
 msgid ""
 "This email was sent from a send-only address, so replies will not be "
 "delivered."
-msgstr "このメールは送信専用アドレスから送信されているため、返信メールは届きません。"
+msgstr ""
+"このメールは送信専用アドレスから送信されているため、返信メールは届きません。"
 
-#: templates/account/mail_template/password_reset/message.txt:12
-#: templates/account/mail_template/provisional_registration/message.txt:14
+#: templates/account/mail_template/password_reset/message.txt:11
+#: templates/account/mail_template/provisional_registration/message.txt:13
 msgid "Administrator of Quiz app"
 msgstr "クイズアプリのサーバ管理者"
 
@@ -145,21 +147,21 @@ msgstr "クイズアプリのサーバ管理者"
 msgid "Quiz app - Reset password"
 msgstr "クイズアプリ - パスワードリセット"
 
-#: templates/account/mail_template/provisional_registration/message.txt:4
+#: templates/account/mail_template/provisional_registration/message.txt:3
 msgid "Thank you for conducting provisional registration process."
 msgstr "仮登録を行っていただき、ありがとうございます。"
 
-#: templates/account/mail_template/provisional_registration/message.txt:5
+#: templates/account/mail_template/provisional_registration/message.txt:4
 msgid ""
 "We&apos;d like you to access the following URL to complete a definitive "
 "registration."
 msgstr "本登録を完了するには、以下のURLにアクセスしてください。"
 
-#: templates/account/mail_template/provisional_registration/message.txt:6
+#: templates/account/mail_template/provisional_registration/message.txt:5
 msgid "Note: Your registration process has not completed yet."
 msgstr "メモ： アカウント登録は、まだ完了しておりません。"
 
-#: templates/account/mail_template/provisional_registration/message.txt:8
+#: templates/account/mail_template/provisional_registration/message.txt:7
 msgid "Definitive registration URL"
 msgstr "本登録用URL"
 
@@ -190,7 +192,7 @@ msgstr "パスワードリセットの確認"
 
 #: templates/account/passwords/confirm_password_form.html:24
 #: templates/account/passwords/password_reset_form.html:20
-#: templates/quiz/playing_room.html:314
+#: templates/quiz/playing_room.html:330
 msgid "Send"
 msgstr "送信"
 
@@ -638,15 +640,15 @@ msgstr "加点"
 msgid "Judgement"
 msgstr "判定"
 
-#: templates/quiz/playing_room.html:276 templates/quiz/playing_room.html:295
+#: templates/quiz/playing_room.html:284 templates/quiz/playing_room.html:311
 msgid "Correct"
 msgstr "正解"
 
-#: templates/quiz/playing_room.html:280 templates/quiz/playing_room.html:299
+#: templates/quiz/playing_room.html:288 templates/quiz/playing_room.html:315
 msgid "Incorrect"
 msgstr "不正解"
 
-#: templates/quiz/playing_room.html:517
+#: templates/quiz/playing_room.html:533
 msgid "The score table is updated. Please check it."
 msgstr "スコアテーブルが更新されました。確認してください。"
 

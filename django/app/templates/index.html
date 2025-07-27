@@ -6,7 +6,7 @@
 <div class="row justify-content-center">
   <div class="col">
     {% if not user.is_authenticated %}
-    <p>{% trans "Please login from above link or create new account." %}</p>
+    <p>{% trans "Please login from side-bar link or create new account." %}</p>
     {% else %}
     <div class="row row-cols-1 g-2">
       {# Quiz rooms #}
@@ -98,15 +98,11 @@
 <script>
 (function () {
   const init = () => {
+    const helper = new HelperMethods();
     const btn = document.querySelector('#copy-hash-value');
-    const popover = new bootstrap.Popover(btn, {
-      delay: {
-        'show': 100,
-        'hide': 1500,
-      },
-    });
+    const popover = helper.addPopoverEvent(btn);
+    // Add click event
     btn.addEventListener('click', (event) => {
-      const helper = new HelperMethods();
       const element = document.querySelector('#hash-value');
       helper.copyToClipboard(element);
       popover.show();

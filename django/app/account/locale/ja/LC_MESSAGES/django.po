@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-07-17 22:26+0900\n"
+"POT-Creation-Date: 2025-07-27 04:39+0900\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,6 +17,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
+
 #: account/admin.py:21
 msgid "Permissions"
 msgstr "権限"
@@ -25,177 +26,186 @@ msgstr "権限"
 msgid "Important dates"
 msgstr "重要な日付"
 
-#: account/forms.py:36
+#: account/forms.py:46
 msgid "The given user who has staff permission cannot login."
 msgstr "スタッフ権限を持つユーザはログインできません。"
 
-#: account/forms.py:63
+#: account/forms.py:73
 msgid "Hash value"
 msgstr "ハッシュ値"
 
-#: account/forms.py:67
+#: account/forms.py:77
 msgid "Enter the today’s hash value."
 msgstr "今日のハッシュ値を入力"
 
-#: account/forms.py:127
+#: account/forms.py:138
 msgid ""
 "The old password is same as new password. Please enter difference passwords."
-msgstr "古いパスワードと新しいパスワードが同一です。異なるパスワードを入力してください。"
+msgstr ""
+"古いパスワードと新しいパスワードが同一です。異なるパスワードを入力してくださ"
+"い。"
 
-#: account/forms.py:135
+#: account/forms.py:146
 msgid "Email"
 msgstr "メールアドレス"
 
-#: account/forms.py:174
+#: account/forms.py:196
 msgid "Your request has already registered."
 msgstr "要求は申請済みです。"
 
-#: account/forms.py:204
+#: account/forms.py:227
 msgid "Approve or not"
 msgstr "承認／否認"
 
-#: account/forms.py:220
+#: account/forms.py:243
 msgid "You don’t have permission to update this record."
 msgstr "個のデータを更新する権限がありません。"
 
-#: account/forms.py:287
+#: account/forms.py:310
 #, python-format
 msgid ""
 "You need to select relevant friends because the individual group "
 "\"%(group)s\" has %(friends)s member(s)."
-msgstr "個人グループ「%(group)s」に %(friends)s が含まれます。これらのメンバを選択してください。"
+msgstr ""
+"個人グループ「%(group)s」に %(friends)s が含まれます。これらのメンバを選択し"
+"てください。"
 
-#: account/forms.py:337
+#: account/forms.py:360
 msgid "This field is required."
 msgstr "このフィールドは必須です。"
 
-#: account/forms.py:343
+#: account/forms.py:366
 msgid "Invalid member list. Some members are assigned except owner’s friends."
 msgstr "無効なメンバリストです。あなたのフレンドに含まれないメンバがいます。"
 
-#: account/models.py:22
+#: account/models.py:24
 msgid "Manager"
 msgstr "管理者"
 
-#: account/models.py:23
+#: account/models.py:25
 msgid "Creator"
 msgstr "クイズ制作者"
 
-#: account/models.py:24
+#: account/models.py:26
 msgid "Guest"
 msgstr "一般ユーザ"
 
-#: account/models.py:64
+#: account/models.py:66
 msgid "The given email must be set."
 msgstr "メールアドレスの設定は必須です。"
 
-#: account/models.py:97
+#: account/models.py:99
 msgid "Superuser must have is_staff=True."
 msgstr "スーパーユーザは、スタッフ権限を持つ必要があります。"
 
-#: account/models.py:99
+#: account/models.py:101
 msgid "Superuser must have is_superuser=True."
 msgstr "スーパーユーザは、スーパーユーザ権限を持つ必要があります。"
 
-#: account/models.py:130
+#: account/models.py:132
 msgid "email address"
 msgstr "メールアドレス"
 
-#: account/models.py:133
+#: account/models.py:135
 msgid ""
 "Required. 128 characters allowing only Unicode characters, in addition to "
 "@, ., -, and _."
-msgstr "128文字以内。「@, ., -, _」に加えアルファベット半角数字が使用できます。"
+msgstr ""
+"128文字以内。「@, ., -, _」に加えアルファベット半角数字が使用できます。"
 
-#: account/models.py:136
+#: account/models.py:138
 msgid "code"
 msgstr "コード"
 
-#: account/models.py:141
+#: account/models.py:143
 msgid "screen name"
 msgstr "表示名"
 
-#: account/models.py:144
+#: account/models.py:146
 msgid "Optional. 128 characters or fewer."
 msgstr "オプション。128文字以下。"
 
-#: account/models.py:147
+#: account/models.py:149
 msgid "password"
 msgstr "パスワード"
 
-#: account/models.py:149
+#: account/models.py:151
 msgid ""
 "It must contain at least four types which are an alphabet (uppercase/"
 "lowercase), a number, and a symbol."
-msgstr "アルファベット（大文字と小文字）、半角数字、記号を少なくとも1つずつ含める必要があります。"
+msgstr ""
+"アルファベット（大文字と小文字）、半角数字、記号を少なくとも1つずつ含める必要"
+"があります。"
 
-#: account/models.py:152
+#: account/models.py:154
 msgid "staff status"
 msgstr "スタッフ権限の有無"
 
-#: account/models.py:154
+#: account/models.py:156
 msgid "Designates whether the user can log into this admin site or not."
 msgstr "ユーザがadminサイトにログインできるかどうかを表す。"
 
-#: account/models.py:157
+#: account/models.py:159
 msgid "superuser status"
 msgstr "スーパーユーザ権限の有無"
 
-#: account/models.py:159
+#: account/models.py:161
 msgid "Designates whether the user is a superuser or not."
 msgstr "ーザがスーパーユーザであるかどうかを表す。"
 
-#: account/models.py:162
+#: account/models.py:164
 msgid "active"
 msgstr "有効／無効"
 
-#: account/models.py:164
+#: account/models.py:166
 msgid ""
 "Designates whether this user should be treated as active. Unselect this "
 "instead of deleting accounts."
-msgstr "このユーザを有効なユーザとして扱うかどうかを表す。アカウントを削除する代わりにこのフィールドをOFFにする。"
+msgstr ""
+"このユーザを有効なユーザとして扱うかどうかを表す。アカウントを削除する代わり"
+"にこのフィールドをOFFにする。"
 
-#: account/models.py:167
+#: account/models.py:169
 msgid "Role"
 msgstr "ロール"
 
-#: account/models.py:175
+#: account/models.py:177
 msgid "My friends"
 msgstr "フレンズ"
 
-#: account/models.py:179 account/models.py:364
+#: account/models.py:181 account/models.py:385
 msgid "Created time"
 msgstr "作成日時"
 
-#: account/models.py:293
+#: account/models.py:314
 msgid "Candidate for approval"
 msgstr "承認対象の候補者"
 
-#: account/models.py:298
+#: account/models.py:319
 msgid "Requested time"
 msgstr "要求日時"
 
-#: account/models.py:302
+#: account/models.py:323
 msgid "Approval status"
 msgstr "承認状況"
 
-#: account/models.py:304
+#: account/models.py:325
 msgid "Designates whether this user’s role has already been approved or not."
 msgstr "ユーザのロールが既に承認されているかどうかを表す。"
 
-#: account/models.py:349
+#: account/models.py:370
 msgid "Group owner"
 msgstr "グループ所有者"
 
-#: account/models.py:354
+#: account/models.py:375
 msgid "Group name"
 msgstr "グループ名"
 
-#: account/models.py:356
+#: account/models.py:377
 msgid "Required. 128 characters or fewer."
 msgstr "必須。128文字以下。"
 
-#: account/models.py:361
+#: account/models.py:382
 msgid "Group members"
 msgstr "グループメンバ"
 
@@ -203,7 +213,9 @@ msgstr "グループメンバ"
 msgid ""
 "Your password must contain at least four types which are an alphabet "
 "(uppercase/lowercase), a number, and a symbol."
-msgstr "アルファベット（大文字と小文字）、半角数字、記号を少なくとも1つずつ含める必要があります。"
+msgstr ""
+"アルファベット（大文字と小文字）、半角数字、記号を少なくとも1つずつ含める必要"
+"があります。"
 
 #: account/validators.py:62
 msgid "Invalid a digest value."
@@ -234,9 +246,9 @@ msgid "Conducted provisional registration"
 msgstr "アカウントの仮登録完了"
 
 #: account/views.py:180 account/views.py:254
-#, python-format
-msgid "In addition, URL is valid for %(timelimit)s minutes."
-msgstr "このURLは %(timelimit)s 分間のみ有効です。"
+#, python-brace-format
+msgid "In addition, URL is valid for {timelimit} minutes."
+msgstr "このURLは {timelimit} 分間のみ有効です。"
 
 #: account/views.py:216
 msgid "Update password"

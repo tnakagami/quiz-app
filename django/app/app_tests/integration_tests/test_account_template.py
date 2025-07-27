@@ -252,7 +252,7 @@ class TestAccountRegistration(Common):
   ])
   def test_send_post_request(self, mocker, csrf_exempt_django_app, input_digest, is_valid_expectation, output_url):
     mocker.patch('account.forms.get_digest', return_value='hoge')
-    mocker.patch('account.models.send_mail', return_value=None)
+    mocker.patch('account.models.EmailMessage.send', return_value=None)
     # Get form and submit form
     app = csrf_exempt_django_app
     forms = app.get(self.create_account_url).forms

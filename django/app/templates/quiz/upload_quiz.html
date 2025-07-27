@@ -90,15 +90,11 @@
 <script>
 (function () {
   const init = () => {
+    const helper = new HelperMethods();
     const btn = document.querySelector('#copy-user-id');
-    const popover = new bootstrap.Popover(btn, {
-      delay: {
-        'show': 100,
-        'hide': 1500,
-      },
-    });
+    const popover = helper.addPopoverEvent(btn);
+    // Add click event
     btn.addEventListener('click', (event) => {
-      const helper = new HelperMethods();
       const element = document.querySelector('#user-id');
       helper.copyToClipboard(element);
       popover.show();

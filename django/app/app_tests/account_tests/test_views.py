@@ -319,9 +319,20 @@ def test_invalid_email_of_create_account_page(mocker, init_records, client, get_
 @pytest.mark.account
 @pytest.mark.view
 @pytest.mark.django_db
-def test_valid_create_account_page(mocker, client, get_create_account_url):
+@pytest.mark.parametrize([
+  'default_email',
+], [
+  (None, ),
+  ('hogehoge@example.com', ),
+], ids=[
+  'no-default-email-exists',
+  'default-email-exists',
+])
+def test_valid_create_account_page(settings, mocker, client, get_create_account_url, default_email):
   mocker.patch('account.forms.get_digest', return_value='hoge')
-  mail_mock = mocker.patch('account.models.send_mail', return_value=None)
+  mocker.patch('account.models.EmailMessage.send', return_value=None)
+  mail_mock = mocker.patch('account.models.EmailMessage.__init__', return_value=None)
+  settings.DEFAULT_FROM_EMAIL = default_email
   url = get_create_account_url
   params = {
     'email': 'hogehoge@example.com',
@@ -331,17 +342,22 @@ def test_valid_create_account_page(mocker, client, get_create_account_url):
     'hash_sign': 'hoge',
   }
   response = client.post(url, data=params)
-  args, _ = mail_mock.call_args
+  args, kwargs = mail_mock.call_args
   subject = args[0]
   body = args[1]
-  from_email = args[2]
-  to_email = args[3]
+  from_email = kwargs['from_email']
+  to_email = kwargs['to']
+  # Define expected from_email
+  if default_email is None:
+    callback = lambda email: email is None
+  else:
+    callback = lambda email: email == default_email
 
   assert response.status_code == status.HTTP_302_FOUND
   assert 'Quiz app - Account registration' in subject
   assert params['email'] in body
   assert 'account/complete-account-creation' in body
-  assert from_email is None
+  assert callback(from_email)
   assert to_email == [params['email']]
 
 @pytest.mark.account

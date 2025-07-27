@@ -12,10 +12,10 @@ from app_tests import factories
 UserModel = get_user_model()
 
 class DummyBaseQuizState:
-  def __init__(self):
+  def __init__(self, player_ids):
     self.score = None
     self.quiz = None
-    self.players = {}
+    self.players = {key: False for key in player_ids}
     self.answers = {}
     self.current_time = None
   def update_score(self, score):
@@ -213,6 +213,13 @@ class Common:
   @database_sync_to_async
   def get_score_detail(self, score):
     return score.detail
+
+  @database_sync_to_async
+  def get_player_ids(self, room):
+    pks = room.members.all().values_list('pk', flat=True)
+    player_ids = list(map(lambda val: f'user{val}', pks))
+
+    return player_ids
 
 @pytest.mark.quiz
 @pytest.mark.consumer
@@ -425,14 +432,14 @@ class TestQuizConsumer(Common):
     data = {'command': 'resetQuiz'}
     # Call reset method
     if is_owner:
-      expected_status = models.QuizStatusType.START
+      expected_status = models.QuizStatusType.START.value
       expected_index = 1
       await owner_socket.send_json_to(data)
       owner_msg = await owner_socket.receive_json_from()
       member_msg = await member_socket.receive_json_from()
       callback = lambda msg: msg['type'] == 'resetCompleted'
     else:
-      expected_status = models.QuizStatusType.ANSWERING
+      expected_status = models.QuizStatusType.ANSWERING.value
       expected_index = 3
       await member_socket.send_json_to(data)
       owner_msg = await owner_socket.receive_nothing()
@@ -448,20 +455,22 @@ class TestQuizConsumer(Common):
 
   @pytest.mark.asyncio
   async def test_get_next_quiz_method(self, monkeypatch, common_process):
+    is_owner, owner_socket, member_socket, room = common_process
+    player_ids = await self.get_player_ids(room)
+
     class DummyQStat(DummyBaseQuizState):
       @database_sync_to_async
       def get_quiz(self, max_question):
         return 'hogehoge', 4
 
     def get_callback(name):
-      return DummyQStat()
+      return DummyQStat(player_ids)
     def del_callback(name):
       pass
 
     # Define test code
     monkeypatch.setattr('quiz.consumers.g_quizstates.get_state', get_callback)
     monkeypatch.setattr('quiz.consumers.g_quizstates.del_state', del_callback)
-    is_owner, owner_socket, member_socket, _ = common_process
     data = {'command': 'getNextQuiz'}
     # Call get_next_quiz method
     if is_owner:
@@ -495,19 +504,21 @@ class TestQuizConsumer(Common):
   ])
   @pytest.mark.asyncio
   async def test_received_quiz_method(self, monkeypatch, common_process, is_completed):
+    is_owner, owner_socket, member_socket, room = common_process
+    player_ids = await self.get_player_ids(room)
+
     class DummyQStat(DummyBaseQuizState):
       def update_member_status(self, pk):
         return is_completed
 
     def get_callback(name):
-      return DummyQStat()
+      return DummyQStat(player_ids)
     def del_callback(name):
       pass
 
     # Define test code
     monkeypatch.setattr('quiz.consumers.g_quizstates.get_state', get_callback)
     monkeypatch.setattr('quiz.consumers.g_quizstates.del_state', del_callback)
-    is_owner, owner_socket, member_socket, _ = common_process
     data = {'command': 'receivedQuiz'}
     # Call received_quiz method
     if is_owner:
@@ -532,15 +543,17 @@ class TestQuizConsumer(Common):
 
   @pytest.mark.asyncio
   async def test_start_answer_method(self, monkeypatch, common_process):
+    is_owner, owner_socket, member_socket, room = common_process
+    player_ids = await self.get_player_ids(room)
+
     def get_callback(name):
-      return DummyBaseQuizState()
+      return DummyBaseQuizState(player_ids)
     def del_callback(name):
       pass
 
     # Define test code
     monkeypatch.setattr('quiz.consumers.g_quizstates.get_state', get_callback)
     monkeypatch.setattr('quiz.consumers.g_quizstates.del_state', del_callback)
-    is_owner, owner_socket, member_socket, _ = common_process
     data = {'command': 'startAnswer'}
     # Call start_answer method
     if is_owner:
@@ -568,6 +581,9 @@ class TestQuizConsumer(Common):
   ])
   @pytest.mark.asyncio
   async def test_answer_quiz_method(self, monkeypatch, common_process, can_answer):
+    is_owner, owner_socket, member_socket, room = common_process
+    player_ids = await self.get_player_ids(room)
+
     class DummyQStat(DummyBaseQuizState):
       @database_sync_to_async
       def can_answer(self):
@@ -575,7 +591,7 @@ class TestQuizConsumer(Common):
       def update_answer(self, pk, data):
         self.answers = {pk: data}
     # Define test instance
-    instance = DummyQStat()
+    instance = DummyQStat(player_ids)
     # Define callbacks
     def get_callback(name):
       return instance
@@ -585,7 +601,6 @@ class TestQuizConsumer(Common):
     # Define test code
     monkeypatch.setattr('quiz.consumers.g_quizstates.get_state', get_callback)
     monkeypatch.setattr('quiz.consumers.g_quizstates.del_state', del_callback)
-    is_owner, owner_socket, member_socket, _ = common_process
     # Call answer_quiz method
     if is_owner:
       await owner_socket.send_json_to({'command': 'answerQuiz', 'data': 'owner-foobar'})
@@ -610,15 +625,17 @@ class TestQuizConsumer(Common):
 
   @pytest.mark.asyncio
   async def test_stop_answer_method(self, monkeypatch, common_process):
+    is_owner, owner_socket, member_socket, room = common_process
+    player_ids = await self.get_player_ids(room)
+
     def get_callback(name):
-      return DummyBaseQuizState()
+      return DummyBaseQuizState(player_ids)
     def del_callback(name):
       pass
 
     # Define test code
     monkeypatch.setattr('quiz.consumers.g_quizstates.get_state', get_callback)
     monkeypatch.setattr('quiz.consumers.g_quizstates.del_state', del_callback)
-    is_owner, owner_socket, member_socket, _ = common_process
     data = {'command': 'stopAnswer'}
     # Call stop_answer method
     if is_owner:
@@ -641,6 +658,9 @@ class TestQuizConsumer(Common):
 
   @pytest.mark.asyncio
   async def test_get_answers_method(self, monkeypatch, common_process):
+    is_owner, owner_socket, member_socket, room = common_process
+    player_ids = await self.get_player_ids(room)
+
     class DummyQStat(DummyBaseQuizState):
       @database_sync_to_async
       def get_answers(self):
@@ -653,14 +673,13 @@ class TestQuizConsumer(Common):
         return answers, correct_answer
 
     def get_callback(name):
-      return DummyQStat()
+      return DummyQStat(player_ids)
     def del_callback(name):
       pass
 
     # Define test code
     monkeypatch.setattr('quiz.consumers.g_quizstates.get_state', get_callback)
     monkeypatch.setattr('quiz.consumers.g_quizstates.del_state', del_callback)
-    is_owner, owner_socket, member_socket, _ = common_process
     data = {'command': 'getAnswers'}
     # Call get_answers method
     if is_owner:
@@ -698,6 +717,7 @@ class TestQuizConsumer(Common):
   @pytest.mark.asyncio
   async def test_send_result_method(self, monkeypatch, common_process, is_ended):
     is_owner, owner_socket, member_socket, room = common_process
+    player_ids = await self.get_player_ids(room)
 
     class DummyQStat(DummyBaseQuizState):
       @database_sync_to_async
@@ -711,7 +731,7 @@ class TestQuizConsumer(Common):
         return details, is_ended
 
     def get_callback(name):
-      instance = DummyQStat()
+      instance = DummyQStat(player_ids)
       instance.update_score(room.score)
 
       return instance
@@ -772,7 +792,8 @@ class TestQuizState(Common):
     from copy import deepcopy
     owner = await get_guest()
     _, _, _, room = await get_room_instances(owner)
-    instance = consumers.QuizState()
+    player_ids = await self.get_player_ids(room)
+    instance = consumers.QuizState(player_ids)
     default_score = deepcopy(instance.score)
     # Call target method
     instance.update_score(await self.get_score(room))
@@ -789,10 +810,10 @@ class TestQuizState(Common):
     'inputs',     # Define whether 'foo' key exists or not
     'expected',
   ], [
-    (True,  {'hoge': False, 'foo':  True}, {'hoge': False}),
-    (True,  {'hoge': False              }, {'hoge': False}),
-    (False, {'hoge': False, 'foo': False}, {'hoge': False, 'foo': True}),
-    (False, {'hoge': False              }, {'hoge': False, 'foo': True}),
+    (True,  {'hoge':  True, 'foo':  True}, {'hoge':  True, 'foo': False}),
+    (True,  {'hoge': False, 'foo': False}, {'hoge': False, 'foo': False}),
+    (False, {'hoge':  True, 'foo': False}, {'hoge':  True, 'foo':  True}),
+    (False, {'hoge': False, 'foo':  True}, {'hoge': False, 'foo':  True}),
   ], ids=[
     'deleted-pattern',
     'no-existing-pattern',
@@ -800,7 +821,7 @@ class TestQuizState(Common):
     'insert-pattern',
   ])
   def test_update_player(self, do_delete, inputs, expected):
-    instance = consumers.QuizState()
+    instance = consumers.QuizState(['hoge', 'foo'])
     instance.players = inputs
     # Call target method
     instance.update_player('foo', do_delete=do_delete)
@@ -813,14 +834,16 @@ class TestQuizState(Common):
     'inputs',
     'expected',
   ], [
-    ({'hoge': True}, True),
-    ({}, False),
+    ({'hoge': True, 'foo': True}, True),
+    ({'hoge': True, 'foo': False}, True),
+    ({'hoge': False, 'foo': False}, False),
   ], ids=[
-    'has-player',
-    'does-not-have-player',
+    'both-players-exist',
+    'only-hoge-player-exists',
+    'no-player-exists',
   ])
   def test_has_player(self, inputs, expected):
-    instance = consumers.QuizState()
+    instance = consumers.QuizState(['hoge', 'foo'])
     instance.players = inputs
     # Call target method
     output = instance.has_player()
@@ -845,7 +868,8 @@ class TestQuizState(Common):
 
     owner = await get_guest()
     _, _, _, room = await get_room_instances(owner)
-    instance = consumers.QuizState()
+    player_ids = await self.get_player_ids(room)
+    instance = consumers.QuizState(player_ids)
     instance.score = await self.get_score(room)
     # Call target method
     sentence, index = await instance.get_quiz(max_question)
@@ -858,6 +882,7 @@ class TestQuizState(Common):
     assert sentence == expected_sentence
     assert index == exact_idx
     assert await self.get_score_status(score) == models.QuizStatusType.SENT_QUESTION.value
+    assert await self.get_score_index(score) == exact_idx
     assert str(instance.quiz.pk) == pk
     assert len(instance.answers) == 0
 
@@ -873,7 +898,7 @@ class TestQuizState(Common):
     'is-completed',
   ])
   def test_update_member_status(self, members, answered, expected):
-    instance = consumers.QuizState()
+    instance = consumers.QuizState(['foo', 'bar'])
     instance.answers = {}
     instance.players = {key: True for key in members}
 
@@ -892,7 +917,7 @@ class TestQuizState(Common):
     owner = await get_guest()
     _, _, _, room = await get_room_instances(owner)
     inputs = {'foo': None, 'bar': None}
-    instance = consumers.QuizState()
+    instance = consumers.QuizState(['foo', 'bar'])
     instance.players = dict(inputs)
     instance.score = await self.get_score(room)
     # Call target method
@@ -935,7 +960,7 @@ class TestQuizState(Common):
     owner = await get_guest()
     _, _, _, room = await get_room_instances(owner)
     inputs = {'foo': None, 'bar': None}
-    instance = consumers.QuizState()
+    instance = consumers.QuizState(['foo', 'bar'])
     score = await self.get_score(room)
     await set_score_status(score, status)
     instance.score = await self.get_score(room)
@@ -947,7 +972,7 @@ class TestQuizState(Common):
   def test_update_answer(self, mocker):
     _format = '%Y-%m-%d %H:%M:%S'
     mocker.patch('quiz.consumers.get_current_time', side_effect=[datetime(2021,12,3,5,14,45), datetime(2021,12,3,5,14,53), datetime(2021,12,3,5,14,57)])
-    instance = consumers.QuizState()
+    instance = consumers.QuizState(['foo', 'bar'])
     instance.current_time = datetime(2021,12,3,5,14,50)
     # Call target method
     instance.update_answer('foo', 'hoge')
@@ -964,7 +989,8 @@ class TestQuizState(Common):
   async def test_received_all_answers_phase(self, get_guest, get_room_instances):
     owner = await get_guest()
     _, _, _, room = await get_room_instances(owner)
-    instance = consumers.QuizState()
+    player_ids = await self.get_player_ids(room)
+    instance = consumers.QuizState(player_ids)
     instance.score = await self.get_score(room)
     # Call target method
     await instance.received_all_answers_phase()
@@ -990,7 +1016,7 @@ class TestQuizState(Common):
         'time': 5.0,
       }
     }
-    instance = consumers.QuizState()
+    instance = consumers.QuizState(['foo', 'bar'])
     instance.answers = dict(inputs)
     instance.score = await self.get_score(room)
     _sequence = await self.get_score_sequence(instance.score)
@@ -1061,7 +1087,7 @@ class TestQuizState(Common):
     _, _, _, room = await get_room_instances(owner)
     data, judgement, expected, max_question = get_quiz_status_patterns
     await set_score(await self.get_score(room), data)
-    instance = consumers.QuizState()
+    instance = consumers.QuizState(['foo', 'bar'])
     instance.score = await self.get_score(room)
     instance.quiz = 3
     # Call target method
@@ -1092,14 +1118,14 @@ class TestConsumerState:
 
   def test_get_state_with_data(self):
     instance = consumers.ConsumerState()
-    instance.states['hoge'] = consumers.QuizState()
+    instance.states['hoge'] = consumers.QuizState(['x-user', 'y-user'])
     output = instance.get_state('hoge')
 
     assert isinstance(output, consumers.QuizState)
 
   def test_set_state(self):
     instance = consumers.ConsumerState()
-    instance.set_state('hoge', consumers.QuizState())
+    instance.set_state('hoge', consumers.QuizState(['x-user', 'y-user']))
 
     assert isinstance(instance.states['hoge'], consumers.QuizState)
 
@@ -1115,7 +1141,7 @@ class TestConsumerState:
   ])
   def test_del_state(self, name, keys):
     instance = consumers.ConsumerState()
-    instance.states['hoge'] = consumers.QuizState()
+    instance.states['hoge'] = consumers.QuizState(['x-user', 'y-user'])
     instance.del_state(name)
 
     assert len(instance.states) == len(keys)

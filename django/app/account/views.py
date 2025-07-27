@@ -177,7 +177,7 @@ class DoneAccountCreationPage(IsNotAuthenticated, TemplateView, DjangoBreadcrumb
   def get_context_data(self, **kwargs):
     context = super().get_context_data(**kwargs)
     timelimit = _get_timelimit_minutes()
-    context['warning_message'] = gettext_lazy('In addition, URL is valid for %(timelimit)s minutes.' % {'timelimit': timelimit})
+    context['warning_message'] = gettext_lazy('In addition, URL is valid for {timelimit} minutes.').format(timelimit=timelimit)
 
     return context
 
@@ -251,7 +251,7 @@ class DonePasswordResetPage(IsNotAuthenticated, PasswordResetDoneView, DjangoBre
   def get_context_data(self, **kwargs):
     context = super().get_context_data(**kwargs)
     timelimit = _get_password_reset_timeout_minutes()
-    context['warning_message'] = gettext_lazy('In addition, URL is valid for %(timelimit)s minutes.' % {'timelimit': timelimit})
+    context['warning_message'] = gettext_lazy('In addition, URL is valid for {timelimit} minutes.').format(timelimit=timelimit)
 
     return context
 
