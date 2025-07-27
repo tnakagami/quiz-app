@@ -10,7 +10,7 @@
         <div class="table-responsive">
           <table class="table">
             <thead>
-              <tr>
+              <tr class="align-middle">
                 <th scope="col">{% trans "Element" %}</th>
                 <th scope="col">{% trans "Value" %}</th>
                 <th scope="col">{% trans "Operation" %}</th>
@@ -120,16 +120,11 @@
   const init = () => {
     const copyButtons = document.querySelectorAll('.js-copy-btn');
     const helper = new HelperMethods();
-
+    // Add click event for each button
     for (const btn of copyButtons) {
       btn.addEventListener('click', (event) => {
-        const popover = new bootstrap.Popover(btn, {
-          delay: {
-            'show': 100,
-            'hide': 1500,
-          },
-        });
         helper.copyToClipboard(null, btn.dataset.text);
+        const popover = helper.addPopoverEvent(btn);
         popover.show();
       }, false);
     }

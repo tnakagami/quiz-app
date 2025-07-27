@@ -319,9 +319,20 @@ def test_invalid_email_of_create_account_page(mocker, init_records, client, get_
 @pytest.mark.account
 @pytest.mark.view
 @pytest.mark.django_db
-def test_valid_create_account_page(mocker, client, get_create_account_url):
+@pytest.mark.parametrize([
+  'default_email',
+], [
+  (None, ),
+  ('hogehoge@example.com', ),
+], ids=[
+  'no-default-email-exists',
+  'default-email-exists',
+])
+def test_valid_create_account_page(settings, mocker, client, get_create_account_url, default_email):
   mocker.patch('account.forms.get_digest', return_value='hoge')
-  mail_mock = mocker.patch('account.models.send_mail', return_value=None)
+  mocker.patch('account.models.EmailMessage.send', return_value=None)
+  mail_mock = mocker.patch('account.models.EmailMessage.__init__', return_value=None)
+  settings.DEFAULT_FROM_EMAIL = default_email
   url = get_create_account_url
   params = {
     'email': 'hogehoge@example.com',
@@ -331,17 +342,22 @@ def test_valid_create_account_page(mocker, client, get_create_account_url):
     'hash_sign': 'hoge',
   }
   response = client.post(url, data=params)
-  args, _ = mail_mock.call_args
+  args, kwargs = mail_mock.call_args
   subject = args[0]
   body = args[1]
-  from_email = args[2]
-  to_email = args[3]
+  from_email = kwargs['from_email']
+  to_email = kwargs['to']
+  # Define expected from_email
+  if default_email is None:
+    callback = lambda email: email is None
+  else:
+    callback = lambda email: email == default_email
 
   assert response.status_code == status.HTTP_302_FOUND
   assert 'Quiz app - Account registration' in subject
   assert params['email'] in body
   assert 'account/complete-account-creation' in body
-  assert from_email is None
+  assert callback(from_email)
   assert to_email == [params['email']]
 
 @pytest.mark.account
@@ -563,13 +579,49 @@ def test_valid_of_not_active_user_in_reset_password_page(mocker, init_records, c
   assert response.status_code == status.HTTP_302_FOUND
   assert email_mock.call_count == 0
 
+@pytest.fixture
+def get_url_of_confirm_page():
+  from django.utils.encoding import force_bytes
+  from django.utils.http import urlsafe_base64_encode
+  from django.contrib.auth.tokens import default_token_generator
+
+  def inner(user, is_GET=True):
+    user_pk_bytes = force_bytes(UserModel._meta.pk.value_to_string(user))
+    uid = urlsafe_base64_encode(user_pk_bytes)
+    kwargs = {
+      'uidb64': uid,
+      'token': default_token_generator.make_token(user) if is_GET else 'set-password',
+    }
+    url = reverse('account:confirm_password_reset', kwargs=kwargs)
+
+    return url
+
+  return inner
+
 @pytest.mark.account
 @pytest.mark.view
 @pytest.mark.django_db
-def test_valid_email_in_reset_password_page(mocker, init_records, client):
+@pytest.mark.parametrize([
+  'port_num',
+], [
+  (':8426',),
+  ('',),
+], ids=[
+  'set-port-number',
+  'does-not-set-port-number',
+])
+def test_valid_email_in_reset_password_page(mocker, init_records, client, get_url_of_confirm_page, port_num):
+  class FakeObj:
+    def __init__(self):
+      self.domain = 'foo'
+  # Define test code
+  fake_obj = FakeObj()
+  mocker.patch('account.forms.get_current_site', return_value=fake_obj)
+  mocker.patch('account.forms._get_forwarding_port', return_value=port_num)
   email_mock = mocker.patch('django.contrib.auth.forms.EmailMultiAlternatives.__init__', return_value=None)
   mocker.patch('django.contrib.auth.forms.EmailMultiAlternatives.send', return_value=None)
   email_addr = init_records[0].email
+  user = init_records[0].user
   url = reverse('account:reset_password')
   params = {
     'email': email_addr,
@@ -577,10 +629,13 @@ def test_valid_email_in_reset_password_page(mocker, init_records, client):
   response = client.post(url, data=params)
   args, _ = email_mock.call_args
   subject, body, _, to_email = args
+  base_url = '/'.join(get_url_of_confirm_page(user).split('/')[:-1])
+  exact_url = f'http://foo{port_num}{base_url}'
 
   assert response.status_code == status.HTTP_302_FOUND
   assert response['Location'] == reverse('account:done_password_reset')
   assert 'Quiz app - Reset password' in subject
+  assert exact_url in body
   assert 'The above url is valid for 5 minutes.' in body
   assert 'account/confirm-password-reset' in body
   assert to_email == [email_addr]
@@ -605,25 +660,6 @@ def test_with_authentication_for_done_password_reset_page(init_records, client):
   response = client.get(url)
 
   assert response.status_code == status.HTTP_403_FORBIDDEN
-
-@pytest.fixture
-def get_url_of_confirm_page():
-  from django.utils.encoding import force_bytes
-  from django.utils.http import urlsafe_base64_encode
-  from django.contrib.auth.tokens import default_token_generator
-
-  def inner(user, is_GET=True):
-    user_pk_bytes = force_bytes(UserModel._meta.pk.value_to_string(user))
-    uid = urlsafe_base64_encode(user_pk_bytes)
-    kwargs = {
-      'uidb64': uid,
-      'token': default_token_generator.make_token(user) if is_GET else 'set-password',
-    }
-    url = reverse('account:confirm_password_reset', kwargs=kwargs)
-
-    return url
-
-  return inner
 
 @pytest.mark.account
 @pytest.mark.view

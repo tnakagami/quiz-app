@@ -45,7 +45,7 @@ python manage.py collectstatic
 Run the following commands to reflect translation messages.
 
 ```bash
-# 
+#
 # If you need to create/update translated file, type the following commands and execute them.
 
 # In the docker environment
@@ -76,20 +76,6 @@ import pytest
 def django_db_setup(django_db_setup):
   pass
 ```
-
-In addition, when you conduct some tests in development environment, you need to copy relevant certificate which is registered in `https-portal` to client machine. The detail is shown below.
-
-1. Copy target certificate from `https-portal`
-
-    ```bash
-    # In the host environment
-    ./wrapper start
-    # Several minutes later... Specifically, the https-portal’s output log includes "s6-rc: info: service legacy-services successfully started".
-    docker cp https-portal.quiz-app:/var/lib/https-portal/default_server/default_server.crt .
-    ```
-
-1. Download the certificate to client machine.
-1. Install the certificate as "Trusted Root Certification Authorities".
 
 ### Execution
 Run the following command to execute pytest in your pc.

@@ -1,0 +1,44 @@
+x-logging:
+  &json-logging
+  driver: json-file
+  options:
+    max-size: "1m"
+    max-file: "3"
+
+services:
+  wireguard:
+    image: lscr.io/linuxserver/wireguard:latest
+    container_name: wireguard
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    environment:
+      - SERVERPORT=${APP_WIREGUARD_PORT:-51820}
+      - TZ=Asia/Tokyo
+    env_file:
+      - ./container_env/.env
+      - ./container_env/.ids-env
+    networks:
+      localnet:
+        # Please set the `APP_WIREGUARD_IP` based on your `APP_VPN_ACCESS_IP`.
+        # For example, if you set `APP_VPN_ACCESS_IP=10.17.31.123` then, you can select arbitrary number except ".0", ".1", ".123", and ".255"
+        # Details:
+        # - In the case of APP_WIREGUARD_IP=10.17.31.0, it's reserved ip-address which is known as `network address`.
+        # - In the case of APP_WIREGUARD_IP=10.17.31.1, it's used as gateway.
+        # - In the case of APP_WIREGUARD_IP=10.17.31.123, it's already used in `APP_VPN_ACCESS_IP`.
+        # - In the case of APP_WIREGUARD_IP=10.17.31.255, it's reserved ip-address which is known as `broadcast address`.
+        ipv4_address: ${APP_WIREGUARD_IP:-10.100.0.2}
+    ports:
+      - ${APP_WIREGUARD_PORT:-51820}:51820/udp
+    volumes:
+      - /lib/modules:/lib/modules
+      - ./configs:/config
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+    restart: always
+    logging: *json-logging
+
+networks:
+  localnet:
+    name: shared-localnet
+    external: true

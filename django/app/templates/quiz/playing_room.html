@@ -209,7 +209,7 @@
           >
             <table class="table mb-0">
               <thead>
-                <tr>
+                <tr class="align-middle">
                   <th scope="col">{% trans "Member" %}</th>
                   <th scope="col">{% trans "Score" %}</th>
                 </tr>
@@ -255,7 +255,7 @@
           <div class="col">
             <table class="table border-top">
               <thead>
-                <tr>
+                <tr class="align-middle">
                   <th scope="col" class="text-nowrap">{% trans "Member" %}</th>
                   <th scope="col" class="text-nowrap">{% trans "Answer" %}</th>
                   <th scope="col" class="text-nowrap">{% trans "Elapsed time" %}</th>
@@ -266,7 +266,15 @@
               <tbody class="table-group-divider">
                 <tr class="align-middle js-judgement-item" data-pk="{{ room.owner.pk }}">
                   <td scope="row" class="p-1">{{ room.owner|stringformat:"s" }}</td>
-                  <td class="text-wrap p-1" name="answer"></td>
+                  <td
+                    class="text-wrap p-1"
+                    name="answer"
+                    tabindex="0"
+                    data-bs-toggle="popover"
+                    data-bs-trigger="focus"
+                    data-bs-placement="bottom"
+                    data-bs-content=""
+                  ></td>
                   <td name="time"></td>
                   <td class="p-1"><input type="number" name="score" class="form-control" min="1" step="1" /></td>
                   <td class="align-middle">
@@ -285,7 +293,15 @@
                 {% for member in room.members.all %}
                 <tr class="align-middle js-judgement-item" data-pk="{{ member.pk }}">
                   <td scope="row" class="p-1">{{ member|stringformat:"s" }}</td>
-                  <td class="text-wrap p-1" name="answer"></td>
+                  <td
+                    class="text-wrap p-1"
+                    name="answer"
+                    tabindex="0"
+                    data-bs-toggle="popover"
+                    data-bs-trigger="focus"
+                    data-bs-placement="bottom"
+                    data-bs-content=""
+                  ></td>
                   <td name="time"></td>
                   <td class="p-1"><input type="number" name="score" class="form-control" min="1" step="1" /></td>
                   <td class="align-middle">
@@ -335,6 +351,7 @@
 {% endblock %}
 
 {% block bodyjs %}
+{{ block.super }}
 <script src="https://unpkg.com/typeit@8.7.1/dist/index.umd.js"></script>
 <script src="{% static 'js/quiz-websocket.js' %}"></script>
 <script>
@@ -558,6 +575,7 @@
         const name = `user${pk}`
         const answer = element.querySelector('[name="answer"]');
         answer.textContent = results[name].answer.slice(0, 20+1);
+        answer.setAttribute('data-bs-content', results[name].answer);
         const time = element.querySelector('[name="time"]');
         const elapsedTime = (() => {
           const totalSeconds = results[name].time;
@@ -602,6 +620,7 @@
    * @brief Initialization
   */
   const init = () => {
+    const helper = new HelperMethods();
     const callbacks = new Callbacks('{{ user.pk }}');
     const isOwner = {% if room|is_owner:user %}true{% else %}false{% endif %};
     QuizRoom.Init(
@@ -682,6 +701,7 @@
           // Reset answer
           const answer = element.querySelector('[name="answer"]');
           answer.textContent = '';
+          answer.setAttribute('data-bs-content', '');
           const time = element.querySelector('[name="time"]');
           time.textContent = '';
           // Init score
@@ -735,6 +755,14 @@
           const cmd = target.dataset.cmd;
           const callback = operations[cmd];
           callback(target);
+        });
+      }
+      // Define popper event
+      const answers = document.querySelectorAll('td[name="answer"]');
+      for (const elem of answers) {
+        elem.addEventListener('click', () => {
+          const popover = helper.addPopoverEvent(elem, hide=5500);
+          popover.show();
         });
       }
     })();

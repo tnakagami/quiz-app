@@ -4,13 +4,13 @@
 {% block content %}
 {% include 'breadcrumbs.html' with title=_("403 Forbidden") %}
 <div class="p-4">
-  <div class="d-flex flex-column justify-content-start">
+  <div class="d-flex flex-column justify-content-start gap-3">
     <div>
       {% trans "You don&apos;t have permission to access the requested page." %}
     </div>
     {% if exception %}
     <div class="text-danger">
-      {{ exception }}
+      {{ exception|stringformat:'s' }}
     </div>
     {% endif %}
     <div>

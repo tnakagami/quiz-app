@@ -39,6 +39,7 @@ factory-boy = "^3.3.3"
 mock = "^5.2.0"
 coverage = "^7.8.0"
 django-webtest = "^1.9.13"
+websockets = "^15.0.1"
 
 [tool.pytest_env]
 PYTHONPATH = "/opt/app"
@@ -46,7 +47,7 @@ DJANGO_EXECUTABLE_TYPE = "production"
 DJANGO_LANGUAGE_CODE = "en"
 
 [tool.pytest.ini_options]
-addopts = "-vv --rootdir=/opt/app --cov=. --cov-report=xml --cov-report=html --cov-config=.coveragerc"
+addopts = "-vv --maxfail=3 --rootdir=/opt/app --cov=. --cov-report=xml --cov-report=html --cov-config=.coveragerc"
 DJANGO_SETTINGS_MODULE = "config.settings.production"
 testpaths = ["app_tests"]
 python_files = ["test_*.py", "tests.py", "*_test.py"]
@@ -60,6 +61,7 @@ markers = [
   "utils: mark tests as utils application",
   "account: mark tests as account application",
   "quiz: mark tests as quiz application",
+  "consumer: mark tests as consumer application",
   "webtest: mark tests as django-webtest",
 ]
 cache_dir = "/opt/home/.cache"

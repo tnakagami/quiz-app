@@ -11,12 +11,18 @@ handler(){
 trap handler 1 2 3 15
 
 # Copy javascript files to nginx static directory
-readonly from_path="/var/static/js"
-readonly to_path="/opt/nginx-static/js"
-if [ ! -e ${to_path} ]; then
-  mkdir -p ${to_path}
-fi
-cp -f ${from_path}/*.js ${to_path}
+readonly from_base_path="/var/static"
+readonly to_base_path="/opt/nginx-static"
+
+for target in js img; do
+  from_path=${from_base_path}/${target}
+  to_path=${to_base_path}/${target}
+
+  if [ ! -e ${to_path} ]; then
+    mkdir -p ${to_path}
+  fi
+  cp -rf ${from_path}/* ${to_path}
+done
 
 # In the case of development environment
 if [ "${DJANGO_EXECUTABLE_TYPE}" = "development" ]; then

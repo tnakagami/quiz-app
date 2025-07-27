@@ -44,13 +44,13 @@
         <div class="table-responsive">
           <table class="table" id="all-quizzes">
             <thead>
-              <tr>
+              <tr class="align-middle">
                 <th scope="col"></th>
-                <th scope="col">{% trans "Creator" %}</th>
-                <th scope="col">{% trans "Genre" %}</th>
-                <th scope="col">{% trans "Question" %}</th>
-                <th scope="col">{% trans "Answer" %}</th>
-                <th scope="col">{% trans "Status" %}</th>
+                <th scope="col" class="text-nowrap">{% trans "Creator" %}</th>
+                <th scope="col" class="text-nowrap">{% trans "Genre" %}</th>
+                <th scope="col" class="text-nowrap">{% trans "Question" %}</th>
+                <th scope="col" class="text-nowrap">{% trans "Answer" %}</th>
+                <th scope="col" class="text-nowrap">{% trans "Status" %}</th>
               </tr>
             </thead>
           </table>
@@ -180,7 +180,7 @@
     //
     // Setup form
     //
-    const form = document.querySelector('#quiz-download-form');    
+    const form = document.querySelector('#quiz-download-form');
     form.addEventListener('submit', (event) => {
       // Set event when submit button is clicked
       const btn = document.querySelector('#download-btn');

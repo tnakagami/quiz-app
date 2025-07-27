@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-07-21 03:32+0900\n"
+"POT-Creation-Date: 2025-07-27 04:15+0900\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,41 +18,41 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-#: quiz/consumers.py:243
+#: quiz/consumers.py:268
 #, python-brace-format
 msgid "Join {name} to {room}"
 msgstr "{name} さんが {room} に参加"
 
-#: quiz/consumers.py:268
+#: quiz/consumers.py:293
 #, python-brace-format
 msgid "Leave {name} from {room}"
 msgstr "{name} さんが {room} を退出"
 
-#: quiz/consumers.py:321
+#: quiz/consumers.py:348
 msgid "Status reset is completed"
 msgstr "初期化完了"
 
-#: quiz/consumers.py:343
+#: quiz/consumers.py:370
 msgid "The next quiz is received."
 msgstr "次の問題の取得完了"
 
-#: quiz/consumers.py:364
+#: quiz/consumers.py:391
 msgid "All players received the quiz."
 msgstr "全メンバのクイズ取得完了"
 
-#: quiz/consumers.py:413
+#: quiz/consumers.py:440
 msgid "Responses have ended. No more responses will be accepted."
 msgstr "回答時間終了（これ以降は回答を受け付けません）"
 
-#: quiz/consumers.py:433
+#: quiz/consumers.py:460
 msgid "All player’s answers are received."
 msgstr "全メンバの回答取得完了"
 
-#: quiz/consumers.py:458
+#: quiz/consumers.py:485
 msgid "All quizzes have been asked. Please press the reset button."
 msgstr "全問出題済み。初期化ボタンを押してください。"
 
-#: quiz/consumers.py:460
+#: quiz/consumers.py:487
 msgid "The score is updated. Please next quiz."
 msgstr "スコアを更新しました。次のクイズを出題してください。"
 

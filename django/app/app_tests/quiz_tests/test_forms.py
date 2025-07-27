@@ -502,10 +502,10 @@ class TestQuizUploadForm(Common):
     user = get_quiz_accounts
     creator = user if user.is_creator() else factories.UserFactory(is_active=True, role=RoleType.CREATOR)
     records = [
-      [str(creator.pk), str(genres[0].pk), 'quiz-hogehoge', 'foofoo', True],
-      [str(creator.pk), str(genres[1].pk), 'quiz-text1', 'ans1', False],
-      [str(creator.pk), str(genres[1].pk), 'quiz-text2', 'ans2', True],
-      [str(creator.pk), str(genres[2].pk), 'quiz-bar', 'nugar', False],
+      [str(creator.pk), genres[0].name, 'quiz-hogehoge', 'foofoo', True],
+      [str(creator.pk), genres[1].name, 'quiz-text1', 'ans1', False],
+      [str(creator.pk), genres[1].name, 'quiz-text2', 'ans2', True],
+      [str(creator.pk), genres[2].name, 'quiz-bar', 'nugar', False],
     ]
     # Create form
     params, files = get_params_for_register_method
@@ -565,9 +565,9 @@ class TestQuizUploadForm(Common):
 ])
 def test_custom_multiple_choicefield(data):
   field = forms.CustomMultipleChoiceField(
-    label='', 
-    choices=[], 
-    required=False, 
+    label='',
+    choices=[],
+    required=False,
   )
 
   assert field.valid_value(data)

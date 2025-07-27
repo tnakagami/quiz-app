@@ -82,7 +82,7 @@ module OpenSSL
         -batch \
         -config /opt/certs_manager/x509.conf \
         -extensions v3_ca \
-        -subj "/CN=default-server.example.com"
+        -subj "/CN=00-default-server.example.com"
     EOC
 
     system command
@@ -92,7 +92,7 @@ module OpenSSL
 
   def self.dummy?(pem)
     issuer = `openssl x509 -issuer -noout -in #{pem}`
-    issuer.include? "default-server.example.com"
+    issuer.include? "00-default-server.example.com"
   end
 
   def self.expires_at(pem)

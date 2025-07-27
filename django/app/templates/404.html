@@ -4,20 +4,13 @@
 {% block content %}
 {% include 'breadcrumbs.html' with title=_("404 Page Not Found") %}
 <div class="p-4">
-  <div class="d-flex flex-column justify-content-start">
+  <div class="d-flex flex-column justify-content-start gap-3">
     <div class="d-flex flex-column">
-      <div>
-        {% trans "Requested URL is not found." %}
-      </div>
-      <div>
-        URL: {{ request.get_full_path }}
-      </div>
+      {% trans "Requested URL is not found." %}
     </div>
-    {% if exception %}
     <div class="text-danger">
-      {{ exception }}
+      URL: {{ request.get_full_path }}
     </div>
-    {% endif %}
     <div>
       {{ block.super }}
     </div>

@@ -19,7 +19,7 @@
         <div class="table-responsive">
           <table class="table">
             <thead>
-              <tr>
+              <tr class="align-middle">
                 <th scope="col">{% trans "Group name" %}</th>
                 <th scope="col">{% trans "#Members" %}</th>
                 <th colspan="2">{% trans "Operation" %}</th>
@@ -27,7 +27,7 @@
             </thead>
             <tbody class="table-group-divider">
             {% for instance in own_groups %}
-              <tr>
+              <tr class="align-middle">
                 <td scope="row">{{ instance.name }}</td>
                 <td>{{ instance.members.all.count }}</td>
                 <td>

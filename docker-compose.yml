@@ -11,15 +11,16 @@ services:
     container_name: https-portal.quiz-app
     restart: always
     environment:
-      - DEBUG=true
       - STAGE=local
-      - NUMBITS=2048
+      - NUMBITS=4096
       - DOMAINS=${APP_DOMAINS:-'localhost -> http://django:8001'}
       - ACCESS_LOG=stdout
       - ERROR_LOG=stderr
       - HSTS_MAX_AGE=60
       - CLIENT_MAX_BODY_SIZE=32M
+      - ACCESS_LOG_INCLUDE_HOST=on
       - WEBSOCKET=true
+      - VPN_ACCESS_IP=${APP_VPN_ACCESS_IP:-10.100.0.3}
     volumes:
       - https-portal-data:/var/lib/https-portal
       - static:/etc/nginx/static:ro
@@ -27,16 +28,21 @@ services:
       - ./https-portal/custom/x509.conf:/opt/certs_manager/x509.conf:ro
       - ./https-portal/bashrc:/root/.bashrc:ro
       - ./https-portal/html:/var/www/html:ro
-      - ./https-portal/default.conf.erb:/var/lib/nginx-conf/default.conf.erb:ro
+      - ./https-portal/quiz.local.ssl.conf.erb:/var/lib/nginx-conf/quiz.local.ssl.conf.erb:ro
       - ./https-portal/default.ssl.conf.erb:/var/lib/nginx-conf/default.ssl.conf.erb:ro
+      - ./https-portal/nginx.conf.erb:/var/lib/nginx-conf/nginx.conf.erb:ro
     depends_on:
       - django
     networks:
-      - frontend-link
-      - backend-link
+      frontend-link:
+      backend-link:
+      localnet:
+        ipv4_address: ${APP_VPN_ACCESS_IP:-10.100.0.3}
     ports:
-      - ${APP_BACKDOOR_PORT-:3000}:80
+      - 80:80
       - 8443:443
+    expose:
+      - 3002
     logging: *json-logging
 
   django:
@@ -62,9 +68,10 @@ services:
       - DJANGO_REDIS_PORT=6379
       - DJANGO_DATABASE_HOST=postgres
       - DJANGO_DATABASE_PORT=5432
+      - DJANGO_NGINX_FORWARDING_PORT=8443
     volumes:
       - static:/opt/nginx-static
-      - ./statics:/var/static
+      - ./statics:/var/static:ro
       - ./django/bashrc:/opt/home/.bashrc:ro
       - ./django/app:/opt/app
       - ./django/pyproject.toml:/opt/pyproject.toml
@@ -125,6 +132,9 @@ networks:
     name: frontend-quiz-app
   backend-link:
     name: backend-quiz-app
+  localnet:
+    name: shared-localnet
+    external: true
 
 volumes:
   database:

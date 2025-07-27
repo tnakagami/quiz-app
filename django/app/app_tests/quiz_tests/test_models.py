@@ -59,7 +59,7 @@ class TestGenre(Common):
     assert isinstance(genre, models.Genre)
 
   @pytest.mark.parametrize([
-    'name', 
+    'name',
     'is_enabled',
   ], [
     ('hoge', True),
@@ -165,7 +165,7 @@ class TestGenre(Common):
     assert 'filename' in keys
     assert len(list(kwargs['rows'])) == len(genres)
     assert all([item.pk == exact.pk for item, exact in zip(kwargs['rows'], genres)])
-    assert len(kwargs['header']) == 2
+    assert len(kwargs['header']) == 1
     assert kwargs['filename'] == 'genre-foobar.csv'
 
 # ========
@@ -181,7 +181,7 @@ class TestQuiz(Common):
     assert isinstance(quiz, models.Quiz)
 
   @pytest.mark.parametrize([
-    'question', 
+    'question',
     'answer',
     'is_completed',
     'short_question',
@@ -394,7 +394,7 @@ class TestQuiz(Common):
   def test_valid_records_by_using_record_checker(self, mocker, get_quizzes_info, has_manager_role, indices):
     creators, genres = get_quizzes_info
     user = creators[0] if not has_manager_role else factories.UserFactory(is_active=True, role=RoleType.MANAGER)
-    rows = [(str(creators[c_idx].pk), str(genres[g_idx].pk)) for c_idx, g_idx in indices]
+    rows = [(str(creators[c_idx].pk), genres[g_idx].name) for c_idx, g_idx in indices]
     creators = UserModel.objects.filter(pk__in=self.pk_convertor(creators))
     genres = models.Genre.objects.filter(pk__in=self.pk_convertor(genres))
     mocker.patch('quiz.models.UserModel.objects.collect_creators', return_value=creators)
@@ -432,7 +432,7 @@ class TestQuiz(Common):
       factories.UserFactory(is_active=True, role=RoleType.GUEST),
     ]
     user = creators[0] if not has_manager_role else factories.UserFactory(is_active=True, role=RoleType.MANAGER)
-    rows = [(str(_invalid_creators[c_idx].pk), str(_invalid_genres[g_idx].pk)) for c_idx, g_idx in indices]
+    rows = [(str(_invalid_creators[c_idx].pk), _invalid_genres[g_idx].name) for c_idx, g_idx in indices]
     creators = UserModel.objects.filter(pk__in=self.pk_convertor(creators))
     genres = models.Genre.objects.filter(pk__in=self.pk_convertor(genres))
     mocker.patch('quiz.models.UserModel.objects.collect_creators', return_value=creators)
@@ -455,20 +455,21 @@ class TestQuiz(Common):
     assert exact_err in str(ex.value)
 
   @pytest.mark.parametrize([
-    'role'
+    'role',
+    'rows',
   ], [
-    (RoleType.MANAGER, ),
-    (RoleType.CREATOR, ),
+    (RoleType.MANAGER, [('invalid-c-pk', 'invalid-g-name')]),
+    (RoleType.CREATOR, [('invalid-c-pk', 'invalid-g-name')]),
+    (RoleType.MANAGER, []),
+    (RoleType.CREATOR, []),
   ], ids=[
-    'is-manager',
-    'is-creator',
+    'is-manager-with-a-record',
+    'is-creator-with-a-record',
+    'is-manager-without-records',
+    'is-creator-without-records',
   ])
-  def test_include_non_uuid_record(self, role):
+  def test_include_non_uuid_record(self, role, rows):
     user = factories.UserFactory(is_active=True, role=role)
-    rows = [
-      ('Creator.pk', 'Genre'),
-      ('invalid-c-pk', 'invalid-g-pk'),
-    ]
 
     with pytest.raises(ValidationError) as ex:
       is_valid, err = models.Quiz.record_checker(rows, user)
@@ -483,7 +484,7 @@ class TestQuiz(Common):
     _genre = genres[0]
     row = [
       str(_creator.pk),
-      str(_genre.pk),
+      _genre.name,
       'hogehoge-quiz',
       'fugafuga-answer',
       'true',
@@ -620,14 +621,14 @@ class TestQuizRoom(Common):
     'is-enabled-with-creator',
     'is-not-enabled-with-guest',
   ])
-  def test_check_reset_method(self, get_genres, is_enabled, role):
-    genres = get_genres[:4]
+  def test_check_reset_method(self, is_enabled, role):
+    genres = factories.GenreFactory.create_batch(4, is_enabled=True)
     creators = factories.UserFactory.create_batch(4, is_active=True, role=RoleType.CREATOR)
     members = factories.UserFactory.create_batch(6, is_active=True)
     members = UserModel.objects.filter(pk__in=self.pk_convertor(members)).order_by('pk')
     owner = factories.UserFactory(is_active=True, role=role)
     quizzes = [
-      factories.QuizFactory(creator=creators[0], genre=genres[0], is_completed=True),  # 0 
+      factories.QuizFactory(creator=creators[0], genre=genres[0], is_completed=True),  # 0
       factories.QuizFactory(creator=creators[0], genre=genres[1], is_completed=False), # 1, Is not selected
       factories.QuizFactory(creator=creators[1], genre=genres[0], is_completed=True),  # 2, Is not selected
       factories.QuizFactory(creator=creators[1], genre=genres[1], is_completed=True),  # 3
@@ -645,7 +646,7 @@ class TestQuizRoom(Common):
       max_question=4,
       is_enabled=is_enabled,
     )
-    room.score.status = models.QuizStatusType.Answering
+    room.score.status = models.QuizStatusType.ANSWERING
     room.score.index = 2
     room.score.sequence = {}
     room.score.detail = {}
@@ -665,7 +666,7 @@ class TestQuizRoom(Common):
         'index': 2,
         'len_seq': 0,
         'len_detail': 0,
-        'status': models.QuizStatusType.Answering,
+        'status': models.QuizStatusType.ANSWERING,
         'seq': [],
         'detail': [],
       },
@@ -947,7 +948,7 @@ class TestScore:
     (models.QuizStatusType.START, 'Start'),
     (models.QuizStatusType.WAITING, 'Waiting'),
     (models.QuizStatusType.SENT_QUESTION, 'Sent question'),
-    (models.QuizStatusType.Answering, 'Answering'),
+    (models.QuizStatusType.ANSWERING, 'Answering'),
     (models.QuizStatusType.RECEIVED_ANSWERS, 'Received answers'),
     (models.QuizStatusType.JUDGING, 'Judging'),
     (models.QuizStatusType.END, 'End'),

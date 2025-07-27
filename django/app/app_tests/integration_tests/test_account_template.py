@@ -252,7 +252,7 @@ class TestAccountRegistration(Common):
   ])
   def test_send_post_request(self, mocker, csrf_exempt_django_app, input_digest, is_valid_expectation, output_url):
     mocker.patch('account.forms.get_digest', return_value='hoge')
-    mocker.patch('account.models.send_mail', return_value=None)
+    mocker.patch('account.models.EmailMessage.send', return_value=None)
     # Get form and submit form
     app = csrf_exempt_django_app
     forms = app.get(self.create_account_url).forms
@@ -644,7 +644,7 @@ class TestUpdateFriends(Common):
 
   def test_invalid_post_request(self, csrf_exempt_django_app):
     # In the case of that target user has individual group which includes user's friends
-    other = factories.UserFactory(is_active=True, role=RoleType.GUEST) 
+    other = factories.UserFactory(is_active=True, role=RoleType.GUEST)
     friends = list(factories.UserFactory.create_batch(2, is_active=True, role=RoleType.GUEST))
     friends = UserModel.objects.filter(pk__in=[val.pk for val in friends]).order_by('pk')
     user = factories.UserFactory(

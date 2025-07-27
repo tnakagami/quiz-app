@@ -10,17 +10,17 @@
         <div class="table-responsive">
           <table class="table">
             <thead>
-              <tr>
+              <tr class="align-middle">
                 <th scope="col">{% trans "Element" %}</th>
                 <th scope="col">{% trans "Value" %}</th>
               </tr>
             </thead>
             <tbody class="table-group-divider">
-              <tr>
+              <tr class="align-middle">
                 <th scope="row">{% trans 'screen name' %}</th>
                 <td>{{ user }}</td>
               </tr>
-              <tr>
+              <tr class="align-middle">
                 <th>{% trans 'Current role' %}</th>
                 <td>{{ user.get_role_label }}</td>
               </tr>

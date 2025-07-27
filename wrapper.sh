@@ -1,13 +1,20 @@
 #!/bin/bash
 
+readonly NETWORK_NAME="shared-localnet"
 readonly DJANGO_CONTAINER=django.quiz-app
 readonly BASE_DIR=$(cd $(dirname $0) && pwd)
+readonly HTTPS_PORTAL_HTML_DIR=${BASE_DIR}/https-portal/html
+readonly WIREGUARD_DIR=${BASE_DIR}/wireguard
+readonly WIREGUARD_YAML_FILE=${WIREGUARD_DIR}/docker-compose.yml
 
 function Usage() {
 cat <<- _EOF
 Usage: $0 command [option] ...
 
 Enabled commands:
+  create-network
+    create docker network
+
   build
     Build docker image using Dockerfile
 
@@ -54,6 +61,8 @@ function clean_up() {
   docker ps -a | grep Exited | awk '{print $1;}' | xargs -I{} docker rm -f {}
   # Delete disabled images
   docker images | grep none | awk '{print $3;}' | xargs -I{} docker rmi {}
+  # Delete temporary volumes
+  docker volume ls | grep -oP "\s+[0-9a-f]+$" | awk '{print $1}' | xargs -I{} docker volume rm {}
 }
 
 # ================
@@ -73,6 +82,32 @@ while [ -n "$1" ]; do
       shift
       ;;
 
+    create-network )
+      if ! $(docker network ls | grep -q "${NETWORK_NAME}"); then
+        base_ip=$(cat ${BASE_DIR}/.env | grep "APP_VPN_ACCESS_IP" | grep -oP "(?<==)((\d+|\.){5})")
+        subnet="${base_ip}.0/24"
+        gateway="${base_ip}.1"
+        echo    "Create docker network: "
+        echo    "  Name:    ${NETWORK_NAME}"
+        echo    "  Subnet:  ${subnet}"
+        echo    "  Gateway: ${gateway}"
+        echo -n "Are you ok? (y/n [y]): "
+        read is_valid
+
+        if [ -z "${is_valid}" -o "y" == "${is_valid}" ]; then
+          echo "Create docker network(bridge)"
+          docker network create --driver=bridge --subnet=${subnet} --gateway=${gateway} ${NETWORK_NAME}
+          docker network ls | grep ${NETWORK_NAME}
+        else
+          echo "Cancel to create docker network"
+        fi
+      else
+        echo Docker network \"${NETWORK_NAME}\" already exists.
+      fi
+
+      shift
+      ;;
+
     build )
       docker-compose build --build-arg UID="$(id -u)" --build-arg GID="$(id -g)"
       clean_up
@@ -81,13 +116,19 @@ while [ -n "$1" ]; do
       ;;
 
     start )
+      {
+        echo PUID=$(id -u)
+        echo PGID=$(id -g)
+      } > ${WIREGUARD_DIR}/container_env/.ids-env
       docker-compose up -d
+      docker-compose -f ${WIREGUARD_YAML_FILE} --env-file ${BASE_DIR}/.env up -d
 
       shift
       ;;
 
     stop | restart | down )
       docker-compose $1
+      docker-compose -f ${WIREGUARD_YAML_FILE} $1
 
       shift
       ;;
@@ -134,13 +175,14 @@ while [ -n "$1" ]; do
 
     logs )
       docker-compose logs -t | sort -t "|" -k 1,+2d
+      docker-compose -f ${WIREGUARD_YAML_FILE} logs -t | sort -t "|" -k 1,+2d
 
       shift
       ;;
 
     migrate )
       docker-compose up -d
-      apps=$(find backend/src -type f | grep -oP "(?<=/)([a-zA-Z]+)(?=/apps.py$)" | tr '\n' ' ')
+      apps=$(find django/app -type f | grep -oP "(?<=/)([a-zA-Z]+)(?=/apps.py$)" | tr '\n' ' ')
       commands="python manage.py makemigrations ${apps}; python manage.py migrate"
       docker exec ${DJANGO_CONTAINER} bash -c "${commands}"
 
@@ -165,14 +207,16 @@ while [ -n "$1" ]; do
       ;;
 
     maintenance )
-      touch ${BASE_DIR}/nginx/html/is_maintenance
+      touch ${HTTPS_PORTAL_HTML_DIR}/is_maintenance
       echo maintenance mode
+
       shift
       ;;
 
     release )
-      rm -f ${BASE_DIR}/nginx/html/is_maintenance
+      rm -f ${HTTPS_PORTAL_HTML_DIR}/is_maintenance
       echo release mode
+
       shift
       ;;
 

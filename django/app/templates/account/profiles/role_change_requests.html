@@ -11,7 +11,7 @@
         <div class="table-responsive">
           <table class="table">
             <thead>
-              <tr>
+              <tr class="align-middle">
                 <th scope="col">{% trans "Screen name (e-mail)" %}</th>
                 <th scope="col">{% trans "Role" %}</th>
                 <th colspan="2">{% trans "Operation" %}</th>
@@ -22,6 +22,7 @@
               <tr
                 data-target="{{ instance.user.screen_name|default:'Empty' }}({{ instance.user.email }})"
                 data-url="{% url 'account:update_role_approval' pk=instance.pk %}"
+                class="align-middle"
               >
                 <td scope="row">{{ instance.user.screen_name|default:"Empty" }}({{ instance.user.email }})</td>
                 <td>{{ instance.user.get_role_label }}</td>
