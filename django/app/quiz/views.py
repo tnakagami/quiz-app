@@ -262,6 +262,33 @@ class EnterQuizRoom(LoginRequiredMixin, UserPassesTestMixin, DetailView, DjangoB
 # ===================
 # = Download/Upload =
 # ===================
+class UploadGenrePage(LoginRequiredMixin, HasManagerRole, FormView, DjangoBreadcrumbsMixin):
+  raise_exception = True
+  form_class = forms.GenreUploadForm
+  template_name = 'quiz/upload_genre.html'
+  success_url = reverse_lazy('quiz:genre_list')
+  crumbles = DjangoBreadcrumbsMixin.get_target_crumbles(
+    url_name='quiz:upload_genre',
+    title=gettext_lazy('Upload genre'),
+    parent_view_class=GenreListPage,
+  )
+
+  ##
+  # @brief Post process for form validation
+  # @param form Instance of `self.form_class`
+  # @return response Instance of HttpResponse
+  def form_valid(self, form):
+    from django.core.exceptions import NON_FIELD_ERRORS
+    # Store genres based on uploaded file
+    form.register_genres()
+    # Check errors
+    if not form.has_error(NON_FIELD_ERRORS):
+      response = super().form_valid(form)
+    else:
+      response = super().form_invalid(form)
+
+    return response
+
 class DownloadGenrePage(LoginRequiredMixin, HasCreatorRole, FormView, DjangoBreadcrumbsMixin):
   raise_exception = True
   form_class = forms.GenreDownloadForm
@@ -320,7 +347,7 @@ class UploadQuizPage(LoginRequiredMixin, HasCreatorRole, FormView, DjangoBreadcr
   ##
   # @brief Post process for form validation
   # @param form Instance of `self.form_class`
-  # @return response Instance of StreamingHttpResponse
+  # @return response Instance of HttpResponse
   def form_valid(self, form):
     from django.core.exceptions import NON_FIELD_ERRORS
     # Store quizzes based on uploaded file

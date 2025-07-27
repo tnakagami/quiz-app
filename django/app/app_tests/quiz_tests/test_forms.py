@@ -129,6 +129,142 @@ def get_each_types_of_genre(django_db_blocker, get_genres):
 
   return valid_genres, invalid_genre
 
+# ==================
+# = GenreUploadForm =
+# ==================
+@pytest.mark.quiz
+@pytest.mark.form
+@pytest.mark.django_db
+class TestGenreUploadForm(Common):
+  @pytest.fixture
+  def get_form_params_with_fds(self):
+    def inner(encoding, suffix='.csv'):
+      # Setup temporary file
+      tmp_fp = tempfile.NamedTemporaryFile(mode='r+', encoding=encoding, suffix=suffix)
+      with open(tmp_fp.name, encoding=encoding, mode='w') as csv_file:
+        csv_file.writelines(['Genre\n', 'a\n', 'b\n'])
+        csv_file.flush()
+      with open(tmp_fp.name, encoding=encoding, mode='r') as fin:
+        csv_file = SimpleUploadedFile(fin.name, bytes(fin.read(), encoding=fin.encoding))
+        # Create form data
+        params = {
+          'encoding': encoding,
+          'header': True,
+        }
+        files = {
+          'csv_file': csv_file,
+        }
+
+      return tmp_fp, csv_file, params, files
+
+    return inner
+
+  @pytest.fixture(params=['utf-8-encoding', 'sjis-encoding', 'cp932-encoding'])
+  def get_valid_form_param(self, request, get_form_params_with_fds):
+    encoding = 'utf-8'
+    # Define encoding
+    if request.param == 'utf-8-encoding':
+      encoding = 'utf-8'
+    elif request.param == 'sjis-encoding':
+      encoding = 'shift_jis'
+    elif request.param == 'cp932-encoding':
+      encoding = 'cp932'
+    # Setup temporary file
+    tmp_fp, csv_file, params, files = get_form_params_with_fds(encoding)
+
+    yield params, files
+
+    # Post-process
+    csv_file.close()
+    tmp_fp.close()
+
+  def test_valid_input_pattern(self, mocker, get_valid_form_param):
+    params, files = get_valid_form_param
+    form = forms.GenreUploadForm(data=params, files=files)
+    mocker.patch.object(form.validator, 'validate', return_value=None)
+    is_valid = form.is_valid()
+
+    assert is_valid
+
+  @pytest.fixture(params=['without-encoding', 'without-csvfile', 'without-header'])
+  def get_invalid_form_param(self, request, get_form_params_with_fds):
+    # Setup temporary file
+    tmp_fp, csv_file, params, files = get_form_params_with_fds('utf-8')
+    err_msg = 'This field is required'
+    # Setup form data
+    if request.param == 'without-encoding':
+      del params['encoding']
+    elif request.param == 'without-csvfile':
+      del files['csv_file']
+    elif request.param == 'without-header':
+      del params['header']
+
+    yield params, files, err_msg
+
+    # Post-process
+    csv_file.close()
+    tmp_fp.close()
+
+  def test_invalid_field_data(self, mocker, get_invalid_form_param):
+    params, files, err_msg = get_invalid_form_param
+    form = forms.GenreUploadForm(data=params, files=files)
+    mocker.patch.object(form.validator, 'validate', return_value=None)
+    is_valid = form.is_valid()
+
+    assert not is_valid
+    assert err_msg in str(form.errors)
+
+  @pytest.fixture
+  def get_params_for_register_method(self, get_form_params_with_fds):
+    tmp_fp, csv_file, params, files = get_form_params_with_fds('utf-8')
+
+    yield params, files
+
+    # Post-process
+    csv_file.close()
+    tmp_fp.close()
+
+  @pytest.mark.parametrize([
+    'records',
+    'expected',
+  ], [
+    ([('test-genre-01', ), ('test-genre-02', ), ('test-genre-03', )], ['test-genre-01', 'test-genre-02', 'test-genre-03']),
+    ([('test-genre-01', ), ('test-genre-02', ), ('test-genre-03', ), ('test-genre-02', ), ('test-genre-01', )], ['test-genre-01', 'test-genre-02', 'test-genre-03']),
+  ], ids=[
+    'unique-list',
+    'duplication-list',
+  ])
+  def test_check_register_genres(self, mocker, get_params_for_register_method, records, expected):
+    params, files = get_params_for_register_method
+    form = forms.GenreUploadForm(data=params, files=files)
+    mocker.patch.object(form.validator, 'validate', return_value=None)
+    mocker.patch.object(form.validator, 'get_record', return_value=records)
+    is_valid = form.is_valid()
+    instances = form.register_genres()
+    counts = models.Genre.objects.filter(pk__in=self.pk_convertor(instances)).count()
+
+    assert is_valid
+    assert not form.has_error(NON_FIELD_ERRORS)
+    assert counts == len(expected)
+    assert all([obj.name in expected for obj in instances])
+
+  def test_raise_exception_in_bulk_create(self, mocker, get_params_for_register_method):
+    err_msg = 'Include invalid records. Please check the detail:'
+    # Create form
+    params, files = get_params_for_register_method
+    form = forms.GenreUploadForm(data=params, files=files)
+    mocker.patch.object(form.validator, 'validate', return_value=None)
+    mocker.patch.object(form.validator, 'get_record', return_value=[[1], [2], [3]])
+    mocker.patch('quiz.models.Genre.get_instances_from_list', return_value=[factories.GenreFactory.build(name='hoge-test-bulk023', is_enabled=True)])
+    mocker.patch('quiz.models.Genre.objects.bulk_create', side_effect=IntegrityError('Invalid data'))
+    is_valid = form.is_valid()
+    instances = form.register_genres()
+
+    assert is_valid
+    assert form.has_error(NON_FIELD_ERRORS)
+    assert err_msg in str(form.non_field_errors())
+    assert len(instances) == 0
+
 # =====================
 # = GenreDownloadForm =
 # =====================

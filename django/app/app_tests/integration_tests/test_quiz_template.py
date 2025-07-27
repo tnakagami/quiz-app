@@ -987,6 +987,116 @@ class TestQuizRoom(Common):
 
     assert str(status.HTTP_403_FORBIDDEN) in ex.value.args[0]
 
+# ==============
+# = UploadGenre =
+# ==============
+@pytest.mark.webtest
+@pytest.mark.django_db
+class TestUploadGenre(Common):
+  genre_list_url = reverse('quiz:genre_list')
+  form_view_url = reverse('quiz:upload_genre')
+
+  def test_can_move_to_upload_page(self, csrf_exempt_django_app, get_managers):
+    user = get_managers
+    app = csrf_exempt_django_app
+    page = app.get(self.genre_list_url, user=user)
+    response = page.click('Upload genre')
+
+    assert response.status_code == status.HTTP_200_OK
+    assert get_current_path(response) == self.form_view_url
+
+  def test_can_move_to_parent_page_from_upload_page(self, csrf_exempt_django_app, get_managers):
+    user = get_managers
+    app = csrf_exempt_django_app
+    page = app.get(self.form_view_url, user=user)
+    response = page.click('Cancel')
+
+    assert response.status_code == status.HTTP_200_OK
+    assert get_current_path(response) == self.genre_list_url
+
+  @pytest.fixture(params=[
+    'utf-8-with-header',
+    'utf-8-without-header',
+    'sjis-with-header',
+    'sjis-without-header',
+    'cp932-with-header',
+    'cp932-without-header',
+  ])
+  def get_valid_form_param(self, request, get_managers):
+    config = {
+      'utf-8-with-header':    ('utf-8', True),
+      'utf-8-without-header': ('utf-8', False),
+      'sjis-with-header':     ('shift_jis', True),
+      'sjis-without-header':  ('shift_jis', False),
+      'cp932-with-header':    ('cp932', True),
+      'cp932-without-header': ('cp932', False),
+    }
+    user = get_managers
+    encoding, header = config[request.param]
+    # Setup temporary file
+    inputs = [
+      'uploaded-genre-0x0101',
+      'uploaded-genre-0x0201',
+      'uploaded-genre-0x0301',
+    ]
+    if header:
+      data = ['Genre\n']
+    else:
+      data = []
+    data += [f'{name}\n' for name in inputs]
+    # Create form data
+    params = {
+      'encoding': encoding,
+      'csv_file': ('test-file.csv', bytes(''.join(data), encoding=encoding)), # For django-webtest format
+      'header': header,
+    }
+
+    return user, params, inputs
+
+  def test_send_post_request(self, get_valid_form_param, csrf_exempt_django_app):
+    user, params, inputs = get_valid_form_param
+    # Send request
+    app = csrf_exempt_django_app
+    forms = app.get(self.form_view_url, user=user).forms
+    form = forms['genre-upload-form']
+    for key, val in params.items():
+      form[key] = val
+    response = form.submit().follow()
+    # Collect expected queryset
+    queryset = models.Genre.objects.filter(name__contains='uploaded-genre-0x0')
+
+    assert response.status_code == status.HTTP_200_OK
+    assert get_current_path(response) == self.genre_list_url
+    assert all([queryset.filter(name=name).exists() for name in inputs])
+
+  def test_send_invalid_encoding(self, get_managers, csrf_exempt_django_app):
+    user = get_managers
+    app = csrf_exempt_django_app
+    forms = app.get(self.form_view_url, user=user).forms
+    form = forms['genre-upload-form']
+
+    with pytest.raises(ValueError):
+      form['encoding'] = 'euc-jp'
+
+  def test_send_invalid_extensions(self, get_managers, csrf_exempt_django_app):
+    params = {
+      'encoding': 'utf-8',
+      'csv_file': ('hoge.txt', bytes('hogehoge\nfogafoga\n', 'utf-8')),
+    }
+    err_msg = 'The extention has to be &quot;.csv&quot;.'
+    # Send request
+    user = get_managers
+    app = csrf_exempt_django_app
+    forms = app.get(self.form_view_url, user=user).forms
+    form = forms['genre-upload-form']
+    for key, val in params.items():
+      form[key] = val
+    response = form.submit()
+    errors = response.context['form'].errors
+
+    assert response.status_code == status.HTTP_200_OK
+    assert err_msg in str(errors)
+
 # =================
 # = DownloadGenre =
 # =================
@@ -1165,11 +1275,6 @@ class TestUploadQuiz(Common):
     ])
 
   def test_send_invalid_encoding(self, get_editors, csrf_exempt_django_app):
-    params = {
-      'encoding': 'euc-jp',
-      'csv_file': ('hoge.csv', bytes('hogehoge\nfogafoga\n', 'euc-jp')),
-    }
-    # Send request
     user = get_editors
     app = csrf_exempt_django_app
     forms = app.get(self.form_view_url, user=user).forms

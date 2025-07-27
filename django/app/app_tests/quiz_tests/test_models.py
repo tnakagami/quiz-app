@@ -153,6 +153,73 @@ class TestGenre(Common):
     assert queryset.count() == count
     assert callback(queryset, exacts)
 
+  @pytest.mark.parametrize([
+    'row',
+    'is_valid',
+  ], [
+    ([1, ], True),
+    ([1, 2], False),
+  ], ids=[
+    'length-is-1',
+    'length-is-2',
+  ])
+  def test_check_length_checker(self, row, is_valid):
+    assert models.Genre.length_checker(row) == is_valid
+
+  def test_valid_records_by_using_record_checker(self, mocker):
+    genres = [
+      factories.GenreFactory(name='hoge00-012', is_enabled=True),
+      factories.GenreFactory(name='foobar-123', is_enabled=True),
+      factories.GenreFactory(name='xyzw01-234', is_enabled=True),
+    ]
+    rows = [['valid-01',], ['valid-02',], ['valid-03',]]
+    genres = models.Genre.objects.filter(pk__in=self.pk_convertor(genres))
+    mocker.patch('quiz.models.Genre.objects.collect_active_genres', return_value=genres)
+    is_valid, err = models.Genre.record_checker(rows)
+
+    assert is_valid
+    assert err is None
+
+  def test_invalid_records_by_using_record_checker(self, mocker):
+    genres = [
+      factories.GenreFactory(name='hoge00-012', is_enabled=True),
+      factories.GenreFactory(name='foobar-123', is_enabled=True),
+      factories.GenreFactory(name='xyzw01-234', is_enabled=True),
+      factories.GenreFactory(name='invalid-99', is_enabled=True),
+    ]
+    pk1, pk3 = genres[1].pk, genres[3].pk
+    rows = [['valid-01',], ['foobar-123',], ['invalid-99',]]
+    genres = models.Genre.objects.filter(pk__in=self.pk_convertor(genres))
+    mocker.patch('quiz.models.Genre.objects.all', return_value=genres)
+    # Define error message
+    invalids = models.Genre.objects.filter(pk__in=[pk1, pk3]).order_by('name')
+    msg = ','.join([str(_genre) for _genre in invalids])
+    exact_err = f'The csv file includes invalid genre(s). Details: {msg}'
+    # Raise exception
+    with pytest.raises(ValidationError) as ex:
+      is_valid, err = models.Genre.record_checker(rows)
+      raise err
+
+    assert not is_valid
+    assert exact_err in str(ex.value)
+
+  @pytest.mark.parametrize([
+    'rows',
+    'expected',
+  ], [
+    ([('valid-01',), ('valid-02',), ('valid-03',)], ['valid-01', 'valid-02', 'valid-03']),
+    ([('valid-01',), ('valid-02',), ('valid-03',), ('valid-02',), ('valid-01',)], ['valid-01', 'valid-02', 'valid-03']),
+  ], ids=[
+    'unique-list',
+    'duplication-list',
+  ])
+  def test_check_get_instances_from_list_method(self, rows, expected):
+    instances = models.Genre.get_instances_from_list(rows)
+
+    assert len(instances) == len(expected)
+    assert all([obj.name in expected for obj in instances])
+    assert all([obj.is_enabled for obj in instances])
+
   def test_check_get_response_kwargs_method(self, mocker, get_genres):
     genres = get_genres
     genres = models.Genre.objects.filter(pk__in=self.pk_convertor(genres)).order_by('name')

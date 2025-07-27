@@ -14,6 +14,14 @@
           {% trans "Create a new genre" %}
         </a>
       </div>
+      <div class="col">
+        <a
+          href="{% url 'quiz:upload_genre' %}"
+          class="btn btn-success w-100 custom-boxshadow"
+        >
+          {% trans "Upload genre" %}
+        </a>
+      </div>
       {% if genres %}
       <div class="col">
         <div class="table-responsive">

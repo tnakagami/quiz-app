@@ -122,9 +122,10 @@
     const helper = new HelperMethods();
     // Add click event for each button
     for (const btn of copyButtons) {
+      const popover = helper.addPopoverEvent(btn);
+      // Add event
       btn.addEventListener('click', (event) => {
         helper.copyToClipboard(null, btn.dataset.text);
-        const popover = helper.addPopoverEvent(btn);
         popover.show();
       }, false);
     }

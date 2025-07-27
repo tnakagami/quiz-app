@@ -104,11 +104,11 @@
           // Remove textarea element
           document.body.removeChild(textarea);
         }
-        addPopoverEvent(element, show=100, hide=1500) {
+        addPopoverEvent(element) {
           const popover = new bootstrap.Popover(element, {
             delay: {
-              show: show,
-              hide: hide,
+              show: 100,
+              hide: 1500,
             },
           });
 

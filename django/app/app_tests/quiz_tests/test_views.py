@@ -1035,6 +1035,137 @@ class TestQuizRoomView(Common):
 
     assert view.crumbles[-1].title == 'hoge-room'
 
+# ==================
+# = UploadGenreView =
+# ==================
+@pytest.mark.quiz
+@pytest.mark.view
+@pytest.mark.django_db
+class TestUploadGenreView(Common):
+  form_view_url = reverse('quiz:upload_genre')
+
+  def test_check_get_access(self, get_user, client):
+    exact_types = {
+      'superuser': status.HTTP_200_OK,
+      'manager': status.HTTP_200_OK,
+      'creator': status.HTTP_403_FORBIDDEN,
+      'guest': status.HTTP_403_FORBIDDEN,
+    }
+    key, user = get_user
+    client.force_login(user)
+    response = client.get(self.form_view_url)
+
+    assert response.status_code == exact_types[key]
+
+  @pytest.fixture(params=[
+    'utf-8-with-header',
+    'utf-8-without-header',
+    'sjis-with-header',
+    'sjis-without-header',
+    'cp932-with-header',
+    'cp932-without-header',
+  ])
+  def get_valid_form_param(self, request, get_manager):
+    config = {
+      'utf-8-with-header':    ('utf-8', True),
+      'utf-8-without-header': ('utf-8', False),
+      'sjis-with-header':     ('shift_jis', True),
+      'sjis-without-header':  ('shift_jis', False),
+      'cp932-with-header':    ('cp932', True),
+      'cp932-without-header': ('cp932', False),
+    }
+    user = get_manager
+    encoding, header = config[request.param]
+    # Set genre
+    valid_data = [
+      'test-genre-0x0101',
+      'test-genre-0x0221',
+      'test-genre-0x0341',
+    ]
+    csv_file = SimpleUploadedFile('hoge.csv', bytes('foo,bar\n', encoding=encoding))
+    # Create form data
+    params = {
+      'encoding': encoding,
+      'csv_file': csv_file,
+      'header': header,
+    }
+
+    yield user, params, valid_data
+
+    # Post-process
+    csv_file.close()
+
+  @pytest.mark.parametrize([
+    'data_indices',
+  ], [
+    ([0, 2, 1], ),
+    ([0, 2, 1, 0, 1], ),
+  ], ids=[
+    'unique-list',
+    'duplication-list',
+  ])
+  def test_check_valid_post_access(self, mocker, get_valid_form_param, client, data_indices):
+    user, params, valid_data = get_valid_form_param
+    records = [(valid_data[idx], ) for idx in data_indices]
+    mock_csv_validator = mocker.patch('quiz.forms.validators.CustomCSVFileValidator.validate', return_value=None)
+    mock_get_record_method = mocker.patch('quiz.forms.validators.CustomCSVFileValidator.get_record', return_value=records)
+    # Send request
+    client.force_login(user)
+    response = client.post(self.form_view_url, data=params)
+    # Collect expected queryset
+    queryset = models.Genre.objects.filter(name__contains='test-genre-0x')
+
+    assert response.status_code == status.HTTP_302_FOUND
+    assert response['Location'] == reverse('quiz:genre_list')
+    assert all([queryset.filter(name=name).exists() for name in valid_data])
+    assert mock_csv_validator.call_count == 1
+    assert mock_get_record_method.call_count == 1
+
+  @pytest.fixture(params=['form-invalid', 'invalid-bulk-create'])
+  def get_invalid_form_param(self, mocker, request):
+    input_header = True
+    err_msg = ''
+
+    if request.param == 'form-invalid':
+      mocker.patch('quiz.forms.GenreUploadForm.clean', side_effect=ValidationError('invalid-inputs'))
+      err_msg = 'invalid-inputs'
+    elif request.param == 'invalid-bulk-create':
+      from django.db.utils import IntegrityError
+      mocker.patch('quiz.forms.GenreUploadForm.clean', return_value=None)
+      mocker.patch('quiz.forms.validators.CustomCSVFileValidator.get_record', return_value=[])
+      mocker.patch('quiz.models.Genre.objects.bulk_create', side_effect=IntegrityError('test'))
+      err_msg = 'Include invalid records. Please check the detail: test.'
+    # Setup temporary file
+    encoding = 'utf-8'
+    tmp_fp = tempfile.NamedTemporaryFile(mode='r+', encoding=encoding, suffix='.csv')
+    with open(tmp_fp.name, encoding=encoding, mode='w') as csv_file:
+      csv_file.write('Genre\ng1-pk\ng2-pk\n')
+    with open(tmp_fp.name, encoding=encoding, mode='r') as fin:
+      csv_file = SimpleUploadedFile(fin.name, bytes(fin.read(), encoding=fin.encoding))
+      # Create form data
+      params = {
+        'encoding': encoding,
+        'csv_file': csv_file,
+        'header': input_header,
+      }
+
+    yield params, err_msg
+
+    # Post-process
+    csv_file.close()
+    tmp_fp.close()
+
+  def test_check_invalid_post_access(self, get_manager, get_invalid_form_param, client):
+    user = get_manager
+    params, err_msg = get_invalid_form_param
+    # Send request
+    client.force_login(user)
+    response = client.post(self.form_view_url, data=params)
+    errors = response.context['form'].errors
+
+    assert response.status_code == status.HTTP_200_OK
+    assert err_msg in str(errors)
+
 # =====================
 # = DownloadGenreView =
 # =====================
@@ -1221,13 +1352,13 @@ class TestUploadQuizView(Common):
       csv_file.write('c-pk,g-pk,q-1,a-1,True\n')
       csv_file.write('c-pk,g-pk,q-2,a-2,False\n')
     with open(tmp_fp.name, encoding=encoding, mode='r') as fin:
-        csv_file = SimpleUploadedFile(fin.name, bytes(fin.read(), encoding=fin.encoding))
-        # Create form data
-        params = {
-          'encoding': encoding,
-          'csv_file': csv_file,
-          'header': input_header,
-        }
+      csv_file = SimpleUploadedFile(fin.name, bytes(fin.read(), encoding=fin.encoding))
+      # Create form data
+      params = {
+        'encoding': encoding,
+        'csv_file': csv_file,
+        'header': input_header,
+      }
 
     yield params, err_msg
 

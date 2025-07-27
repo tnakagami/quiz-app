@@ -266,15 +266,21 @@
               <tbody class="table-group-divider">
                 <tr class="align-middle js-judgement-item" data-pk="{{ room.owner.pk }}">
                   <td scope="row" class="p-1">{{ room.owner|stringformat:"s" }}</td>
-                  <td
-                    class="text-wrap p-1"
-                    name="answer"
-                    tabindex="0"
-                    data-bs-toggle="popover"
-                    data-bs-trigger="focus"
-                    data-bs-placement="bottom"
-                    data-bs-content=""
-                  ></td>
+                  <td>
+                    <div class="d-flex flex-row">
+                      <div class="me-1" name="answer"></div>
+                      <button
+                        type="button"
+                        class="btn btn-secondary px-1 py-0 mx-3 custom-boxshadow position-relative start-0 ms-auto me-0"
+                        data-bs-toggle="popover"
+                        data-bs-placement="bottom"
+                        data-bs-title="{{ room.owner|stringformat:'s' }}"
+                        data-bs-content=""
+                      >
+                        <i class="fas fa-comment fa-sm"></i>
+                      </button>
+                    </div>
+                  </td>
                   <td name="time"></td>
                   <td class="p-1"><input type="number" name="score" class="form-control" min="1" step="1" /></td>
                   <td class="align-middle">
@@ -293,15 +299,21 @@
                 {% for member in room.members.all %}
                 <tr class="align-middle js-judgement-item" data-pk="{{ member.pk }}">
                   <td scope="row" class="p-1">{{ member|stringformat:"s" }}</td>
-                  <td
-                    class="text-wrap p-1"
-                    name="answer"
-                    tabindex="0"
-                    data-bs-toggle="popover"
-                    data-bs-trigger="focus"
-                    data-bs-placement="bottom"
-                    data-bs-content=""
-                  ></td>
+                  <td>
+                    <div class="d-flex flex-row">
+                      <div class="me-1" name="answer"></div>
+                      <button
+                        type="button"
+                        class="btn btn-secondary px-1 py-0 mx-3 custom-boxshadow position-relative start-0 ms-auto me-0"
+                        data-bs-toggle="popover"
+                        data-bs-placement="bottom"
+                        data-bs-title="{{ member|stringformat:'s' }}"
+                        data-bs-content=""
+                      >
+                        <i class="fas fa-comment fa-sm"></i>
+                      </button>
+                    </div>
+                  </td>
                   <td name="time"></td>
                   <td class="p-1"><input type="number" name="score" class="form-control" min="1" step="1" /></td>
                   <td class="align-middle">
@@ -351,11 +363,15 @@
 {% endblock %}
 
 {% block bodyjs %}
-{{ block.super }}
 <script src="https://unpkg.com/typeit@8.7.1/dist/index.umd.js"></script>
 <script src="{% static 'js/quiz-websocket.js' %}"></script>
 <script>
 (function () {
+  // Define popover
+  const setPopover = (elem, val) => {
+    elem.setAttribute('data-bs-content', val);
+    new bootstrap.Popover(elem);
+  };
   // Setup callbacks of WebSocket
   class Callbacks {
     /**
@@ -574,8 +590,8 @@
         const pk = element.dataset.pk;
         const name = `user${pk}`
         const answer = element.querySelector('[name="answer"]');
-        answer.textContent = results[name].answer.slice(0, 20+1);
-        answer.setAttribute('data-bs-content', results[name].answer);
+        answer.textContent = results[name].answer.slice(0, 20+1) || '-';
+        setPopover(element.querySelector('[data-bs-toggle="popover"]'), results[name].answer || '-');
         const time = element.querySelector('[name="time"]');
         const elapsedTime = (() => {
           const totalSeconds = results[name].time;
@@ -620,7 +636,6 @@
    * @brief Initialization
   */
   const init = () => {
-    const helper = new HelperMethods();
     const callbacks = new Callbacks('{{ user.pk }}');
     const isOwner = {% if room|is_owner:user %}true{% else %}false{% endif %};
     QuizRoom.Init(
@@ -701,7 +716,7 @@
           // Reset answer
           const answer = element.querySelector('[name="answer"]');
           answer.textContent = '';
-          answer.setAttribute('data-bs-content', '');
+          setPopover(element.querySelector('[data-bs-toggle="popover"]'), '-');
           const time = element.querySelector('[name="time"]');
           time.textContent = '';
           // Init score
@@ -758,13 +773,8 @@
         });
       }
       // Define popper event
-      const answers = document.querySelectorAll('td[name="answer"]');
-      for (const elem of answers) {
-        elem.addEventListener('click', () => {
-          const popover = helper.addPopoverEvent(elem, hide=5500);
-          popover.show();
-        });
-      }
+      const popoverElements = document.querySelectorAll('[data-bs-toggle="popover"]');
+      [...popoverElements].map((elem) => setPopover(elem, '-'));
     })();
     {% endif %}
   };

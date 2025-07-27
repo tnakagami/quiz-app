@@ -30,6 +30,22 @@ def generate_default_filename():
 
   return filename
 
+##
+# @brief Check csv filesize
+# @exception ValidationError Input file size is larger than `MAX_CSV_FILESIZE`
+def check_filesize(value):
+  max_size = settings.MAX_CSV_FILESIZE
+  mega_byte = max_size // 1024 // 1024
+
+  if value.size > max_size:
+    raise forms.ValidationError(
+      gettext_lazy('Input filesize is too large. Max filesize: %(size)d MB'),
+      code='invalid_file',
+      params={'size': mega_byte}
+    )
+
+  return value
+
 class GenreForm(forms.ModelForm):
   template_name = 'renderer/custom_form.html'
 
@@ -59,6 +75,103 @@ class GenreForm(forms.ModelForm):
     }),
     help_text=gettext_lazy('Describes whether this genre is enabled or not.'),
   )
+
+class GenreUploadForm(forms.Form):
+  template_name = 'renderer/custom_form.html'
+
+  encoding = forms.ChoiceField(
+    label=gettext_lazy('Encoding'),
+    choices=(
+      ('utf-8', 'UTF-8'),
+      ('shift_jis', 'Shift-JIS'),
+      ('cp932', 'CP932 (Windows)'),
+    ),
+    initial='shift_jis',
+    required=True,
+    widget=forms.Select(attrs={
+      'class': 'form-select',
+      'autofocus': True,
+    }),
+    help_text=gettext_lazy('In general, please select "Shift-JIS" in Windows OS, "UTF-8" in Linux like OS.'),
+  )
+
+  csv_file = forms.FileField(
+    label=gettext_lazy('CSV file'),
+    required=True,
+    widget=forms.FileInput(attrs={
+      'class': 'form-control',
+    }),
+    validators=[
+      FileExtensionValidator(
+        allowed_extensions=['csv'],
+        message=gettext_lazy('The extention has to be ".csv".'),
+      ),
+      check_filesize,
+    ],
+    help_text=gettext_lazy('The extention is ".csv" only.'),
+  )
+
+  header = forms.TypedChoiceField(
+    label=gettext_lazy('With header/Without header'),
+    coerce=bool_converter,
+    initial=True,
+    empty_value=True,
+    choices=(
+      (True, gettext_lazy('With header')),
+      (False, gettext_lazy('Without header')),
+    ),
+    widget=CustomRadioSelect(attrs={
+      'class': 'form-check form-check-inline',
+      'input-class': 'form-check-input',
+      'label-class': 'form-check-label',
+    }),
+    help_text=gettext_lazy('Describes whether the csv file has header or not.'),
+  )
+
+  ##
+  # @brief Constructor of GenreUploadForm
+  # @param args Positional arguments
+  # @param kwargs Named arguments
+  def __init__(self, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+    self.validator = validators.CustomCSVFileValidator(
+      length_checker=models.Genre.length_checker,
+      record_checker=models.Genre.record_checker,
+    )
+
+  ##
+  # @brief Check data
+  # @exception ValidationError Format is invalid, Failed to decode, or Raise exception
+  def clean(self):
+    super().clean()
+    csv_file = self.cleaned_data.get('csv_file')
+    encoding = self.cleaned_data.get('encoding')
+    header = self.cleaned_data.get('header')
+    self.validator.validate(csv_file, encoding, header)
+
+  ##
+  # @brief Register the items based on input csv file
+  # @return instances Instances of created genre
+  # @exception IntegrityError Add the error to `non_field_errors`
+  # @pre Assume that `self.clean` method is called.
+  def register_genres(self):
+    instances = []
+    # Register items
+    try:
+      rows = self.validator.get_record()
+      enabled_items = models.Genre.get_instances_from_list(rows)
+      # Store relevant items to database
+      with transaction.atomic():
+        instances = models.Genre.objects.bulk_create(enabled_items)
+    except IntegrityError as ex:
+      error = forms.ValidationError(
+        gettext_lazy('Include invalid records. Please check the detail: %(ex)s.'),
+        code='invalid_genres',
+        params={'ex': str(ex)},
+      )
+      self.add_error(None, error)
+
+    return instances
 
 class GenreDownloadForm(forms.Form):
   template_name = 'renderer/custom_form.html'
@@ -219,22 +332,6 @@ class QuizSearchForm(forms.Form):
     options = self.dual_listbox.collect_options_of_items(all_creators, selected_ones, callback=callback)
 
     return options
-
-##
-# @brief Check csv filesize
-# @exception ValidationError Input file size is larger than `MAX_CSV_FILESIZE`
-def check_filesize(value):
-  max_size = settings.MAX_CSV_FILESIZE
-  mega_byte = max_size // 1024 // 1024
-
-  if value.size > max_size:
-    raise forms.ValidationError(
-      gettext_lazy('Input filesize is too large. Max filesize: %(size)d MB'),
-      code='invalid_file',
-      params={'size': mega_byte}
-    )
-
-  return value
 
 class QuizUploadForm(forms.Form):
   template_name = 'renderer/custom_form.html'
