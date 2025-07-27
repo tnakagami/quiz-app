@@ -7,26 +7,10 @@ from django.db.utils import IntegrityError
 from app_tests import factories, g_compare_options
 from account.models import RoleType, IndividualGroup
 from quiz import forms, models
-from datetime import datetime, timezone
 import json
 import tempfile
 
 UserModel = get_user_model()
-
-# ====================
-# = Global functions =
-# ====================
-@pytest.mark.quiz
-@pytest.mark.form
-def test_generate_default_filename(mocker):
-  mocker.patch(
-    'quiz.forms.get_current_time',
-    return_value=datetime(2021,7,3,11,7,48,microsecond=123456,tzinfo=timezone.utc),
-  )
-  expected = '20210703-200748'
-  filename = forms.generate_default_filename()
-
-  assert filename == expected
 
 class DummyFile:
   def __init__(self, val):
@@ -274,10 +258,7 @@ class TestGenreUploadForm(Common):
 class TestGenreDownloadForm(Common):
   @pytest.fixture
   def set_custom_mock(self, mocker):
-    mocker.patch(
-      'quiz.forms.get_current_time',
-      return_value=datetime(2022,7,3,10,58,3,microsecond=123456,tzinfo=timezone.utc),
-    )
+    mocker.patch('quiz.forms.generate_default_filename', return_value='20210703-205803')
     mocker.patch('quiz.models.Genre.get_response_kwargs',
       side_effect=lambda name: {'filename': f'genre-{name}.csv'},
     )
@@ -291,7 +272,7 @@ class TestGenreDownloadForm(Common):
     ('hoge', 'genre-hoge.csv'),
     ('foo.csv', 'genre-foo.csv'),
     ('foo.txt', 'genre-foo.txt.csv'),
-    ('.csv', 'genre-20220703-195803.csv'),
+    ('.csv', 'genre-20210703-205803.csv'),
   ], ids=[
     'norma-pattern',
     'with-extention',
@@ -717,12 +698,9 @@ def test_custom_multiple_choicefield(data):
 class TestQuizDownloadForm(Common):
   @pytest.fixture
   def set_custom_mock(self, mocker):
-    mocker.patch(
-      'quiz.forms.get_current_time',
-      return_value=datetime(2022,7,3,11,58,3,microsecond=123456,tzinfo=timezone.utc),
-    )
-    mocker.patch('quiz.models.Genre.get_response_kwargs',
-      side_effect=lambda name: {'filename': f'genre-{name}.csv'},
+    mocker.patch('quiz.forms.generate_default_filename', return_value='20210703-205803')
+    mocker.patch('quiz.models.Quiz.get_response_kwargs',
+      side_effect=lambda name, ids: {'filename': f'quiz-{name}.csv'},
     )
 
     return mocker
@@ -734,7 +712,7 @@ class TestQuizDownloadForm(Common):
     ('hoge', 'quiz-hoge.csv'),
     ('foo.csv', 'quiz-foo.csv'),
     ('foo.txt', 'quiz-foo.txt.csv'),
-    ('.csv', 'quiz-20220703-205803.csv'),
+    ('.csv', 'quiz-20210703-205803.csv'),
   ], ids=[
     'norma-pattern',
     'with-extention',

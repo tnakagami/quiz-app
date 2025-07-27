@@ -440,6 +440,27 @@ def test_check_collect_valid_creators_of_user_queryset(is_completed):
   assert queryset.count() == len(pks)
   assert all([queryset.filter(pk=pk).exists() for pk in pks])
 
+@pytest.mark.account
+@pytest.mark.model
+@pytest.mark.django_db
+def test_check_get_response_kwargs_method(mocker):
+  users = factories.UserFactory.create_batch(3, is_active=True, role=models.RoleType.CREATOR)
+  users = models.User.objects.filter(pk__in=[obj.pk for obj in users]).order_by('pk')
+  mocker.patch('account.models.User.objects.collect_creators', return_value=users)
+  kwargs = models.User.get_response_kwargs('foobar')
+  keys = kwargs.keys()
+
+  assert 'rows' in keys
+  assert 'header' in keys
+  assert 'filename' in keys
+  assert len(list(kwargs['rows'])) == len(users)
+  assert all([
+    all([item[0] == str(exact.pk), item[1] == str(exact), item[2] == exact.code])
+    for item, exact in zip(list(kwargs['rows']), users)
+  ])
+  assert len(kwargs['header']) == 3
+  assert kwargs['filename'] == 'creator-foobar.csv'
+
 # =================
 # = Role Approval =
 # =================

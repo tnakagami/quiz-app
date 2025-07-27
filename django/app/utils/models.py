@@ -114,6 +114,15 @@ def convert_timezone(utc_time, is_string=False, strformat='Y-m-d'):
   return output
 
 ##
+# @brief Generate filename based on current tile
+# @return filename Generated filename
+def generate_default_filename():
+  current_time = get_current_time()
+  filename = convert_timezone(current_time, is_string=True, strformat='Ymd-His')
+
+  return filename
+
+##
 # @brief Make hash value based on current date
 # @return digest hash value of hex string with salt given by developer
 def get_digest():

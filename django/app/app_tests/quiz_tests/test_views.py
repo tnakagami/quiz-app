@@ -1190,8 +1190,8 @@ class TestDownloadGenreView(Common):
 
   def test_check_post_access(self, mocker, get_has_creator_role_members, client):
     output = {
-      'rows': (row for row in [['hoge', 'abc'], ['foo', '123']]),
-      'header': ['name', 'pk'],
+      'rows': (row for row in [['hoge'], ['foo']]),
+      'header': ['Name'],
       'filename': 'genre-test1.csv',
     }
     mocker.patch('quiz.forms.GenreDownloadForm.create_response_kwargs', return_value=output)
@@ -1199,7 +1199,7 @@ class TestDownloadGenreView(Common):
     params = {
       'filename': 'dummy-name',
     }
-    expected = bytes('name,pk\nhoge,abc\nfoo,123\n', 'utf-8')
+    expected = bytes('Name\nhoge\nfoo\n', 'utf-8')
     # Post access
     client.force_login(user)
     response = client.post(self.form_view_url, data=params)

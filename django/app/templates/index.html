@@ -36,6 +36,18 @@
       </div>
       {% endif %}
       {% if user.has_manager_role %}
+      {# Creators #}
+      <div class="col">
+        <a href="{% url 'account:download_creator' %}" class="link-underline link-underline-opacity-0">
+          <div class="card custom-boxshadow">
+            <div class="card-header">{% trans "Manager only" %}</div>
+            <div class="card-body">
+              <p class="card-title h3">{% trans "Download creator" %}</p>
+              <p class="card-text">{% trans "Download creator list." %}</p>
+            </div>
+          </div>
+        </a>
+      </div>
       {# Quiz genres #}
       <div class="col">
         <a href="{% url 'quiz:genre_list' %}" class="link-underline link-underline-opacity-0">
@@ -66,12 +78,12 @@
           <div class="card-body">
             <p class="card-title">
               <div class="d-flex flex-row">
-                <span class=" h3">{% trans "Today&apos;s hash value" %}</span>
+                <span class="h3">{% trans "Today&apos;s hash value" %}</span>
                 <a
                   id="copy-hash-value"
                   tabindex="0"
                   role="button"
-                  class="btn btn-outline-primary px-1 py-0 mx-3 custom-boxshadow position-absolute end-0"
+                  class="btn btn-outline-primary px-1 py-0 mx-3 my-1 custom-boxshadow position-absolute end-0"
                   data-bs-toggle="popover"
                   data-bs-trigger="focus"
                   data-bs-placement="bottom"

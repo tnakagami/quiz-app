@@ -231,7 +231,7 @@ class TestGenre(Common):
     assert 'header' in keys
     assert 'filename' in keys
     assert len(list(kwargs['rows'])) == len(genres)
-    assert all([item.pk == exact.pk for item, exact in zip(kwargs['rows'], genres)])
+    assert all([item[0] == exact.name for item, exact in zip(list(kwargs['rows']), genres)])
     assert len(kwargs['header']) == 1
     assert kwargs['filename'] == 'genre-foobar.csv'
 
@@ -567,6 +567,7 @@ class TestQuiz(Common):
   def test_check_get_response_kwargs_method(self, get_quizzes_info):
     creators, _ = get_quizzes_info
     ids = creators[0].quizzes.all().order_by('genre__name', 'creator__screen_name').values_list('pk', flat=True)
+    queryset = models.Quiz.objects.filter(pk__in=list(ids))
     kwargs = models.Quiz.get_response_kwargs('hoge', ids)
     keys = kwargs.keys()
 
@@ -574,7 +575,10 @@ class TestQuiz(Common):
     assert 'header' in keys
     assert 'filename' in keys
     assert len(list(kwargs['rows'])) == len(ids)
-    assert all([item.pk == exact for item, exact in zip(kwargs['rows'], ids)])
+    assert all([
+      all([item[0] == str(exact.creator.pk), item[1] == exact.genre.name, item[2] == exact.question, item[3] == exact.answer, item[4] == exact.is_completed])
+      for item, exact in zip(list(kwargs['rows']), queryset)
+    ])
     assert len(kwargs['header']) == 5
     assert kwargs['filename'] == 'quiz-hoge.csv'
 

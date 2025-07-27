@@ -41,6 +41,18 @@ def test_check_convert_timezone(options, exact_time):
 
 @pytest.mark.utils
 @pytest.mark.model
+def test_generate_default_filename(mocker):
+  mocker.patch(
+    'utils.models.get_current_time',
+    return_value=datetime(2021,7,3,11,7,48,microsecond=123456,tzinfo=timezone.utc),
+  )
+  expected = '20210703-200748'
+  filename = models.generate_default_filename()
+
+  assert filename == expected
+
+@pytest.mark.utils
+@pytest.mark.model
 def test_check_get_digest_method(settings, mocker):
   class FakeObj:
     def hexdigest(self):

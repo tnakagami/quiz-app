@@ -7,8 +7,7 @@ from django.db.utils import IntegrityError
 from django.utils.translation import gettext_lazy
 from utils.models import (
   DualListbox,
-  get_current_time,
-  convert_timezone,
+  generate_default_filename,
   bool_converter,
 )
 from utils.forms import (
@@ -20,15 +19,6 @@ from functools import partial
 from . import models, validators
 
 UserModel = get_user_model()
-
-##
-# @brief Generate filename based on current tile
-# @return filename Generated filename
-def generate_default_filename():
-  current_time = get_current_time()
-  filename = convert_timezone(current_time, is_string=True, strformat='Ymd-His')
-
-  return filename
 
 ##
 # @brief Check csv filesize

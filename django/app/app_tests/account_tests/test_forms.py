@@ -345,6 +345,7 @@ def test_password_change_form(params, is_valid):
 # ===========================
 @pytest.mark.account
 @pytest.mark.form
+@pytest.mark.django_db
 @pytest.mark.parametrize([
   'email',
   'is_valid',
@@ -358,6 +359,8 @@ def test_password_change_form(params, is_valid):
   'over-max-length',
 ])
 def test_check_password_reset_form(email, is_valid):
+  _ = factories.UserFactory(email='hoge@example.com', is_active=True)
+  _ = factories.UserFactory(email='{}@hoge.com'.format('1'*119), is_active=True)
   params = {
     'email': email,
   }
@@ -365,6 +368,33 @@ def test_check_password_reset_form(email, is_valid):
 
   assert form.is_valid() == is_valid
 
+@pytest.mark.account
+@pytest.mark.form
+@pytest.mark.django_db
+@pytest.mark.parametrize([
+  'email',
+  'is_active',
+], [
+  ('invalid-foobar@example.com', True),
+  ('foobar@example.com', False),
+], ids=[
+  'invalid-email-address',
+  'not-active-user',
+])
+def test_invalid_email_in_password_reset_form(email, is_active):
+  _ = factories.UserFactory(email='foobar@example.com', is_active=is_active)
+  params = {
+    'email': email,
+  }
+  form = forms.CustomPasswordResetForm(data=params)
+  is_valid = form.is_valid()
+  err_msg = 'The given email address is not registered or not enabled. Please check your email address.'
+
+  assert not is_valid
+  assert err_msg in str(form.errors)
+
+@pytest.mark.account
+@pytest.mark.form
 def test_check_save_method(mocker):
   class FakeObj:
     def __init__(self):
@@ -461,6 +491,56 @@ def test_check_save_method_of_role_change_request_form(mocker, commit, count):
 
   assert ra_mock.call_count == count
 
+@pytest.fixture
+def set_custom_mock_of_creator_download_form(mocker):
+  mocker.patch('account.forms.generate_default_filename', return_value='20230704-205803')
+  mocker.patch('account.models.User.get_response_kwargs',
+    side_effect=lambda name: {'filename': f'creator-{name}.csv'},
+  )
+
+  return mocker
+
+@pytest.mark.account
+@pytest.mark.form
+@pytest.mark.django_db
+@pytest.mark.parametrize([
+  'name',
+  'expected',
+], [
+  ('hoge', 'creator-hoge.csv'),
+  ('foo.csv', 'creator-foo.csv'),
+  ('foo.txt', 'creator-foo.txt.csv'),
+  ('.csv', 'creator-20230704-205803.csv'),
+], ids=[
+  'norma-pattern',
+  'with-extention',
+  'with-other-extention',
+  'only-extension',
+])
+def test_valid_get_response_kwargs_of_creator_download_form(set_custom_mock_of_creator_download_form, name, expected):
+  _ = set_custom_mock_of_creator_download_form
+  params = {
+    'filename': name,
+  }
+  form = forms.CreatorDownloadForm(data=params)
+  is_valid = form.is_valid()
+  kwargs = form.create_response_kwargs()
+
+  assert is_valid
+  assert kwargs['filename'] == expected
+
+@pytest.mark.account
+@pytest.mark.form
+@pytest.mark.django_db
+def test_invalid_params_of_creator_download_form(set_custom_mock_of_creator_download_form):
+  _ = set_custom_mock_of_creator_download_form
+  params = {
+    'filename': '1'*129,
+  }
+  form = forms.CreatorDownloadForm(data=params)
+  is_valid = form.is_valid()
+
+  assert not is_valid
 
 # ====================
 # = RoleApprovalForm =

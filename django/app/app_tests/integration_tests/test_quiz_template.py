@@ -615,9 +615,13 @@ class TestQuizRoom(Common):
     assert rooms.count() == expected.count()
     assert self.compare_qs(rooms, expected)
 
-  def test_check_room_queryset_for_player(self, csrf_exempt_django_app, create_rooms):
+  def test_check_room_queryset_for_player(self, csrf_exempt_django_app, mocker, create_rooms):
     user, _, all_queryset = create_rooms
     app = csrf_exempt_django_app
+    # Mock for related_name's elements
+    mock_user = mocker.patch('account.models.User', side_effect=UserModel())
+    mock_user.quiz_rooms.all.return_value = all_queryset.filter(owner=user)
+    mock_user.assigned_rooms.all.return_value = all_queryset.filter(members__pk__in=[user.pk])
     response = app.get(self.room_list_url, user=user)
     rooms = models.QuizRoom.objects.filter(pk__in=[_room.pk for _room in response.context['rooms']]).order_by('pk')
     expected = all_queryset.filter(Q(owner=user) | Q(members__pk__in=[user.pk], is_enabled=True)).order_by('pk').distinct()
@@ -1146,7 +1150,7 @@ class TestDownloadGenre(Common):
     # Create expected values
     lines = '\n'.join([','.join([obj.name]) for obj in genres]) + '\n'
     expected = {
-      'data': bytes('name\n' + lines, 'utf-8'),
+      'data': bytes('Name\n' + lines, 'utf-8'),
       'filename': exact_fname,
     }
     # Send post request

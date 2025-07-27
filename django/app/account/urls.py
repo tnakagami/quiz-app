@@ -22,6 +22,8 @@ urlpatterns = [
   path('reset-password/done', views.DonePasswordResetPage.as_view(), name='done_password_reset'),
   path('confirm-password-reset/<uidb64>/<token>', views.ConfirmPasswordResetPage.as_view(), name='confirm_password_reset'),
   path('complete-password-reset', views.CompletePasswordResetPage.as_view(), name='complete_password_reset'),
+  # Download creator
+  path('download/creators', views.DownloadCreatorPage.as_view(), name='download_creator'),
   # Change role
   path('role-change-list', views.RoleChangeRequestListPage.as_view(), name='role_change_requests'),
   path('change-role', views.CreateRoleChangeRequestPage.as_view(), name='create_role_change_request'),

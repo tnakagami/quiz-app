@@ -18,6 +18,7 @@ from django.urls import reverse, reverse_lazy
 from django.http import (
   HttpResponseBadRequest,
   HttpResponseRedirect,
+  StreamingHttpResponse,
   JsonResponse,
 )
 from django.views.generic import (
@@ -27,6 +28,7 @@ from django.views.generic import (
   CreateView,
   UpdateView,
   DetailView,
+  FormView,
 )
 from utils.views import (
   CanUpdate,
@@ -37,6 +39,7 @@ from utils.views import (
   Index,
   DjangoBreadcrumbsMixin,
 )
+from utils.models import streaming_csv_file
 from . import models, forms, validators
 import json
 
@@ -269,6 +272,42 @@ class CompletePasswordResetPage(IsNotAuthenticated, PasswordResetCompleteView, D
     title=gettext_lazy('Password was reset'),
     parent_view_class=Index,
   )
+
+# =====================
+# = Download creators =
+# =====================
+class DownloadCreatorPage(LoginRequiredMixin, HasManagerRole, FormView, DjangoBreadcrumbsMixin):
+  raise_exception = True
+  form_class = forms.CreatorDownloadForm
+  template_name = 'account/download_creator.html'
+  success_url = reverse_lazy('utils:index')
+  crumbles = DjangoBreadcrumbsMixin.get_target_crumbles(
+    url_name='account:download_creator',
+    title=gettext_lazy('Download creators'),
+    parent_view_class=Index,
+  )
+
+  ##
+  # @brief Post process for form validation
+  # @param form Instance of `self.form_class`
+  # @return response Instance of StreamingHttpResponse
+  def form_valid(self, form):
+    kwargs = form.create_response_kwargs()
+    filename = kwargs['filename']
+    # Create response
+    response = StreamingHttpResponse(
+      streaming_csv_file(kwargs['rows'], header=kwargs['header']),
+      content_type='text/csv;charset=UTF-8',
+      headers={'Content-Disposition': f'attachment; filename="{filename}"'},
+    )
+    response.set_cookie(
+      'creator_download_status',
+      value='completed',
+      max_age=settings.CSV_DOWNLOAD_MAX_AGE,
+      secure=True,
+    )
+
+    return response
 
 # =============
 # = User role =

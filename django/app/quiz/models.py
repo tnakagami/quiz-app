@@ -141,7 +141,7 @@ class Genre(BaseModel):
     rows = ([obj.name] for obj in queryset.iterator())
     kwargs = {
       'rows': rows,
-      'header': ['name'],
+      'header': ['Name'],
       'filename': f'genre-{name}.csv',
     }
 

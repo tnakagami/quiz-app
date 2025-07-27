@@ -12,6 +12,7 @@ from utils.models import (
   convert_timezone,
   BaseModel,
 )
+import urllib.parse
 
 def _get_code():
   current_time = get_current_time()
@@ -295,6 +296,26 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
   def update_role(self):
     self.role = RoleType.CREATOR
     self.save()
+
+  ##
+  # @brief Write active creators
+  # @param cls This class object
+  # @param filename Output csv filename
+  # @return response Instance of django.http.HttpResponse
+  @classmethod
+  def get_response_kwargs(cls, filename):
+    # Convert filename with encoding `UTF-8`
+    name = urllib.parse.quote(filename.encode('utf-8'))
+    # Create output data
+    queryset = cls.objects.collect_creators().order_by('email')
+    rows = ([str(obj.pk), str(obj), obj.code] for obj in queryset.iterator())
+    kwargs = {
+      'rows': rows,
+      'header': ['Creator.pk', 'Screen name', 'Code'],
+      'filename': f'creator-{name}.csv',
+    }
+
+    return kwargs
 
 class RoleApprovalQuerySet(models.QuerySet):
   ##

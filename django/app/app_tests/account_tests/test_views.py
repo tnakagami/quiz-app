@@ -11,6 +11,7 @@ from app_tests import (
 )
 from account import views, models
 import json
+import urllib.parse
 
 UserModel = get_user_model()
 
@@ -575,8 +576,10 @@ def test_valid_of_not_active_user_in_reset_password_page(mocker, init_records, c
     'email': init_records[user_idx].email,
   }
   response = client.post(url, data=params)
+  errors = response.context['form'].errors
 
-  assert response.status_code == status.HTTP_302_FOUND
+  assert response.status_code == status.HTTP_200_OK
+  assert 'The given email address is not registered or not enabled. Please check your email address.' in str(errors)
   assert email_mock.call_count == 0
 
 @pytest.fixture
@@ -1392,3 +1395,89 @@ def test_invalid_request_to_individual_group_ajax_response(client):
 
   assert response.status_code == status.HTTP_200_OK
   assert len(options) == 0
+
+# =======================
+# = DownloadCreatorView =
+# =======================
+@pytest.fixture(scope='module', params=['superuser', 'manager'])
+def get_has_manager_role_members(request, django_db_blocker):
+  config = {
+    'superuser': {'is_superuser': True, 'is_staff': True, 'role': models.RoleType.GUEST},
+    'manager': {'is_superuser': False, 'is_staff': False, 'role': models.RoleType.MANAGER},
+  }
+  kwargs = config[request.param]
+  # Create user
+  with django_db_blocker.unblock():
+    user = factories.UserFactory(is_active=True, **kwargs)
+
+  return user
+
+@pytest.mark.account
+@pytest.mark.view
+@pytest.mark.django_db
+def test_check_get_access_for_creator_download_page(get_specific_users, client):
+  codes = {
+    'is-superuser': status.HTTP_200_OK,
+    'is-staff': status.HTTP_403_FORBIDDEN,
+    'is-manager': status.HTTP_200_OK,
+    'is-creator': status.HTTP_403_FORBIDDEN,
+    'is-guest': status.HTTP_403_FORBIDDEN,
+  }
+  key, user = get_specific_users
+  client.force_login(user)
+  url = reverse('account:download_creator')
+  response = client.get(url)
+
+  assert response.status_code == codes[key]
+
+@pytest.mark.account
+@pytest.mark.view
+@pytest.mark.django_db
+def test_check_post_access_for_creator_download_page(mocker, get_has_manager_role_members, client):
+  output = {
+    'rows': (row for row in [['hoge', 'abc', '123'], ['foo', 'xyz', '789']]),
+    'header': ['Creator.pk', 'Screen name', 'Code'],
+    'filename': 'creator-test1.csv',
+  }
+  mocker.patch('account.forms.CreatorDownloadForm.create_response_kwargs', return_value=output)
+  user = get_has_manager_role_members
+  params = {
+    'filename': 'dummy-name',
+  }
+  expected = bytes('Creator.pk,Screen name,Code\nhoge,abc,123\nfoo,xyz,789\n', 'utf-8')
+  # Post access
+  client.force_login(user)
+  url = reverse('account:download_creator')
+  response = client.post(url, data=params)
+  cookie = response.cookies.get('creator_download_status')
+  attachment = response.get('content-disposition')
+  stream = response.getvalue()
+
+  assert response.has_header('content-disposition')
+  assert output['filename'] == urllib.parse.unquote(attachment.split('=')[1].replace('"', ''))
+  assert cookie.value == 'completed'
+  assert expected in stream
+
+@pytest.mark.account
+@pytest.mark.view
+@pytest.mark.django_db
+@pytest.mark.parametrize([
+  'params',
+  'err_msg',
+], [
+  ({}, 'This field is required'),
+  ({'filename': '1'*129}, 'Ensure this value has at most 128 character'),
+], ids=[
+  'is-empty',
+  'too-long-filename',
+])
+def test_invalid_post_request_for_creator_download_page(get_has_manager_role_members, client, params, err_msg):
+  user = get_has_manager_role_members
+  # Post access
+  client.force_login(user)
+  url = reverse('account:download_creator')
+  response = client.post(url, data=params)
+  errors = response.context['form'].errors
+
+  assert response.status_code == status.HTTP_200_OK
+  assert err_msg in str(errors)

@@ -385,20 +385,30 @@ class TestResetPassword(Common):
     assert response.status_code == status.HTTP_200_OK
     assert get_current_path(response) == self.parent_page_url
 
+  def test_send_post_request(self, mocker, csrf_exempt_django_app):
+    email_mock = mocker.patch('django.contrib.auth.forms.EmailMultiAlternatives.send', return_value=None)
+    user = factories.UserFactory(is_active=True, email='hoge@good.email.com')
+    # Get form and submit form
+    app = csrf_exempt_django_app
+    forms = app.get(self.reset_password_url).forms
+    form = forms['reset-password-form']
+    form['email'] = 'hoge@good.email.com'
+    response = form.submit().follow()
+
+    assert response.status_code == status.HTTP_200_OK
+    assert email_mock.call_count == 1
+
   @pytest.mark.parametrize([
     'email',
     'is_active',
-    'call_count',
   ], [
-    ('hoge@good.email.com', True, 1),
-    ('hoge@good.email.com', False, 0),
-    ('nobody@bad.email', True, 0),
+    ('hoge@good.email.com', False),
+    ('nobody@bad.email', True),
   ], ids=[
-    'is-valid-request',
     'user-is-not-active',
     'user-does-not-exist',
   ])
-  def test_send_post_request(self, mocker, csrf_exempt_django_app, email, is_active, call_count):
+  def test_send_invalid_post_request(self, mocker, csrf_exempt_django_app, email, is_active):
     email_mock = mocker.patch('django.contrib.auth.forms.EmailMultiAlternatives.send', return_value=None)
     user = factories.UserFactory(is_active=is_active, email='hoge@good.email.com')
     # Get form and submit form
@@ -406,10 +416,10 @@ class TestResetPassword(Common):
     forms = app.get(self.reset_password_url).forms
     form = forms['reset-password-form']
     form['email'] = email
-    response = form.submit().follow()
+    response = form.submit()
 
     assert response.status_code == status.HTTP_200_OK
-    assert email_mock.call_count == call_count
+    assert email_mock.call_count == 0
 
   @pytest.fixture
   def get_confirm_page_url(self):
