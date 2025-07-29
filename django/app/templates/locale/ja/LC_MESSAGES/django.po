@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-07-27 04:39+0900\n"
+"POT-Creation-Date: 2025-07-28 07:42+0900\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -30,7 +30,7 @@ msgstr "リクエストされたページにアクセスする権限がありま
 msgid "404 Page Not Found"
 msgstr "404 Page Not Found"
 
-#: templates/404.html:10
+#: templates/404.html:9
 msgid "Requested URL is not found."
 msgstr "リクエストされたURLは存在しません。"
 
@@ -63,7 +63,7 @@ msgstr "本登録が完了しました。"
 msgid "Redirect to the index page after 3 seconds."
 msgstr "3秒後にトップページに遷移します。"
 
-#: templates/account/create_account.html:5 templates/header.html:72
+#: templates/account/create_account.html:5 templates/header.html:34
 msgid "Create account"
 msgstr "アカウント新規登録"
 
@@ -71,18 +71,20 @@ msgstr "アカウント新規登録"
 msgid "Provisional registration"
 msgstr "アカウント仮登録"
 
-#: templates/account/create_account.html:29 templates/account/login.html:29
+#: templates/account/create_account.html:29
+#: templates/account/download_creator.html:27 templates/account/login.html:29
 #: templates/account/passwords/password_change_form.html:27
 #: templates/account/passwords/password_reset_form.html:27
 #: templates/account/profiles/change_role_form.html:53
 #: templates/account/profiles/friend_form.html:54
 #: templates/account/profiles/group_form.html:54
 #: templates/account/profiles/profile_form.html:27
-#: templates/account/profiles/role_change_requests.html:95
+#: templates/account/profiles/role_change_requests.html:96
 #: templates/quiz/download_genre.html:27 templates/quiz/download_quiz.html:34
 #: templates/quiz/genre_form.html:27 templates/quiz/quiz_form.html:27
 #: templates/quiz/quiz_list.html:149 templates/quiz/room_form.html:31
-#: templates/quiz/room_list.html:142 templates/quiz/upload_quiz.html:76
+#: templates/quiz/room_list.html:142 templates/quiz/upload_genre.html:26
+#: templates/quiz/upload_quiz.html:76
 msgid "Cancel"
 msgstr "キャンセル"
 
@@ -91,18 +93,25 @@ msgid "Conducted provisional registration"
 msgstr "アカウントの仮登録完了"
 
 #: templates/account/done_account_creation.html:8
-msgid ""
-"Send message to your e-mail address to conduct a definitive registration."
-msgstr ""
-"本登録を行うために、入力されたメールアドレスにメッセージを送信しました。"
+msgid "Send message to your e-mail address to conduct a definitive registration."
+msgstr "本登録を行うために、入力されたメールアドレスにメッセージを送信しました。"
 
 #: templates/account/done_account_creation.html:10
 #: templates/account/passwords/done_password_reset.html:10
 msgid "Redirect to the index page after 10 seconds."
 msgstr "10秒後にトップページに遷移します。"
 
+#: templates/account/download_creator.html:5 templates/index.html:45
+msgid "Download creator"
+msgstr "クイズ制作者一覧のダウンロード"
+
+#: templates/account/download_creator.html:20
+#: templates/quiz/download_genre.html:20 templates/quiz/download_quiz.html:27
+msgid "Download"
+msgstr "ダウンロード"
+
 #: templates/account/login.html:5 templates/account/login.html:21
-#: templates/header.html:73
+#: templates/header.html:40
 msgid "Login"
 msgstr "ログイン"
 
@@ -132,11 +141,8 @@ msgstr "注意：上記のURLは、%(timelimit)s 分間のみ有効です。"
 
 #: templates/account/mail_template/password_reset/message.txt:9
 #: templates/account/mail_template/provisional_registration/message.txt:11
-msgid ""
-"This email was sent from a send-only address, so replies will not be "
-"delivered."
-msgstr ""
-"このメールは送信専用アドレスから送信されているため、返信メールは届きません。"
+msgid "This email was sent from a send-only address, so replies will not be delivered."
+msgstr "このメールは送信専用アドレスから送信されているため、返信メールは届きません。"
 
 #: templates/account/mail_template/password_reset/message.txt:11
 #: templates/account/mail_template/provisional_registration/message.txt:13
@@ -152,9 +158,7 @@ msgid "Thank you for conducting provisional registration process."
 msgstr "仮登録を行っていただき、ありがとうございます。"
 
 #: templates/account/mail_template/provisional_registration/message.txt:4
-msgid ""
-"We&apos;d like you to access the following URL to complete a definitive "
-"registration."
+msgid "We&apos;d like you to access the following URL to complete a definitive registration."
 msgstr "本登録を完了するには、以下のURLにアクセスしてください。"
 
 #: templates/account/mail_template/provisional_registration/message.txt:5
@@ -175,8 +179,7 @@ msgstr "パスワードのリセット"
 
 #: templates/account/passwords/complete_password_reset.html:8
 msgid "Your password was reset. Please login with new password."
-msgstr ""
-"パスワードがリセットされました。新しいパスワードでログインしてください。"
+msgstr "パスワードがリセットされました。新しいパスワードでログインしてください。"
 
 #: templates/account/passwords/complete_password_reset.html:11
 msgid "Go to login page"
@@ -192,7 +195,7 @@ msgstr "パスワードリセットの確認"
 
 #: templates/account/passwords/confirm_password_form.html:24
 #: templates/account/passwords/password_reset_form.html:20
-#: templates/quiz/playing_room.html:330
+#: templates/quiz/playing_room.html:342
 msgid "Send"
 msgstr "送信"
 
@@ -218,8 +221,7 @@ msgstr "パスワードリセットのリクエスト送信"
 
 #: templates/account/passwords/done_password_reset.html:8
 msgid "The request of password reset was sent to your email."
-msgstr ""
-"パスワードリセットのリクエストが指定されたメールアドレスに送信されました。"
+msgstr "パスワードリセットのリクエストが指定されたメールアドレスに送信されました。"
 
 #: templates/account/passwords/password_change_form.html:5
 #: templates/account/profiles/user_profile.html:80
@@ -318,13 +320,13 @@ msgstr "メンバ数"
 #: templates/account/profiles/group_list.html:25
 #: templates/account/profiles/role_change_requests.html:17
 #: templates/account/profiles/user_profile.html:16
-#: templates/quiz/genre_list.html:25 templates/quiz/quiz_list.html:77
+#: templates/quiz/genre_list.html:33 templates/quiz/quiz_list.html:77
 #: templates/quiz/room_list.html:42
 msgid "Operation"
 msgstr "操作"
 
 #: templates/account/profiles/group_list.html:38
-#: templates/quiz/genre_list.html:40 templates/quiz/quiz_list.html:94
+#: templates/quiz/genre_list.html:48 templates/quiz/quiz_list.html:94
 #: templates/quiz/room_list.html:67 templates/quiz/room_list.html:75
 msgid "Edit"
 msgstr "更新"
@@ -357,37 +359,37 @@ msgstr "表示名（メールアドレス）"
 msgid "Role"
 msgstr "ロール"
 
-#: templates/account/profiles/role_change_requests.html:34
+#: templates/account/profiles/role_change_requests.html:35
 #: templates/delete_modal_form.html:19
 msgid "Accept"
 msgstr "承認"
 
-#: templates/account/profiles/role_change_requests.html:43
+#: templates/account/profiles/role_change_requests.html:44
 msgid "Reject"
 msgstr "否認"
 
-#: templates/account/profiles/role_change_requests.html:57
+#: templates/account/profiles/role_change_requests.html:58
 msgid "There is no role change requests."
 msgstr "ロール変更リクエストが存在しません。"
 
-#: templates/account/profiles/role_change_requests.html:68
+#: templates/account/profiles/role_change_requests.html:69
 msgid "Confirm approval status"
 msgstr "承認状況の確認"
 
-#: templates/account/profiles/role_change_requests.html:72
+#: templates/account/profiles/role_change_requests.html:73
 msgid "Please check the following judgement result."
 msgstr "下記の判断結果を確認してください。"
 
-#: templates/account/profiles/role_change_requests.html:73
+#: templates/account/profiles/role_change_requests.html:74
 #: templates/delete_modal_form.html:11
 msgid "Target"
 msgstr "対象"
 
-#: templates/account/profiles/role_change_requests.html:74
+#: templates/account/profiles/role_change_requests.html:75
 msgid "Result"
 msgstr "判断結果"
 
-#: templates/account/profiles/role_change_requests.html:90
+#: templates/account/profiles/role_change_requests.html:91
 msgid "Submit"
 msgstr "送信"
 
@@ -400,7 +402,7 @@ msgid "Screen name"
 msgstr "表示名"
 
 #: templates/account/profiles/user_profile.html:32
-#: templates/account/profiles/user_profile.html:50 templates/index.html:78
+#: templates/account/profiles/user_profile.html:50 templates/index.html:90
 #: templates/quiz/upload_quiz.html:33
 msgid "Copied!"
 msgstr "コピーしました"
@@ -433,11 +435,15 @@ msgstr "閉じる"
 msgid "L.E.D Quiz"
 msgstr "L.E.D Quiz"
 
-#: templates/header.html:58
+#: templates/header.html:25
+msgid "Contents"
+msgstr "Contents"
+
+#: templates/header.html:47
 msgid "User Profile"
 msgstr "ユーザプロフィール"
 
-#: templates/header.html:66
+#: templates/header.html:59
 msgid "Logout"
 msgstr "ログアウト"
 
@@ -446,8 +452,8 @@ msgid "Index"
 msgstr "Index"
 
 #: templates/index.html:9
-msgid "Please login from above link or create new account."
-msgstr "上記のリンクからログインまたはアカウントの新規登録を行ってください。"
+msgid "Please login from side-bar link or create new account."
+msgstr "サイドバーからログインまたはアカウントの新規登録を行ってください。"
 
 #: templates/index.html:16
 msgid "Allowed all users"
@@ -459,10 +465,10 @@ msgstr "クイズルーム"
 
 #: templates/index.html:19
 msgid "Check/Create/Update/Delete quiz room."
-msgstr "クイズルームの確認／作成／更新／削除"
+msgstr "クイズルームの確認／作成／更新／削除を行います。"
 
 #: templates/index.html:29
-msgid "Create or manager only"
+msgid "Creator or manager only"
 msgstr "クイズ制作者／管理者のみ"
 
 #: templates/index.html:31
@@ -471,39 +477,40 @@ msgstr "クイズ"
 
 #: templates/index.html:32
 msgid "Check/Create/Update/Delete quizzes."
-msgstr "クイズの確認／作成／更新／削除"
+msgstr "クイズの確認／作成／更新／削除を行います。"
 
-#: templates/index.html:43 templates/index.html:55 templates/index.html:65
+#: templates/index.html:43 templates/index.html:55 templates/index.html:67
+#: templates/index.html:77
 msgid "Manager only"
 msgstr "管理者のみ"
 
-#: templates/index.html:45
+#: templates/index.html:46
+msgid "Download creator list."
+msgstr "クイズ制作者一覧をダウンロードします。"
+
+#: templates/index.html:57
 msgid "Quiz genre"
 msgstr "ジャンル"
 
-#: templates/index.html:46
+#: templates/index.html:58
 msgid "Check/Create/Update quiz genres."
-msgstr "ジャンルの確認／作成／更新"
+msgstr "ジャンルの確認／作成／更新を行います。"
 
-#: templates/index.html:57
+#: templates/index.html:69
 msgid "Role change request"
 msgstr "ロール変更リクエスト"
 
-#: templates/index.html:58
+#: templates/index.html:70
 msgid "Check/update role change requests."
-msgstr "ロール変更リクエストの確認／更新"
+msgstr "ロール変更リクエストの確認／更新を行います。"
 
-#: templates/index.html:69
+#: templates/index.html:81
 msgid "Today&apos;s hash value"
 msgstr "今日のハッシュ値"
 
 #: templates/quiz/download_genre.html:5 templates/quiz/quiz_list.html:49
 msgid "Download genre"
 msgstr "ジャンルのダウンロード"
-
-#: templates/quiz/download_genre.html:20 templates/quiz/download_quiz.html:27
-msgid "Download"
-msgstr "ダウンロード"
 
 #: templates/quiz/download_quiz.html:10 templates/quiz/quiz_list.html:59
 msgid "Download quiz"
@@ -560,15 +567,19 @@ msgstr "ジャンル一覧"
 msgid "Create a new genre"
 msgstr "ジャンルの新規作成"
 
-#: templates/quiz/genre_list.html:23
+#: templates/quiz/genre_list.html:22 templates/quiz/upload_genre.html:5
+msgid "Upload genre"
+msgstr "ジャンルのアップロード"
+
+#: templates/quiz/genre_list.html:31
 msgid "Genre name"
 msgstr "ジャンル名"
 
-#: templates/quiz/genre_list.html:24
+#: templates/quiz/genre_list.html:32
 msgid "#Created quizzes"
 msgstr "作成済みクイズ数"
 
-#: templates/quiz/genre_list.html:54
+#: templates/quiz/genre_list.html:62
 msgid "There is no genres."
 msgstr "ジャンルが存在しません。"
 
@@ -640,15 +651,15 @@ msgstr "加点"
 msgid "Judgement"
 msgstr "判定"
 
-#: templates/quiz/playing_room.html:284 templates/quiz/playing_room.html:311
+#: templates/quiz/playing_room.html:290 templates/quiz/playing_room.html:323
 msgid "Correct"
 msgstr "正解"
 
-#: templates/quiz/playing_room.html:288 templates/quiz/playing_room.html:315
+#: templates/quiz/playing_room.html:294 templates/quiz/playing_room.html:327
 msgid "Incorrect"
 msgstr "不正解"
 
-#: templates/quiz/playing_room.html:533
+#: templates/quiz/playing_room.html:550
 msgid "The score table is updated. Please check it."
 msgstr "スコアテーブルが更新されました。確認してください。"
 
@@ -674,7 +685,7 @@ msgstr "補助機能"
 
 #: templates/quiz/quiz_list.html:54 templates/quiz/upload_quiz.html:16
 msgid "Upload quiz"
-msgstr "クイズのアップロード"
+msgstr "クイズアップロード"
 
 #: templates/quiz/quiz_list.html:118
 msgid "There is no quizzes."
@@ -732,17 +743,18 @@ msgstr "クイズルームのフィルタリング"
 msgid "Enter the room name (partial match search possible)"
 msgstr "クイズルーム名の入力（部分一致検索も可能）"
 
+#: templates/quiz/upload_genre.html:19 templates/quiz/upload_quiz.html:69
+msgid "Upload"
+msgstr "アップロード"
+
 #: templates/quiz/upload_quiz.html:24
 msgid "Your role is CREATOR"
 msgstr "ロール：　クイズ制作者"
 
 #: templates/quiz/upload_quiz.html:39
 msgid ""
-"You can only upload own quizzes. Your account ID is shown below and you can "
-"copy it using upper-right button."
-msgstr ""
-"自身が作成したクイズのみアップロードできます。また、右上のボタンからあなたの"
-"アカウントIDをコピーできます。"
+"You can only upload own quizzes. Your account ID is shown below and you can copy it using upper-right button."
+msgstr "自身が作成したクイズのみアップロードできます。また、右上のボタンからあなたのアカウントIDをコピーできます。"
 
 #: templates/quiz/upload_quiz.html:41
 msgid "Your account ID (secret)"
@@ -755,7 +767,3 @@ msgstr "ロール：　管理者"
 #: templates/quiz/upload_quiz.html:49
 msgid "You can upload all creator's quizzes."
 msgstr "すべてのクイズ制作者のクイズをアップロードできます。"
-
-#: templates/quiz/upload_quiz.html:69
-msgid "Upload"
-msgstr "アップロード"

@@ -19,55 +19,55 @@ import urllib.parse
 
 UserModel = get_user_model()
 
+@pytest.fixture(scope='module', params=['superuser', 'manager', 'creator', 'guest'])
+def get_user(django_db_blocker, request):
+  patterns = {
+    'superuser': {'is_active': True, 'is_staff': True, 'is_superuser': True, 'role': RoleType.GUEST},
+    'manager': {'is_active': True, 'role': RoleType.MANAGER},
+    'creator': {'is_active': True, 'role': RoleType.CREATOR},
+    'guest': {'is_active': True, 'role': RoleType.GUEST},
+  }
+  key = request.param
+  kwargs = patterns[key]
+  # Get user instance
+  with django_db_blocker.unblock():
+    user = factories.UserFactory(**kwargs)
+
+  return key, user
+
+@pytest.fixture(scope='module')
+def get_manager(django_db_blocker):
+  with django_db_blocker.unblock():
+    manager = factories.UserFactory(is_active=True, role=RoleType.MANAGER)
+
+  return manager
+
+@pytest.fixture(scope='module')
+def get_creator(django_db_blocker):
+  with django_db_blocker.unblock():
+    creator = factories.UserFactory(is_active=True, role=RoleType.CREATOR)
+
+  return creator
+
+@pytest.fixture(scope='module', params=['is-manager', 'is-creator'])
+def get_has_creator_role_members(get_manager, get_creator, request):
+  if request.param == 'is-manager':
+    user = get_manager
+  else:
+    user = get_creator
+
+  return user
+
+@pytest.fixture(scope='module')
+def get_guest(django_db_blocker):
+  with django_db_blocker.unblock():
+    guest = factories.UserFactory(is_active=True, role=RoleType.GUEST)
+
+  return guest
+
 class Common:
   pk_convertor = lambda _self, xs: [item.pk for item in xs]
   compare_qs = lambda _self, qs, exacts: all([val.pk == exact.pk for val, exact in zip(qs, exacts)])
-
-  @pytest.fixture(scope='module', params=['superuser', 'manager', 'creator', 'guest'])
-  def get_user(self, django_db_blocker, request):
-    patterns = {
-      'superuser': {'is_active': True, 'is_staff': True, 'is_superuser': True, 'role': RoleType.GUEST},
-      'manager': {'is_active': True, 'role': RoleType.MANAGER},
-      'creator': {'is_active': True, 'role': RoleType.CREATOR},
-      'guest': {'is_active': True, 'role': RoleType.GUEST},
-    }
-    key = request.param
-    kwargs = patterns[key]
-    # Get user instance
-    with django_db_blocker.unblock():
-      user = factories.UserFactory(**kwargs)
-
-    return key, user
-
-  @pytest.fixture(scope='module')
-  def get_manager(self, django_db_blocker):
-    with django_db_blocker.unblock():
-      manager = factories.UserFactory(is_active=True, role=RoleType.MANAGER)
-
-    return manager
-
-  @pytest.fixture(scope='module')
-  def get_creator(self, django_db_blocker):
-    with django_db_blocker.unblock():
-      creator = factories.UserFactory(is_active=True, role=RoleType.CREATOR)
-
-    return creator
-
-  @pytest.fixture(scope='module', params=['is-manager', 'is-creator'])
-  def get_has_creator_role_members(self, get_manager, get_creator, request):
-    if request.param == 'is-manager':
-      user = get_manager
-    else:
-      user = get_creator
-
-    return user
-
-  @pytest.fixture(scope='module')
-  def get_guest(self, django_db_blocker):
-    with django_db_blocker.unblock():
-      guest = factories.UserFactory(is_active=True, role=RoleType.GUEST)
-
-    return guest
 
 # =============
 # = GenreView =

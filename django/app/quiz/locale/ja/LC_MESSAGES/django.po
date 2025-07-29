@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-07-27 04:15+0900\n"
+"POT-Creation-Date: 2025-07-28 07:42+0900\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,372 +18,363 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-#: quiz/consumers.py:268
+#: quiz/consumers.py:279
 #, python-brace-format
 msgid "Join {name} to {room}"
-msgstr "{name} さんが {room} に参加"
+msgstr "{name} さんが {room} に参加しました。"
 
-#: quiz/consumers.py:293
+#: quiz/consumers.py:304
 #, python-brace-format
 msgid "Leave {name} from {room}"
-msgstr "{name} さんが {room} を退出"
+msgstr "{name} さんが {room} を退出しました。"
 
-#: quiz/consumers.py:348
+#: quiz/consumers.py:359
 msgid "Status reset is completed"
 msgstr "初期化完了"
 
-#: quiz/consumers.py:370
+#: quiz/consumers.py:381
 msgid "The next quiz is received."
 msgstr "次の問題の取得完了"
 
-#: quiz/consumers.py:391
+#: quiz/consumers.py:402
 msgid "All players received the quiz."
 msgstr "全メンバのクイズ取得完了"
 
-#: quiz/consumers.py:440
+#: quiz/consumers.py:451
 msgid "Responses have ended. No more responses will be accepted."
 msgstr "回答時間終了（これ以降は回答を受け付けません）"
 
-#: quiz/consumers.py:460
+#: quiz/consumers.py:471
 msgid "All player’s answers are received."
 msgstr "全メンバの回答取得完了"
 
-#: quiz/consumers.py:485
+#: quiz/consumers.py:496
 msgid "All quizzes have been asked. Please press the reset button."
 msgstr "全問出題済み。初期化ボタンを押してください。"
 
-#: quiz/consumers.py:487
+#: quiz/consumers.py:498
 msgid "The score is updated. Please next quiz."
 msgstr "スコアを更新しました。次のクイズを出題してください。"
 
-#: quiz/forms.py:47 quiz/forms.py:531
-msgid "Enable/Disable"
-msgstr "有効／無効"
-
-#: quiz/forms.py:52 quiz/forms.py:536 quiz/models.py:40 quiz/models.py:423
-msgid "Enable"
-msgstr "有効"
-
-#: quiz/forms.py:53 quiz/forms.py:537
-msgid "Disable"
-msgstr "無効"
-
-#: quiz/forms.py:60 quiz/models.py:42
-msgid "Describes whether this genre is enabled or not."
-msgstr "ジャンルが有効かどうかを表す。"
-
-#: quiz/forms.py:67 quiz/forms.py:348
-msgid "CSV filename"
-msgstr "CSVファイル名"
-
-#: quiz/forms.py:74 quiz/forms.py:355
-msgid "You don’t have to enter the extention."
-msgstr "拡張子を入力する必要はありません。"
-
-#: quiz/forms.py:103 quiz/models.py:156
-msgid "Genre"
-msgstr "ジャンル"
-
-#: quiz/forms.py:108 quiz/forms.py:509
-msgid "Available genres (#Quizzes)"
-msgstr "有効なジャンル（該当クイズ数）"
-
-#: quiz/forms.py:109 quiz/forms.py:510
-msgid "Assigned genres (#Quizzes)"
-msgstr "選択済みジャンル（該当クイズ数）"
-
-#: quiz/forms.py:115 quiz/models.py:150
-msgid "Creator"
-msgstr "クイズ制作者"
-
-#: quiz/forms.py:120 quiz/forms.py:515
-msgid "Available creators (#Quizzes, Code)"
-msgstr "有効なクイズ制作者（該当クイズ数、コード）"
-
-#: quiz/forms.py:121 quiz/forms.py:516
-msgid "Assigned creators (#Quizzes, Code)"
-msgstr "選択済みクイズ制作者（該当クイズ数、コード）"
-
-#: quiz/forms.py:127
-msgid "Search condition"
-msgstr "検索条件"
-
-#: quiz/forms.py:132
-msgid "AND"
-msgstr "AND"
-
-#: quiz/forms.py:133
-msgid "OR"
-msgstr "OR"
-
-#: quiz/forms.py:140
-msgid "Describes whether the search condition is \"OR\" or not."
-msgstr "検索条件が「OR」かどうかを表す。"
-
-#: quiz/forms.py:232
+#: quiz/forms.py:32
 #, python-format
 msgid "Input filesize is too large. Max filesize: %(size)d MB"
 msgstr "入力ファイルサイズが大きすぎます。最大サイズ： %(size)d MB"
 
-#: quiz/forms.py:243
+#: quiz/forms.py:53 quiz/forms.py:618
+msgid "Enable/Disable"
+msgstr "有効／無効"
+
+#: quiz/forms.py:58 quiz/forms.py:623 quiz/models.py:41 quiz/models.py:482
+msgid "Enable"
+msgstr "有効"
+
+#: quiz/forms.py:59 quiz/forms.py:624
+msgid "Disable"
+msgstr "無効"
+
+#: quiz/forms.py:66 quiz/models.py:43
+msgid "Describes whether this genre is enabled or not."
+msgstr "ジャンルが有効かどうかを表す。"
+
+#: quiz/forms.py:73 quiz/forms.py:330
 msgid "Encoding"
 msgstr "エンコーディング"
 
-#: quiz/forms.py:255
-msgid ""
-"In general, please select \"Shift-JIS\" in Windows OS, \"UTF-8\" in Linux "
-"like OS."
-msgstr ""
-"一般に、Windows OSなら「Shift-JIS」、Linux系OSなら「UTF-8」を選択してくださ"
-"い。"
+#: quiz/forms.py:85 quiz/forms.py:342
+msgid "In general, please select \"Shift-JIS\" in Windows OS, \"UTF-8\" in Linux like OS."
+msgstr "一般に、Windows OSなら「Shift-JIS」、Linux系OSなら「UTF-8」を選択してください。"
 
-#: quiz/forms.py:259
+#: quiz/forms.py:89 quiz/forms.py:346
 msgid "CSV file"
 msgstr "CSVファイル"
 
-#: quiz/forms.py:267
+#: quiz/forms.py:97 quiz/forms.py:354
 msgid "The extention has to be \".csv\"."
 msgstr "拡張子は「.csv」である必要があります。"
 
-#: quiz/forms.py:271
+#: quiz/forms.py:101 quiz/forms.py:358
 msgid "The extention is \".csv\" only."
 msgstr "拡張子は「.csv」だけ有効です。"
 
-#: quiz/forms.py:275
+#: quiz/forms.py:105 quiz/forms.py:362
 msgid "With header/Without header"
 msgstr "ヘッダあり／ヘッダなし"
 
-#: quiz/forms.py:280
+#: quiz/forms.py:110 quiz/forms.py:367
 msgid "With header"
 msgstr "ヘッダあり"
 
-#: quiz/forms.py:281
+#: quiz/forms.py:111 quiz/forms.py:368
 msgid "Without header"
 msgstr "ヘッダなし"
 
-#: quiz/forms.py:288
+#: quiz/forms.py:118 quiz/forms.py:375
 msgid "Describes whether the csv file has header or not."
 msgstr "CSVファイルのヘッダ有無を表す。"
 
-#: quiz/forms.py:332
+#: quiz/forms.py:158 quiz/forms.py:419
 #, python-format
 msgid "Include invalid records. Please check the detail: %(ex)s."
 msgstr "無効なデータが含まれます。詳細を確認してください： %(ex)s"
 
-#: quiz/forms.py:437
+#: quiz/forms.py:170 quiz/forms.py:435
+msgid "CSV filename"
+msgstr "CSVファイル名"
+
+#: quiz/forms.py:177 quiz/forms.py:442
+msgid "You don’t have to enter the extention."
+msgstr "拡張子を入力する必要はありません。"
+
+#: quiz/forms.py:206 quiz/models.py:213
+msgid "Genre"
+msgstr "ジャンル"
+
+#: quiz/forms.py:211 quiz/forms.py:596
+msgid "Available genres (#Quizzes)"
+msgstr "有効なジャンル（該当クイズ数）"
+
+#: quiz/forms.py:212 quiz/forms.py:597
+msgid "Assigned genres (#Quizzes)"
+msgstr "選択済みジャンル（該当クイズ数）"
+
+#: quiz/forms.py:218 quiz/models.py:207
+msgid "Creator"
+msgstr "クイズ制作者"
+
+#: quiz/forms.py:223 quiz/forms.py:602
+msgid "Available creators (#Quizzes, Code)"
+msgstr "有効なクイズ制作者（該当クイズ数、コード）"
+
+#: quiz/forms.py:224 quiz/forms.py:603
+msgid "Assigned creators (#Quizzes, Code)"
+msgstr "選択済みクイズ制作者（該当クイズ数、コード）"
+
+#: quiz/forms.py:230
+msgid "Search condition"
+msgstr "検索条件"
+
+#: quiz/forms.py:235
+msgid "AND"
+msgstr "AND"
+
+#: quiz/forms.py:236
+msgid "OR"
+msgstr "OR"
+
+#: quiz/forms.py:243
+msgid "Describes whether the search condition is \"OR\" or not."
+msgstr "検索条件が「OR」かどうかを表す。"
+
+#: quiz/forms.py:524
 msgid "Created/Creating"
 msgstr "作成完了／作成中"
 
-#: quiz/forms.py:442
+#: quiz/forms.py:529
 msgid "Created"
 msgstr "作成完了"
 
-#: quiz/forms.py:443
+#: quiz/forms.py:530
 msgid "Creating"
 msgstr "作成中"
 
-#: quiz/forms.py:450 quiz/models.py:173
+#: quiz/forms.py:537 quiz/models.py:230
 msgid "Describes whether the creation of this quiz is completed or not."
 msgstr "このクイズの作成状態が完了かどうかを表す。"
 
-#: quiz/forms.py:469
+#: quiz/forms.py:556
 msgid "Need to be a creator role. Please check your role."
 msgstr "クイズ制作者のロールが必要です。ロールを確認してください。"
 
-#: quiz/forms.py:475
+#: quiz/forms.py:562
 msgid "name"
 msgstr "ルーム名"
 
-#: quiz/forms.py:521
+#: quiz/forms.py:608
 msgid "Available members"
 msgstr "有効なメンバ"
 
-#: quiz/forms.py:522
+#: quiz/forms.py:609
 msgid "Assigned members"
 msgstr "選択済みメンバ"
 
-#: quiz/forms.py:544 quiz/models.py:425
+#: quiz/forms.py:631 quiz/models.py:484
 msgid "Describes whether this quiz room is enabled or not."
 msgstr "このクイズルームが有効かどうかを表す。"
 
-#: quiz/forms.py:548
+#: quiz/forms.py:635
 msgid "Individual group"
 msgstr "個人グループ"
 
-#: quiz/forms.py:555
+#: quiz/forms.py:642
 msgid "Select a group to filter specific users."
-msgstr "特定のユーザをフィルタリングするためにグループを選択"
+msgstr "特定のユーザをフィルタリングするためにグループを選択してください。"
 
-#: quiz/forms.py:582
+#: quiz/forms.py:669
 msgid "You have to assign at least one of genres or creators to the quiz room."
-msgstr ""
-"少なくとも1つのジャンルまたは1人のクイズ制作者を選択する必要があります。"
+msgstr "少なくとも1つのジャンルまたは1人のクイズ制作者を選択する必要があります。"
 
-#: quiz/forms.py:591
+#: quiz/forms.py:678
 #, python-format
-msgid ""
-"The number of quizzes this system can set is %(max_count)s, but the "
-"requested value is %(max_question)s. Please check the condition."
-msgstr ""
-"この条件で扱えるクイズの数は、%(max_count)s ですが、要求された最大出題数は "
-"%(max_question)s です。条件を確認してください。"
+msgid "The number of quizzes this system can set is %(max_count)s, but the requested value is %(max_question)s. Please check the condition."
+msgstr "この条件で扱えるクイズの数は、%(max_count)s ですが、要求された最大出題数は %(max_question)s です。条件を確認してください。"
 
-#: quiz/models.py:34
+#: quiz/models.py:35
 msgid "Genre name"
 msgstr "ジャンル名"
 
-#: quiz/models.py:37 quiz/models.py:394
+#: quiz/models.py:38 quiz/models.py:453
 msgid "Required. 128 characters or fewer."
 msgstr "必須。128文字以下。"
 
-#: quiz/models.py:45 quiz/models.py:428
+#: quiz/models.py:46 quiz/models.py:487
 msgid "Created time"
 msgstr "作成日時"
 
-#: quiz/models.py:161
-msgid "Question"
-msgstr "問題"
-
-#: quiz/models.py:163
-msgid "Enter the question."
-msgstr "クイズの問題文を入力"
-
-#: quiz/models.py:166
-msgid "Answer"
-msgstr "解答"
-
-#: quiz/models.py:168
-msgid "Enter the answer for the question."
-msgstr "問題文に対する解答を入力"
-
-#: quiz/models.py:171
-msgid "Creation status"
-msgstr "作成状況"
-
-#: quiz/models.py:203 quiz/models.py:209
-msgid "(Not set)"
-msgstr "（未設定）"
-
-#: quiz/models.py:274
+#: quiz/models.py:108 quiz/models.py:333
 #, python-format
 msgid "The csv file includes invalid genre(s). Details: %(genres)s"
 msgstr "CSVファイルに無効なジャンルが含まれます。詳細： %(genres)s"
 
-#: quiz/models.py:284
+#: quiz/models.py:218
+msgid "Question"
+msgstr "問題"
+
+#: quiz/models.py:220
+msgid "Enter the question."
+msgstr "クイズの問題文を入力してください。"
+
+#: quiz/models.py:223
+msgid "Answer"
+msgstr "解答"
+
+#: quiz/models.py:225
+msgid "Enter the answer for the question."
+msgstr "問題文に対する解答を入力してください。"
+
+#: quiz/models.py:228
+msgid "Creation status"
+msgstr "作成状況"
+
+#: quiz/models.py:260 quiz/models.py:266
+msgid "(Not set)"
+msgstr "（未設定）"
+
+#: quiz/models.py:343
 #, python-format
 msgid "The csv file includes invalid creator(s). Details: %(creators)s"
 msgstr "CSVファイルに無効なクイズ制作者が含まれます。詳細： %(creators)s"
 
-#: quiz/models.py:294
+#: quiz/models.py:353
 #, python-format
 msgid "The csv file includes invalid value(s). Details: %(value)s"
 msgstr "CSVファイルに無効な値が含まれます。詳細： %(value)s"
 
-#: quiz/models.py:387
+#: quiz/models.py:446
 msgid "Owner"
 msgstr "所有者"
 
-#: quiz/models.py:392
+#: quiz/models.py:451
 msgid "Quiz room name"
 msgstr "クイズルーム名"
 
-#: quiz/models.py:400
+#: quiz/models.py:459
 msgid "Genres"
 msgstr "ジャンル"
 
-#: quiz/models.py:401
+#: quiz/models.py:460
 msgid "Genres used in the quiz room"
 msgstr "出題対象のジャンル"
 
-#: quiz/models.py:407
+#: quiz/models.py:466
 msgid "Creators"
 msgstr "クイズ制作者"
 
-#: quiz/models.py:408
+#: quiz/models.py:467
 msgid "Creators used in the quiz room"
 msgstr "出題対象のクイズ制作者"
 
-#: quiz/models.py:414
+#: quiz/models.py:473
 msgid "Room members"
 msgstr "ルームメンバ"
 
-#: quiz/models.py:415
+#: quiz/models.py:474
 msgid "Members assigned to the quiz room"
 msgstr "ルームに割り当て済みのメンバ"
 
-#: quiz/models.py:418
+#: quiz/models.py:477
 msgid "Max question"
 msgstr "最大出題数"
 
-#: quiz/models.py:420
+#: quiz/models.py:479
 msgid "The maximum number of questions"
 msgstr "出題するクイズの最大数"
 
-#: quiz/models.py:549
+#: quiz/models.py:608
 msgid "You have to assign only creators."
 msgstr "クイズ制作者のみ割り当てる必要があります。"
 
-#: quiz/models.py:555
+#: quiz/models.py:614
 msgid "You have to assign only players whose role is `Guest` or `Creator`."
 msgstr "「一般ユーザ」または「クイズ制作者」のみを割り当てる必要があります。"
 
-#: quiz/models.py:561
+#: quiz/models.py:620
 msgid "Start"
 msgstr "開始"
 
-#: quiz/models.py:562
+#: quiz/models.py:621
 msgid "Waiting"
 msgstr "出題終了"
 
-#: quiz/models.py:563
+#: quiz/models.py:622
 msgid "Sent question"
 msgstr "問題文を送信済み"
 
-#: quiz/models.py:564
+#: quiz/models.py:623
 msgid "Answering"
 msgstr "出題中"
 
-#: quiz/models.py:565
+#: quiz/models.py:624
 msgid "Received answers"
 msgstr "回答受領済み"
 
-#: quiz/models.py:566
+#: quiz/models.py:625
 msgid "Judging"
 msgstr "判定中"
 
-#: quiz/models.py:567
+#: quiz/models.py:626
 msgid "End"
 msgstr "終了"
 
-#: quiz/models.py:575
+#: quiz/models.py:634
 msgid "Room"
 msgstr "クイズルーム"
 
-#: quiz/models.py:580
+#: quiz/models.py:639
 msgid "Status"
 msgstr "状態"
 
-#: quiz/models.py:585
+#: quiz/models.py:644
 msgid "Index"
 msgstr "Index"
 
-#: quiz/models.py:588
+#: quiz/models.py:647
 msgid "The n-th question"
 msgstr "第 n 番目の問題"
 
-#: quiz/models.py:591
+#: quiz/models.py:650
 msgid "Sequence"
 msgstr "出題順"
 
-#: quiz/models.py:594
+#: quiz/models.py:653
 msgid "Sequence of questions"
 msgstr "クイズの出題順"
 
-#: quiz/models.py:597
+#: quiz/models.py:656
 msgid "Detail score"
 msgstr "詳細スコア"
 
-#: quiz/models.py:600
+#: quiz/models.py:659
 msgid "Detail score of each member."
 msgstr "各メンバの詳細スコア"
 
@@ -395,8 +386,7 @@ msgstr "%(idx)d 行目のデータ長が不適切です。"
 #: quiz/validators.py:69
 #, python-format
 msgid "Failed to decode in line %(idx)d (Encoding: %(encoding)s)."
-msgstr ""
-"%(idx)d 行目のデコードに失敗しました（エンコーディング： %(encoding)s）"
+msgstr "%(idx)d 行目のデコードに失敗しました（エンコーディング： %(encoding)s）"
 
 #: quiz/validators.py:75
 #, python-format
@@ -428,13 +418,17 @@ msgid "Create/Update quiz room"
 msgstr "クイズルーム作成／更新"
 
 #: quiz/views.py:272
+msgid "Upload genre"
+msgstr "ジャンルのアップロード"
+
+#: quiz/views.py:299
 msgid "Download genres"
-msgstr "ジャンルダウンロード"
+msgstr "ジャンルのダウンロード"
 
-#: quiz/views.py:305
+#: quiz/views.py:332
 msgid "Upload quiz"
-msgstr "クイズアップロード"
+msgstr "クイズのアップロード"
 
-#: quiz/views.py:343
+#: quiz/views.py:370
 msgid "Download quiz"
-msgstr "クイズダウンロード"
+msgstr "クイズのダウンロード"

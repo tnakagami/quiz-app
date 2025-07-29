@@ -60,22 +60,22 @@ def test_invalid_check_filesize_function(mock_csv_filesize):
 
   assert err_msg in str(ex.value)
 
+@pytest.fixture(params=['is-creator', 'is-manager'], scope='module')
+def get_quiz_accounts(request, django_db_blocker):
+  config = {
+    'is-creator': {'is_active': True, 'role': RoleType.CREATOR},
+    'is-manager': {'is_active': True, 'role': RoleType.MANAGER},
+  }
+  key = request.param
+  # Create account
+  with django_db_blocker.unblock():
+    kwargs = config[key]
+    user = factories.UserFactory(**kwargs)
+
+  return user
+
 class Common:
   pk_convertor = lambda _self, xs: [val.pk for val in xs]
-
-  @pytest.fixture(params=['is-creator', 'is-manager'], scope='module')
-  def get_quiz_accounts(self, request, django_db_blocker):
-    config = {
-      'is-creator': {'is_active': True, 'role': RoleType.CREATOR},
-      'is-manager': {'is_active': True, 'role': RoleType.MANAGER},
-    }
-    key = request.param
-    # Create account
-    with django_db_blocker.unblock():
-      kwargs = config[key]
-      user = factories.UserFactory(**kwargs)
-
-    return user
 
 # =============
 # = GenreForm =

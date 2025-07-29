@@ -12,39 +12,39 @@ from quiz import models
 
 UserModel = get_user_model()
 
+@pytest.fixture(scope='module', params=[
+  'superuser-manager',
+  'superuser-creator',
+  'superuser-guest',
+  'staff-manager',
+  'staff-creator',
+  'staff-guest',
+  'normal-manager',
+  'normal-creator',
+  'normal-guest',
+  'not-active',
+], ids=lambda xs: str(xs))
+def get_user(django_db_blocker, request):
+  with django_db_blocker.unblock():
+    _user_table = {
+      'superuser-manager': factories.UserFactory(is_active=True, is_staff=True, is_superuser=True, role=RoleType.MANAGER),
+      'superuser-creator': factories.UserFactory(is_active=True, is_staff=True, is_superuser=True, role=RoleType.CREATOR),
+      'superuser-guest': factories.UserFactory(is_active=True, is_staff=True, is_superuser=True, role=RoleType.GUEST),
+      'staff-manager': factories.UserFactory(is_active=True, is_staff=True, role=RoleType.MANAGER),
+      'staff-creator': factories.UserFactory(is_active=True, is_staff=True, role=RoleType.CREATOR),
+      'staff-guest': factories.UserFactory(is_active=True, is_staff=True, role=RoleType.GUEST),
+      'normal-manager': factories.UserFactory(is_active=True, role=RoleType.MANAGER),
+      'normal-creator': factories.UserFactory(is_active=True, role=RoleType.CREATOR),
+      'normal-guest': factories.UserFactory(is_active=True, role=RoleType.GUEST),
+      'not-active': factories.UserFactory(is_active=False),
+    }
+  key = request.param
+  user = _user_table[key]
+
+  return key, user
+
 class Common:
   pk_convertor = lambda _self, xs: [item.pk for item in xs]
-
-  @pytest.fixture(scope='module', params=[
-    'superuser-manager',
-    'superuser-creator',
-    'superuser-guest',
-    'staff-manager',
-    'staff-creator',
-    'staff-guest',
-    'normal-manager',
-    'normal-creator',
-    'normal-guest',
-    'not-active',
-  ], ids=lambda xs: str(xs))
-  def get_user(self, django_db_blocker, request):
-    with django_db_blocker.unblock():
-      _user_table = {
-        'superuser-manager': factories.UserFactory(is_active=True, is_staff=True, is_superuser=True, role=RoleType.MANAGER),
-        'superuser-creator': factories.UserFactory(is_active=True, is_staff=True, is_superuser=True, role=RoleType.CREATOR),
-        'superuser-guest': factories.UserFactory(is_active=True, is_staff=True, is_superuser=True, role=RoleType.GUEST),
-        'staff-manager': factories.UserFactory(is_active=True, is_staff=True, role=RoleType.MANAGER),
-        'staff-creator': factories.UserFactory(is_active=True, is_staff=True, role=RoleType.CREATOR),
-        'staff-guest': factories.UserFactory(is_active=True, is_staff=True, role=RoleType.GUEST),
-        'normal-manager': factories.UserFactory(is_active=True, role=RoleType.MANAGER),
-        'normal-creator': factories.UserFactory(is_active=True, role=RoleType.CREATOR),
-        'normal-guest': factories.UserFactory(is_active=True, role=RoleType.GUEST),
-        'not-active': factories.UserFactory(is_active=False),
-      }
-    key = request.param
-    user = _user_table[key]
-
-    return key, user
 
 # =========
 # = Genre =
@@ -238,6 +238,19 @@ class TestGenre(Common):
 # ========
 # = Quiz =
 # ========
+@pytest.fixture(scope='class')
+def get_quizzes_info(django_db_blocker, get_genres):
+  with django_db_blocker.unblock():
+    creators = factories.UserFactory.create_batch(3, is_active=True, role=RoleType.CREATOR)
+    genres = get_genres[:4]
+    # Create quiz
+    for creator in creators:
+      for genre in genres:
+        _ = factories.QuizFactory(creator=creator, genre=genre, is_completed=True)
+    models.Quiz.objects.filter(creator=creators[0], genre=genres[2]).update(is_completed=False)
+
+  return creators, genres
+
 @pytest.mark.quiz
 @pytest.mark.model
 @pytest.mark.django_db
@@ -316,19 +329,6 @@ class TestQuiz(Common):
     out = instance._split_text(**kwargs)
 
     assert out == expected
-
-  @pytest.fixture(scope='class')
-  def get_quizzes_info(self, django_db_blocker, get_genres):
-    with django_db_blocker.unblock():
-      creators = factories.UserFactory.create_batch(3, is_active=True, role=RoleType.CREATOR)
-      genres = get_genres[:4]
-      # Create quiz
-      for creator in creators:
-        for genre in genres:
-          _ = factories.QuizFactory(creator=creator, genre=genre, is_completed=True)
-      models.Quiz.objects.filter(creator=creators[0], genre=genres[2]).update(is_completed=False)
-
-    return creators, genres
 
   @pytest.mark.parametrize([
     'input_type',

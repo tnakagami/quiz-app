@@ -121,78 +121,79 @@ class AuthWebsocketCommunicator(WebsocketCommunicator):
     user.backend = backend
     self._login(user, backend)
 
+@pytest.fixture(scope='module')
+def get_guest(django_db_blocker):
+  @database_sync_to_async
+  def inner():
+    with django_db_blocker.unblock():
+      user = factories.UserFactory(is_active=True, role=RoleType.GUEST, screen_name='guest-owner')
+
+    return user
+
+  return inner
+
+@pytest.fixture(scope='module')
+def get_creator(django_db_blocker):
+  @database_sync_to_async
+  def inner():
+    with django_db_blocker.unblock():
+      user = factories.UserFactory(is_active=True, role=RoleType.CREATOR, screen_name='creator-owner')
+
+    return user
+
+  return inner
+
+@pytest.fixture(scope='module')
+def get_room_instances(django_db_blocker):
+  @database_sync_to_async
+  def inner(owner):
+    with django_db_blocker.unblock():
+      genres = factories.GenreFactory.create_batch(3, is_enabled=True)
+      genres = models.Genre.objects.filter(pk__in=[obj.pk for obj in genres])
+      creators = list(factories.UserFactory.create_batch(3, is_active=True, role=RoleType.GUEST))
+      guests = list(factories.UserFactory.create_batch(4, is_active=True, role=RoleType.GUEST))
+      # Update screen name
+      for idx, creator in enumerate(creators):
+        creator.screen_name = f'creator{idx}'
+        creator.save()
+      for idx, guest in enumerate(guests):
+        guest.screen_name = f'guest{idx}'
+        guest.save()
+      # Note: creators[1] and guests[2] are not members
+      members = [creators[0], creators[2], guests[0], guests[1], guests[3]]
+      # Create quizzes
+      quizzes = [
+        factories.QuizFactory(creator=creators[0], genre=genres[0], is_completed=True),  # 0
+        factories.QuizFactory(creator=creators[1], genre=genres[0], is_completed=True),  # 1
+        factories.QuizFactory(creator=creators[2], genre=genres[0], is_completed=False), # 2 Is not selected
+        factories.QuizFactory(creator=creators[0], genre=genres[1], is_completed=True),  # 3
+        factories.QuizFactory(creator=creators[1], genre=genres[1], is_completed=True),  # 4
+        factories.QuizFactory(creator=creators[2], genre=genres[1], is_completed=True),  # 5 Is not selected
+        factories.QuizFactory(creator=creators[0], genre=genres[2], is_completed=True),  # 6
+        factories.QuizFactory(creator=creators[1], genre=genres[2], is_completed=True),  # 7
+        factories.QuizFactory(creator=creators[2], genre=genres[2], is_completed=True),  # 8
+      ]
+      room = factories.QuizRoomFactory(
+        name='test-consumer-room',
+        owner=owner,
+        creators=[creators[0], creators[1]],
+        genres=[genres[0], genres[2]],
+        members=list(members),
+        max_question=4,
+        is_enabled=True,
+      )
+      room.reset()
+      room.score.index = 3
+      room.score.status = models.QuizStatusType.ANSWERING
+      room.score.save()
+
+    return owner, creators, guests, room
+
+  return inner
+
+
 class Common:
   pk_convertor = lambda _self, xs: [item.pk for item in xs]
-
-  @pytest.fixture(scope='module')
-  def get_guest(self, django_db_blocker):
-    @database_sync_to_async
-    def inner():
-      with django_db_blocker.unblock():
-        user = factories.UserFactory(is_active=True, role=RoleType.GUEST, screen_name='guest-owner')
-
-      return user
-
-    return inner
-
-  @pytest.fixture(scope='module')
-  def get_creator(self, django_db_blocker):
-    @database_sync_to_async
-    def inner():
-      with django_db_blocker.unblock():
-        user = factories.UserFactory(is_active=True, role=RoleType.CREATOR, screen_name='creator-owner')
-
-      return user
-
-    return inner
-
-  @pytest.fixture(scope='module')
-  def get_room_instances(self, django_db_blocker):
-    @database_sync_to_async
-    def inner(owner):
-      with django_db_blocker.unblock():
-        genres = factories.GenreFactory.create_batch(3, is_enabled=True)
-        genres = models.Genre.objects.filter(pk__in=self.pk_convertor(genres))
-        creators = list(factories.UserFactory.create_batch(3, is_active=True, role=RoleType.GUEST))
-        guests = list(factories.UserFactory.create_batch(4, is_active=True, role=RoleType.GUEST))
-        # Update screen name
-        for idx, creator in enumerate(creators):
-          creator.screen_name = f'creator{idx}'
-          creator.save()
-        for idx, guest in enumerate(guests):
-          guest.screen_name = f'guest{idx}'
-          guest.save()
-        # Note: creators[1] and guests[2] are not members
-        members = [creators[0], creators[2], guests[0], guests[1], guests[3]]
-        # Create quizzes
-        quizzes = [
-          factories.QuizFactory(creator=creators[0], genre=genres[0], is_completed=True),  # 0
-          factories.QuizFactory(creator=creators[1], genre=genres[0], is_completed=True),  # 1
-          factories.QuizFactory(creator=creators[2], genre=genres[0], is_completed=False), # 2 Is not selected
-          factories.QuizFactory(creator=creators[0], genre=genres[1], is_completed=True),  # 3
-          factories.QuizFactory(creator=creators[1], genre=genres[1], is_completed=True),  # 4
-          factories.QuizFactory(creator=creators[2], genre=genres[1], is_completed=True),  # 5 Is not selected
-          factories.QuizFactory(creator=creators[0], genre=genres[2], is_completed=True),  # 6
-          factories.QuizFactory(creator=creators[1], genre=genres[2], is_completed=True),  # 7
-          factories.QuizFactory(creator=creators[2], genre=genres[2], is_completed=True),  # 8
-        ]
-        room = factories.QuizRoomFactory(
-          name='test-consumer-room',
-          owner=owner,
-          creators=[creators[0], creators[1]],
-          genres=[genres[0], genres[2]],
-          members=list(members),
-          max_question=4,
-          is_enabled=True,
-        )
-        room.reset()
-        room.score.index = 3
-        room.score.status = models.QuizStatusType.ANSWERING
-        room.score.save()
-
-      return owner, creators, guests, room
-
-    return inner
 
   @database_sync_to_async
   def get_score(self, room):
