@@ -6,19 +6,6 @@ from utils.management.commands import custom_createsuperuser
 
 UserModel = get_user_model()
 
-@pytest.fixture
-def init_record(django_db_blocker):
-  password = 'abc123'
-  options = {
-    'email': 'hoge@example.com',
-    'password': password,
-  }
-
-  with django_db_blocker.unblock():
-    user = UserModel.objects.create_user(**options)
-
-  return password, user
-
 # ==========================
 # = custom_createsuperuser =
 # ==========================

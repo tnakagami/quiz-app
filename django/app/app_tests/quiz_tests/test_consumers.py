@@ -122,7 +122,7 @@ class AuthWebsocketCommunicator(WebsocketCommunicator):
     self._login(user, backend)
 
 @pytest.fixture(scope='module')
-def get_guest(django_db_blocker):
+def aget_guest(django_db_blocker):
   @database_sync_to_async
   def inner():
     with django_db_blocker.unblock():
@@ -133,7 +133,7 @@ def get_guest(django_db_blocker):
   return inner
 
 @pytest.fixture(scope='module')
-def get_creator(django_db_blocker):
+def aget_creator(django_db_blocker):
   @database_sync_to_async
   def inner():
     with django_db_blocker.unblock():
@@ -196,27 +196,27 @@ class Common:
   pk_convertor = lambda _self, xs: [item.pk for item in xs]
 
   @database_sync_to_async
-  def get_score(self, room):
+  def aget_score(self, room):
     return models.Score.objects.get(room=room)
 
   @database_sync_to_async
-  def get_score_status(self, score):
+  def aget_score_status(self, score):
     return score.status
 
   @database_sync_to_async
-  def get_score_index(self, score):
+  def aget_score_index(self, score):
     return score.index
 
   @database_sync_to_async
-  def get_score_sequence(self, score):
+  def aget_score_sequence(self, score):
     return score.sequence
 
   @database_sync_to_async
-  def get_score_detail(self, score):
+  def aget_score_detail(self, score):
     return score.detail
 
   @database_sync_to_async
-  def get_player_ids(self, room):
+  def aget_player_ids(self, room):
     pks = room.members.all().values_list('pk', flat=True)
     player_ids = list(map(lambda val: f'user{val}', pks))
 
@@ -241,7 +241,7 @@ class TestQuizConsumer(Common):
 
     return mock_logger, mocker
 
-  async def get_communicator(self, room, user):
+  async def aget_communicator(self, room, user):
     from channels.routing import URLRouter
     from quiz.routing import websocket_urlpatterns
     # Create communicator
@@ -263,11 +263,11 @@ class TestQuizConsumer(Common):
     'valid-owner-with-guest',
   ])
   @pytest.mark.asyncio
-  async def test_check_valid_connect(self, get_guest, get_creator, get_room_instances, access_type):
+  async def test_check_valid_connect(self, aget_guest, aget_creator, get_room_instances, access_type):
     if access_type == 'valid-owner-with-creator':
-      owner = await get_creator()
+      owner = await aget_creator()
     else:
-      owner = await get_guest()
+      owner = await aget_guest()
     _, creators, guests, room = await get_room_instances(owner)
     patterns = {
       'creator': creators[2],
@@ -276,7 +276,7 @@ class TestQuizConsumer(Common):
       'owner-with-guest': owner,
     }
     user = patterns[access_type]
-    communicator = await self.get_communicator(room, user)
+    communicator = await self.aget_communicator(room, user)
     connected, _ = await communicator.connect()
     await communicator.disconnect()
 
@@ -292,25 +292,25 @@ class TestQuizConsumer(Common):
     'invalid-guest',
   ])
   @pytest.mark.asyncio
-  async def test_check_invalid_connect(self, get_guest, get_room_instances, access_type):
-    owner = await get_guest()
+  async def test_check_invalid_connect(self, aget_guest, get_room_instances, access_type):
+    owner = await aget_guest()
     _, creators, guests, room = await get_room_instances(owner)
     patterns = {
       'creator': creators[1],
       'guest': guests[2],
     }
     user = patterns[access_type]
-    communicator = await self.get_communicator(room, user)
+    communicator = await self.aget_communicator(room, user)
 
     with pytest.raises(TimeoutError):
       _ = await communicator.connect()
 
   @pytest.mark.asyncio
-  async def test_connect_exception(self, mock_logger_and_now_method, get_guest, get_room_instances):
+  async def test_connect_exception(self, mock_logger_and_now_method, aget_guest, get_room_instances):
     logger, mocker = mock_logger_and_now_method
-    user = await get_guest()
+    user = await aget_guest()
     _, _, _, room = await get_room_instances(user)
-    communicator = await self.get_communicator(room, user)
+    communicator = await self.aget_communicator(room, user)
     err_msg = f'[quiz-{room.pk}]Connect: Invalid'
     mocker.patch('quiz.consumers.QuizConsumer.accept', side_effect=Exception('Invalid'))
     # Call connect method
@@ -321,11 +321,11 @@ class TestQuizConsumer(Common):
     assert message == err_msg
 
   @pytest.mark.asyncio
-  async def test_check_greeting_messages(self, get_guest, get_room_instances):
-    owner = await get_guest()
+  async def test_check_greeting_messages(self, aget_guest, get_room_instances):
+    owner = await aget_guest()
     _, creators, _, room = await get_room_instances(owner)
-    comm_owner = await self.get_communicator(room, owner)
-    comm_member = await self.get_communicator(room, creators[2])
+    comm_owner = await self.aget_communicator(room, owner)
+    comm_member = await self.aget_communicator(room, creators[2])
     # Connect and receive messages
     connected_owner, _ = await comm_owner.connect()
     join_msg_for_owner_only = await comm_owner.receive_json_from()
@@ -346,7 +346,7 @@ class TestQuizConsumer(Common):
     assert 'Leave guest-owner from test-consumer-room' == leave_msg_member['message']
 
   @pytest.mark.asyncio
-  async def test_check_post_accept_and_post_disconnect(self, monkeypatch, get_guest, get_room_instances):
+  async def test_check_post_accept_and_post_disconnect(self, monkeypatch, aget_guest, get_room_instances):
     # Define test code
     accepted_states = {}
     disconnected_states = {}
@@ -361,9 +361,9 @@ class TestQuizConsumer(Common):
     monkeypatch.setattr('quiz.consumers.g_quizstates.get_state', get_callback)
     monkeypatch.setattr('quiz.consumers.g_quizstates.set_state', set_callback)
     monkeypatch.setattr('quiz.consumers.g_quizstates.del_state', del_callback)
-    owner = await get_guest()
+    owner = await aget_guest()
     _, _, _, room = await get_room_instances(owner)
-    communicator = await self.get_communicator(room, owner)
+    communicator = await self.aget_communicator(room, owner)
     _ = await communicator.connect()
     await communicator.disconnect()
     key = f'quiz-{room.pk}'
@@ -377,11 +377,11 @@ class TestQuizConsumer(Common):
     assert id(accepted_states[key]) == id(disconnected_states[key])
 
   @pytest.mark.asyncio
-  async def test_send_group_message_exception(self, mock_logger_and_now_method, get_guest, get_room_instances):
+  async def test_send_group_message_exception(self, mock_logger_and_now_method, aget_guest, get_room_instances):
     logger, mocker = mock_logger_and_now_method
-    user = await get_guest()
+    user = await aget_guest()
     _, _, _, room = await get_room_instances(user)
-    communicator = await self.get_communicator(room, user)
+    communicator = await self.aget_communicator(room, user)
     err_msg = f'[quiz-{room.pk}]Send group message: Invalid'
     mocker.patch('quiz.consumers.QuizConsumer.send_json', side_effect=Exception('Invalid'))
     # Call connect and disconnect method
@@ -394,11 +394,11 @@ class TestQuizConsumer(Common):
     assert message == err_msg
 
   @pytest.mark.asyncio
-  async def test_receive_json_exception(self, mock_logger_and_now_method, get_guest, get_room_instances):
+  async def test_receive_json_exception(self, mock_logger_and_now_method, aget_guest, get_room_instances):
     logger, _ = mock_logger_and_now_method
-    user = await get_guest()
+    user = await aget_guest()
     _, _, _, room = await get_room_instances(user)
-    communicator = await self.get_communicator(room, user)
+    communicator = await self.aget_communicator(room, user)
     err_msg = f'[quiz-{room.pk}] '
     # Send message
     _ = await communicator.connect()
@@ -409,12 +409,12 @@ class TestQuizConsumer(Common):
     assert err_msg in message
 
   @pytest_asyncio.fixture(params=['is-owner', 'is-not-owner'])
-  async def common_process(self, get_guest, get_room_instances, request):
+  async def common_process(self, aget_guest, get_room_instances, request):
     is_owner = ('is-owner' == request.param)
-    owner = await get_guest()
+    owner = await aget_guest()
     _, creators, _, room = await get_room_instances(owner)
-    owner_socket = await self.get_communicator(room, owner)
-    member_socket = await self.get_communicator(room, creators[2])
+    owner_socket = await self.aget_communicator(room, owner)
+    member_socket = await self.aget_communicator(room, creators[2])
     # Call reset method
     _ = await owner_socket.connect()
     _ = await owner_socket.receive_json_from()
@@ -447,17 +447,17 @@ class TestQuizConsumer(Common):
       member_msg = await member_socket.receive_nothing()
       callback = lambda msg: msg
     # Get score data
-    score = await self.get_score(room=room)
+    score = await self.aget_score(room=room)
 
     assert callback(owner_msg)
     assert callback(member_msg)
-    assert await self.get_score_status(score) == expected_status
-    assert await self.get_score_index(score) == expected_index
+    assert await self.aget_score_status(score) == expected_status
+    assert await self.aget_score_index(score) == expected_index
 
   @pytest.mark.asyncio
   async def test_get_next_quiz_method(self, monkeypatch, common_process):
     is_owner, owner_socket, member_socket, room = common_process
-    player_ids = await self.get_player_ids(room)
+    player_ids = await self.aget_player_ids(room)
 
     class DummyQStat(DummyBaseQuizState):
       @database_sync_to_async
@@ -506,7 +506,7 @@ class TestQuizConsumer(Common):
   @pytest.mark.asyncio
   async def test_received_quiz_method(self, monkeypatch, common_process, is_completed):
     is_owner, owner_socket, member_socket, room = common_process
-    player_ids = await self.get_player_ids(room)
+    player_ids = await self.aget_player_ids(room)
 
     class DummyQStat(DummyBaseQuizState):
       def update_member_status(self, pk):
@@ -545,7 +545,7 @@ class TestQuizConsumer(Common):
   @pytest.mark.asyncio
   async def test_start_answer_method(self, monkeypatch, common_process):
     is_owner, owner_socket, member_socket, room = common_process
-    player_ids = await self.get_player_ids(room)
+    player_ids = await self.aget_player_ids(room)
 
     def get_callback(name):
       return DummyBaseQuizState(player_ids)
@@ -583,7 +583,7 @@ class TestQuizConsumer(Common):
   @pytest.mark.asyncio
   async def test_answer_quiz_method(self, monkeypatch, common_process, can_answer):
     is_owner, owner_socket, member_socket, room = common_process
-    player_ids = await self.get_player_ids(room)
+    player_ids = await self.aget_player_ids(room)
 
     class DummyQStat(DummyBaseQuizState):
       @database_sync_to_async
@@ -627,7 +627,7 @@ class TestQuizConsumer(Common):
   @pytest.mark.asyncio
   async def test_stop_answer_method(self, monkeypatch, common_process):
     is_owner, owner_socket, member_socket, room = common_process
-    player_ids = await self.get_player_ids(room)
+    player_ids = await self.aget_player_ids(room)
 
     def get_callback(name):
       return DummyBaseQuizState(player_ids)
@@ -660,7 +660,7 @@ class TestQuizConsumer(Common):
   @pytest.mark.asyncio
   async def test_get_answers_method(self, monkeypatch, common_process):
     is_owner, owner_socket, member_socket, room = common_process
-    player_ids = await self.get_player_ids(room)
+    player_ids = await self.aget_player_ids(room)
 
     class DummyQStat(DummyBaseQuizState):
       @database_sync_to_async
@@ -718,7 +718,7 @@ class TestQuizConsumer(Common):
   @pytest.mark.asyncio
   async def test_send_result_method(self, monkeypatch, common_process, is_ended):
     is_owner, owner_socket, member_socket, room = common_process
-    player_ids = await self.get_player_ids(room)
+    player_ids = await self.aget_player_ids(room)
 
     class DummyQStat(DummyBaseQuizState):
       @database_sync_to_async
@@ -777,33 +777,33 @@ class TestQuizConsumer(Common):
       expected_index = 3
       expected_status = models.QuizStatusType.ANSWERING.value
     # Get score data
-    score = await self.get_score(room=room)
+    score = await self.aget_score(room=room)
 
     assert callback(owner_msg)
     assert callback(member_msg)
-    assert await self.get_score_status(score) == expected_status
-    assert await self.get_score_index(score) == expected_index
+    assert await self.aget_score_status(score) == expected_status
+    assert await self.aget_score_index(score) == expected_index
 
 @pytest.mark.quiz
 @pytest.mark.consumer
 @pytest.mark.django_db
 class TestQuizState(Common):
   @pytest.mark.asyncio
-  async def test_update_score(self, get_guest, get_room_instances):
+  async def test_update_score(self, aget_guest, get_room_instances):
     from copy import deepcopy
-    owner = await get_guest()
+    owner = await aget_guest()
     _, _, _, room = await get_room_instances(owner)
-    player_ids = await self.get_player_ids(room)
+    player_ids = await self.aget_player_ids(room)
     instance = consumers.QuizState(player_ids)
     default_score = deepcopy(instance.score)
     # Call target method
-    instance.update_score(await self.get_score(room))
+    instance.update_score(await self.aget_score(room))
     updated_score = deepcopy(instance.score)
-    score = await self.get_score(room)
+    score = await self.aget_score(room)
 
     assert default_score is None
-    assert await self.get_score_index(score) == 3
-    assert await self.get_score_status(score) == models.QuizStatusType.ANSWERING.value
+    assert await self.aget_score_index(score) == 3
+    assert await self.aget_score_status(score) == models.QuizStatusType.ANSWERING.value
     assert instance.quiz is None
 
   @pytest.mark.parametrize([
@@ -862,28 +862,28 @@ class TestQuizState(Common):
     'index-is-less-than-max-question',
   ])
   @pytest.mark.asyncio
-  async def test_get_quiz(self, get_guest, get_room_instances, max_question, exact_idx):
+  async def test_get_quiz(self, aget_guest, get_room_instances, max_question, exact_idx):
     @database_sync_to_async
-    def get_question(quiz):
+    def aget_question(quiz):
       return quiz.question
 
-    owner = await get_guest()
+    owner = await aget_guest()
     _, _, _, room = await get_room_instances(owner)
-    player_ids = await self.get_player_ids(room)
+    player_ids = await self.aget_player_ids(room)
     instance = consumers.QuizState(player_ids)
-    instance.score = await self.get_score(room)
+    instance.score = await self.aget_score(room)
     # Call target method
     sentence, index = await instance.get_quiz(max_question)
-    _sequence = await self.get_score_sequence(instance.score)
+    _sequence = await self.aget_score_sequence(instance.score)
     pk = _sequence[str(exact_idx)]
     exact_quiz = await database_sync_to_async(models.Quiz.objects.get)(pk=pk)
-    expected_sentence = await get_question(exact_quiz)
-    score = await self.get_score(room)
+    expected_sentence = await aget_question(exact_quiz)
+    score = await self.aget_score(room)
 
     assert sentence == expected_sentence
     assert index == exact_idx
-    assert await self.get_score_status(score) == models.QuizStatusType.SENT_QUESTION.value
-    assert await self.get_score_index(score) == exact_idx
+    assert await self.aget_score_status(score) == models.QuizStatusType.SENT_QUESTION.value
+    assert await self.aget_score_index(score) == exact_idx
     assert str(instance.quiz.pk) == pk
     assert len(instance.answers) == 0
 
@@ -911,20 +911,20 @@ class TestQuizState(Common):
     assert all([val is None for val in instance.answers.values()])
 
   @pytest.mark.asyncio
-  async def test_answering_phase(self, mocker, get_guest, get_room_instances):
+  async def test_answering_phase(self, mocker, aget_guest, get_room_instances):
     dummy_time = datetime(2021,12,3,5,14,56)
     _format = '%Y-%m-%d %H:%M:%S'
     mocker.patch('quiz.consumers.get_current_time', return_value=dummy_time)
-    owner = await get_guest()
+    owner = await aget_guest()
     _, _, _, room = await get_room_instances(owner)
     inputs = {'foo': None, 'bar': None}
     instance = consumers.QuizState(['foo', 'bar'])
     instance.players = dict(inputs)
-    instance.score = await self.get_score(room)
+    instance.score = await self.aget_score(room)
     # Call target method
     await instance.answering_phase()
-    score = await self.get_score(room)
-    status = await self.get_score_status(score)
+    score = await self.aget_score(room)
+    status = await self.aget_score_status(score)
 
     assert status == models.QuizStatusType.ANSWERING.value
     assert instance.current_time.strftime(_format) == dummy_time.strftime(_format)
@@ -952,19 +952,19 @@ class TestQuizState(Common):
     'end-phase',
   ])
   @pytest.mark.asyncio
-  async def test_can_answer(self, get_guest, get_room_instances, status, is_valid):
+  async def test_can_answer(self, aget_guest, get_room_instances, status, is_valid):
     @database_sync_to_async
-    def set_score_status(score, status):
+    def aset_score_status(score, status):
       score.status = status
       score.save()
     # Define test code
-    owner = await get_guest()
+    owner = await aget_guest()
     _, _, _, room = await get_room_instances(owner)
     inputs = {'foo': None, 'bar': None}
     instance = consumers.QuizState(['foo', 'bar'])
-    score = await self.get_score(room)
-    await set_score_status(score, status)
-    instance.score = await self.get_score(room)
+    score = await self.aget_score(room)
+    await aset_score_status(score, status)
+    instance.score = await self.aget_score(room)
     # Call target method
     output = await instance.can_answer()
 
@@ -987,25 +987,25 @@ class TestQuizState(Common):
     assert int(bar_answer['time']) == 7
 
   @pytest.mark.asyncio
-  async def test_received_all_answers_phase(self, get_guest, get_room_instances):
-    owner = await get_guest()
+  async def test_received_all_answers_phase(self, aget_guest, get_room_instances):
+    owner = await aget_guest()
     _, _, _, room = await get_room_instances(owner)
-    player_ids = await self.get_player_ids(room)
+    player_ids = await self.aget_player_ids(room)
     instance = consumers.QuizState(player_ids)
-    instance.score = await self.get_score(room)
+    instance.score = await self.aget_score(room)
     # Call target method
     await instance.received_all_answers_phase()
-    score = await self.get_score(room)
+    score = await self.aget_score(room)
 
-    assert await self.get_score_status(score) == models.QuizStatusType.RECEIVED_ANSWERS.value
+    assert await self.aget_score_status(score) == models.QuizStatusType.RECEIVED_ANSWERS.value
 
   @pytest.mark.asyncio
-  async def test_get_answers(self, get_guest, get_room_instances):
+  async def test_get_answers(self, aget_guest, get_room_instances):
     @database_sync_to_async
-    def _get_answer(quiz):
+    def _aget_answer(quiz):
       return quiz.answer
     # Define test cose
-    owner = await get_guest()
+    owner = await aget_guest()
     _, _, _, room = await get_room_instances(owner)
     inputs = {
       'foo': {
@@ -1019,19 +1019,19 @@ class TestQuizState(Common):
     }
     instance = consumers.QuizState(['foo', 'bar'])
     instance.answers = dict(inputs)
-    instance.score = await self.get_score(room)
-    _sequence = await self.get_score_sequence(instance.score)
+    instance.score = await self.aget_score(room)
+    _sequence = await self.aget_score_sequence(instance.score)
     instance.quiz = await database_sync_to_async(models.Quiz.objects.get)(pk=_sequence['1'])
     # Call target method
     player_answers, correct_answer = await instance.get_answers()
-    score = await self.get_score(room)
+    score = await self.aget_score(room)
     foo_answer = player_answers['foo']
     bar_answer = player_answers['bar']
 
-    assert await self.get_score_status(score) == models.QuizStatusType.JUDGING.value
+    assert await self.aget_score_status(score) == models.QuizStatusType.JUDGING.value
     assert all([foo_answer['answer'] == 'hoge123', abs(foo_answer['time'] - 3) < 1e-5])
     assert all([bar_answer['answer'] == 'hogehoge-321', abs(bar_answer['time'] - 5) < 1e-5])
-    assert correct_answer == await _get_answer(instance.quiz)
+    assert correct_answer == await _aget_answer(instance.quiz)
 
   @pytest.fixture(params=['first-question', 'second-question', 'last-question'])
   def get_quiz_status_patterns(self, request):
@@ -1077,31 +1077,31 @@ class TestQuizState(Common):
     return data, judgement, expected, max_question
 
   @pytest.mark.asyncio
-  async def test_update_state(self, get_guest, get_room_instances, get_quiz_status_patterns):
+  async def test_update_state(self, aget_guest, get_room_instances, get_quiz_status_patterns):
     @database_sync_to_async
-    def set_score(score, data):
+    def aset_score(score, data):
       score.index = data['index']
       score.detail = data['detail']
       score.save()
     # Define test cose
-    owner = await get_guest()
+    owner = await aget_guest()
     _, _, _, room = await get_room_instances(owner)
     data, judgement, expected, max_question = get_quiz_status_patterns
-    await set_score(await self.get_score(room), data)
+    await aset_score(await self.aget_score(room), data)
     instance = consumers.QuizState(['foo', 'bar'])
-    instance.score = await self.get_score(room)
+    instance.score = await self.aget_score(room)
     instance.quiz = 3
     # Call target method
     detail, is_ended = await instance.update_state(max_question, judgement)
-    score = await self.get_score(room)
-    db_detail = await self.get_score_detail(score)
+    score = await self.aget_score(room)
+    db_detail = await self.aget_score_detail(score)
 
     assert is_ended == expected['is_ended']
     assert instance.quiz is None
     assert all([detail[key] == val for key, val in expected['output'].items()])
     assert all([str(db_detail[key]) == str(val) for key, val in expected['output'].items()])
-    assert await self.get_score_status(score) == expected['status']
-    assert await self.get_score_index(score) == expected['index']
+    assert await self.aget_score_status(score) == expected['status']
+    assert await self.aget_score_index(score) == expected['index']
 
 @pytest.mark.quiz
 @pytest.mark.consumer

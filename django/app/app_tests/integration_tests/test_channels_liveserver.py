@@ -27,11 +27,11 @@ from quiz import models
 
 def get_open_port():
   import socket
-  s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-  s.bind(('', 0))
-  s.listen(1)
-  port = s.getsockname()[1]
-  s.close()
+  _sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  _sock.bind(('', 0))
+  _sock.listen(1)
+  _, port = _sock.getsockname()
+  _sock.close()
 
   return port
 
@@ -59,7 +59,7 @@ class ChannelsLiveServer(ClientMixin):
       if connection.vendor == 'sqlite' and connection.is_in_memory_db() and len(connection.settings_dict.get('TEST', {})) == 0:
         raise ImproperlyConfigured('ChannelsLiveServer can not be used with in memory databases')
 
-      self._live_server_modified_settings = modify_settings(ALLOWED_HOSTS={"append": self.host})
+      self._live_server_modified_settings = modify_settings(ALLOWED_HOSTS={'append': self.host})
       self._live_server_modified_settings.enable()
       get_application = functools.partial(
         make_application,
