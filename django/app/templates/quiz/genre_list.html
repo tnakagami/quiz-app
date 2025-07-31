@@ -38,7 +38,7 @@
               <tr class="align-middle">
                 {% with table_css=instance.is_enabled|yesno:',table-secondary' %}
                 <td scope="row" class="{{ table_css }}">{{ instance.name }}</td>
-                <td class="{{ table_css }}">{{ instance.quizzes.all.collect_quizzes.count }}</td>
+                <td class="{{ table_css }}">{{ instance.quizzes.collect_quizzes.count }}</td>
                 {% endwith %}
                 <td>
                   <a

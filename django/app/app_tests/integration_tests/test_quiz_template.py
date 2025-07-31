@@ -380,7 +380,7 @@ class TestQuiz(Common):
 
   def test_cannot_move_to_other_creators_update_page(self, csrf_exempt_django_app, create_quizzes):
     user, other, _ = create_quizzes
-    instance = other.quizzes.all().first()
+    instance = other.quizzes.first()
     app = csrf_exempt_django_app
     url = self.update_quiz_url(instance.pk)
 
@@ -391,7 +391,7 @@ class TestQuiz(Common):
 
   def test_update_quiz_for_creator(self, csrf_exempt_django_app, create_quizzes):
     user, _, _ = create_quizzes
-    instance = user.quizzes.all().first()
+    instance = user.quizzes.first()
     app = csrf_exempt_django_app
     url = self.update_quiz_url(instance.pk)
     forms = app.get(url, user=user).forms
@@ -413,7 +413,7 @@ class TestQuiz(Common):
   def test_update_quiz_for_manager(self, csrf_exempt_django_app, create_quizzes, get_has_manager_role_user):
     _, other, _ = create_quizzes
     _, user = get_has_manager_role_user
-    instance = other.quizzes.all().first()
+    instance = other.quizzes.first()
     app = csrf_exempt_django_app
     url = self.update_quiz_url(instance.pk)
     forms = app.get(url, user=user).forms
@@ -435,7 +435,7 @@ class TestQuiz(Common):
   def test_cannot_access_to_delete_page(self, csrf_exempt_django_app, create_quizzes, get_users):
     creator, _, _ = create_quizzes
     _, user = get_users
-    instance = creator.quizzes.all().first()
+    instance = creator.quizzes.first()
     app = csrf_exempt_django_app
     url = self.delete_quiz_url(instance.pk)
 
@@ -450,7 +450,7 @@ class TestQuiz(Common):
   def test_delete_quiz_for_manager(self, csrf_exempt_django_app, create_quizzes, get_has_manager_role_user):
     _, other, _ = create_quizzes
     _, user = get_has_manager_role_user
-    instance = other.quizzes.all().first()
+    instance = other.quizzes.first()
     app = csrf_exempt_django_app
     url = self.delete_quiz_url(instance.pk)
     response = app.post(url, user=user).follow()
@@ -462,7 +462,7 @@ class TestQuiz(Common):
 
   def test_delete_quiz_for_creator(self, csrf_exempt_django_app, create_quizzes):
     user, _, _ = create_quizzes
-    instance = user.quizzes.all().first()
+    instance = user.quizzes.first()
     app = csrf_exempt_django_app
     url = self.delete_quiz_url(instance.pk)
     response = app.post(url, user=user).follow()
@@ -474,7 +474,7 @@ class TestQuiz(Common):
 
   def test_delete_quiz_for_other_creator(self, csrf_exempt_django_app, create_quizzes):
     user, other, _ = create_quizzes
-    instance = other.quizzes.all().first()
+    instance = other.quizzes.first()
     app = csrf_exempt_django_app
     url = self.delete_quiz_url(instance.pk)
 
@@ -681,7 +681,7 @@ class TestQuizRoom(Common):
 
   def test_cannot_move_to_other_creators_update_page(self, csrf_exempt_django_app, create_rooms):
     user, other, _ = create_rooms
-    instance = other.quiz_rooms.all().first()
+    instance = other.quiz_rooms.first()
     app = csrf_exempt_django_app
     url = self.update_room_url(instance.pk)
 
@@ -725,7 +725,7 @@ class TestQuizRoom(Common):
     user, _ = get_being_able_to_modify_rooms
     _ = factories.QuizFactory(creator=creators[0], genre=genres[0], is_completed=True)
     _ = factories.QuizFactory(creator=creators[2], genre=genres[0], is_completed=True)
-    target = user.quiz_rooms.all().first()
+    target = user.quiz_rooms.first()
     app = csrf_exempt_django_app
     url = self.update_room_url(target.pk)
     forms = app.get(url, user=user).forms
@@ -753,7 +753,7 @@ class TestQuizRoom(Common):
     _ = factories.QuizFactory(creator=creators[0], genre=genres[0], is_completed=True)
     _ = factories.QuizFactory(creator=creators[2], genre=genres[0], is_completed=True)
     _, user = get_has_manager_role_user
-    target = other.quiz_rooms.all().first()
+    target = other.quiz_rooms.first()
     app = csrf_exempt_django_app
     url = self.update_room_url(target.pk)
     forms = app.get(url, user=user).forms
@@ -778,7 +778,7 @@ class TestQuizRoom(Common):
   def test_cannot_access_to_delete_page(self, csrf_exempt_django_app, get_being_able_to_modify_rooms, get_users):
     creator, _ = get_being_able_to_modify_rooms
     _, user = get_users
-    instance = creator.quiz_rooms.all().first()
+    instance = creator.quiz_rooms.first()
     app = csrf_exempt_django_app
     url = self.delete_room_url(instance.pk)
 

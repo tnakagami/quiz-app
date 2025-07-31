@@ -533,7 +533,7 @@ class TestQuiz(Common):
 
   def test_check_get_response_kwargs_method(self, get_quizzes_info):
     creators, _ = get_quizzes_info
-    ids = creators[0].quizzes.all().order_by('genre__name', 'creator__screen_name').values_list('pk', flat=True)
+    ids = creators[0].quizzes.order_by('genre__name', 'creator__screen_name').values_list('pk', flat=True)
     queryset = models.Quiz.objects.filter(pk__in=list(ids))
     kwargs = models.Quiz.get_response_kwargs('hoge', ids)
     keys = kwargs.keys()

@@ -129,7 +129,7 @@
           <div class="card-header">
             <div class="row row-cols-2">
               <div class="col text-start fw-bold text-decoration-underline">
-                {% trans "Question" %}(<span id="question-index">{{ room.score.index }}</span> / {{ room.max_question }})
+                {% trans "Question" %}(<span id="question-index">{% if room.score.index >= room.max_question %}{{ room.max_question }}{% else %}{{ room.score.index }}{% endif %}</span> / {{ room.max_question }})
               </div>
               <div class="col text-end fw-bold text-decoration-underline">
                 {% trans "Score" %}: <span id="own-score">{{ room.score|get_user_score:user.pk }}</span>

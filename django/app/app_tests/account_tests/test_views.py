@@ -824,7 +824,7 @@ class TestCreateRoleChangeRequestPage(Common):
     user, _, _ = get_guest
     client.force_login(user)
     response = client.post(self.create_role_change_request_url)
-    count = user.approvals.all().count()
+    count = user.approvals.count()
 
     assert response.status_code == status.HTTP_302_FOUND
     assert response['Location'] == self.user_profile_url
@@ -966,7 +966,7 @@ class TestUpdateFriendPage(Common):
 
     assert response.status_code == status.HTTP_302_FOUND
     assert response['Location'] == self.user_profile_url
-    assert updated_user.friends.all().count() == len(friends)
+    assert updated_user.friends.count() == len(friends)
 
 # ===========================
 # = IndividualGroupListPage =
@@ -1076,7 +1076,7 @@ class TestCreateIndividualGroupPage(Common):
     assert response.status_code == status.HTTP_302_FOUND
     assert response['Location'] == self.individual_group_list_url
     assert len(groups) == 1
-    assert groups[0].members.all().count() == number_of_request_members
+    assert groups[0].members.count() == number_of_request_members
 
 # =============================
 # = UpdateIndividualGroupPage =

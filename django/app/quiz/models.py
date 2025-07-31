@@ -94,7 +94,7 @@ class Genre(BaseModel):
   def record_checker(rows):
     genre_set = {data[0] for data in rows}
     # Get genre set based on database records
-    genre_names = Genre.objects.all().filter(name__in=list(genre_set)).values_list('name', flat=True)
+    genre_names = Genre.objects.filter(name__in=list(genre_set)).values_list('name', flat=True)
     target_genre = {name for name in genre_names}
     # Calculate common elements between original set and generated one based on database
     common_genre = genre_set & target_genre
@@ -516,7 +516,7 @@ class QuizRoom(BaseModel):
       self.is_enabled,
       user.is_player(),
       any([
-        self.members.all().filter(pk__in=[user.pk]).exists(),
+        self.members.filter(pk__in=[user.pk]).exists(),
         self.is_owner(user),
       ])
     ])

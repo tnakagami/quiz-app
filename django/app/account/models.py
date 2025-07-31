@@ -289,7 +289,7 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
   # @retval True  The request has already registered
   # @retval False There is no requests in the database
   def conducted_role_approval(self):
-    return self.approvals.all().exists()
+    return self.approvals.exists()
 
   ##
   # @brief Update role

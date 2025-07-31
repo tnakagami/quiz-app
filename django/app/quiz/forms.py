@@ -66,6 +66,22 @@ class GenreForm(forms.ModelForm):
     help_text=gettext_lazy('Describes whether this genre is enabled or not.'),
   )
 
+  ##
+  # @brief Check data
+  # @exception ValidationError There is at least one quiz and `is_enabled` is `False`
+  def clean(self):
+    cleaned_data = super().clean()
+    name = cleaned_data.get('name')
+    is_enabled = cleaned_data.get('is_enabled')
+    # Check status
+    if self.instance and self.instance.quizzes.exists() and not is_enabled:
+      raise forms.ValidationError(
+        gettext_lazy('There is at least one quiz but this genre status is set to "Disable".'),
+        code='invalid_param',
+      )
+
+    return cleaned_data
+
 class GenreUploadForm(forms.Form):
   template_name = 'renderer/custom_form.html'
 
@@ -253,13 +269,13 @@ class QuizSearchForm(forms.Form):
     self.user = user
     # Set genre's choices
     self.fields['genres'].choices = [
-      (str(instance.pk), f'{instance}({instance.quizzes.all().count()})')
+      (str(instance.pk), f'{instance}({instance.quizzes.count()})')
       for instance in models.Genre.objects.collect_active_genres()
     ]
     # Set creator's choices
     if self.user.has_manager_role():
       self.fields['creators'].choices = [
-        (str(instance.pk), f'{instance}({instance.quizzes.all().count()},{instance.code})')
+        (str(instance.pk), f'{instance}({instance.quizzes.count()},{instance.code})')
         for instance in UserModel.objects.collect_creators()
       ]
     else:
@@ -296,9 +312,9 @@ class QuizSearchForm(forms.Form):
     all_genres = models.Genre.objects.collect_active_genres()
 
     if self.user.has_manager_role():
-      callback = lambda item: item.quizzes.all().count()
+      callback = lambda item: item.quizzes.count()
     else:
-      callback = lambda item: item.quizzes.all().filter(creator=self.user).count()
+      callback = lambda item: item.quizzes.filter(creator=self.user).count()
     options = self.dual_listbox.collect_options_of_items(all_genres, callback=callback)
 
     return options
@@ -308,7 +324,7 @@ class QuizSearchForm(forms.Form):
   # @return options JSON data of option element which consists of primary-key, label-name, and selected-or-not
   @property
   def get_creator_options(self):
-    callback = lambda creator: f'{creator.quizzes.all().count()},{creator.code}'
+    callback = lambda creator: f'{creator.quizzes.count()},{creator.code}'
 
     if self.user.has_manager_role():
       # In the case of that the request user has manager role (e.g., MANAGER or superuser)
@@ -687,7 +703,7 @@ class QuizRoomForm(ModelFormBasedOnUser):
   def get_genre_options(self):
     all_genres = self.fields['genres'].queryset
     selected_genres = self.instance.genres.all() if self.instance else None
-    callback = lambda genre: genre.quizzes.all().filter(is_completed=True).count()
+    callback = lambda genre: genre.quizzes.filter(is_completed=True).count()
     options = self.dual_listbox.collect_options_of_items(all_genres, selected_genres, callback=callback)
 
     return options
@@ -699,7 +715,7 @@ class QuizRoomForm(ModelFormBasedOnUser):
   def get_creator_options(self):
     all_creators = self.fields['creators'].queryset
     selected_creators = self.instance.creators.all() if self.instance else None
-    callback = lambda creator: f'{creator.quizzes.all().filter(is_completed=True).count()},{creator.code}'
+    callback = lambda creator: f'{creator.quizzes.filter(is_completed=True).count()},{creator.code}'
     options = self.dual_listbox.collect_options_of_items(all_creators, selected_creators, callback)
 
     return options

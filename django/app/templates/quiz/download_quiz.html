@@ -1,9 +1,9 @@
 {% extends 'base.html' %}
+{% load static %}
 {% load i18n %}
 
 {% block header %}
-<link href="https://cdn.datatables.net/v/bs5/jq-3.7.0/dt-2.3.2/fh-4.0.3/sb-1.8.3/sp-2.3.3/sl-3.0.1/datatables.min.css" rel="stylesheet"
-      integrity="sha384-latD9vjSL4mLm9Se2YpOQEvz4kKMA3PdAtVLMWSH4g2e32lz6FHzKyScWdacU5b7" crossorigin="anonymous">
+<link rel="stylesheet" href="{% static 'css/datatables.min.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -62,8 +62,7 @@
 {% endblock %}
 
 {% block bodyjs %}
-<script src="https://cdn.datatables.net/v/bs5/jq-3.7.0/dt-2.3.2/fh-4.0.3/sb-1.8.3/sp-2.3.3/sl-3.0.1/datatables.min.js"
-        integrity="sha384-KtsA21O237D9lIE7ZeEBTOGqpJa3ec6YnZK63LNBuZzTd1aZWGgzAJrp6ZJc0S/P" crossorigin="anonymous"></script>
+<script src="{% static 'js/datatables.min.js' %}"></script>
 {{ block.super }}
 <script>
 (function () {
@@ -73,13 +72,9 @@
     // Setup configuration of DataTable
     //
     const config = {
-      processing: true,
       ajax: {
         url: "{% url 'quiz:ajax_get_quizzes' %}",
         method: 'GET',
-        headers: {
-          'X-CSRFToken': helper.getCookie('csrftoken'),
-        },
         dataType: 'json',
         dataSrc: (json) => json.quizzes,
       },
@@ -164,7 +159,11 @@
         top1: {
           searchPanes: {
             viewTotal: true,
-            columns: [0, 1, 2]
+            columns: [0, 1, 2],
+            i18n: {
+              loadMessage: '',
+            },
+            collapse: false,
           },
         },
       },

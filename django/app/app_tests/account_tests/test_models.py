@@ -78,7 +78,7 @@ class TestUser:
     assert not user.is_superuser
     assert not user.is_active
     assert user.role == models.RoleType.GUEST
-    assert user.friends.all().count() == 0
+    assert user.friends.count() == 0
 
   def test_superuser_creation(self):
     superuser = models.User.objects.create_superuser(

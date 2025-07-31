@@ -143,6 +143,33 @@ class TestGenreView(Common):
     assert instance.name == params['name']
     assert instance.is_enabled == params['is_enabled']
 
+  @pytest.mark.parametrize([
+    'updated_name',
+  ], [
+    ('hogehoge-uv', ),
+    ('foobar-uv', ),
+  ], ids=[
+    'same-name',
+    'different-name',
+  ])
+  def test_invalid_post_request_in_updatepage(self, get_manager, get_creator, client, updated_name):
+    user = get_manager
+    creator = get_creator
+    client.force_login(user)
+    genre = factories.GenreFactory(name='hogehoge-uv', is_enabled=True)
+    _ = factories.QuizFactory(creator=creator, genre=genre, is_completed=True)
+    url = self.update_view_url(genre.pk)
+    params = {
+      'name': updated_name,
+      'is_enabled': False,
+    }
+    response = client.post(url, data=params)
+    form = response.context['form']
+    err_msg = 'There is at least one quiz but this genre status is set to &quot;Disable&quot;.'
+
+    assert response.status_code == status.HTTP_200_OK
+    assert err_msg in str(form.errors)
+
 # ============
 # = QuizView =
 # ============

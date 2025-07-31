@@ -14,7 +14,7 @@ trap handler 1 2 3 15
 readonly from_base_path="/var/static"
 readonly to_base_path="/opt/nginx-static"
 
-for target in js img; do
+for target in js css img; do
   from_path=${from_base_path}/${target}
   to_path=${to_base_path}/${target}
 

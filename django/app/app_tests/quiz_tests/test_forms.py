@@ -91,6 +91,31 @@ class TestGenreForm(Common):
 
     assert form.is_valid() == is_valid
 
+  @pytest.mark.parametrize([
+    'updated_name',
+  ], [
+    ('test-hogehoge-form', ),
+    ('test-fugafuga-form', ),
+  ], ids=[
+    'same-name',
+    'different-name',
+  ])
+  def test_at_least_one_quiz_exists(self, get_creator, updated_name):
+    creator = get_creator
+    name = 'test-hogehoge-form'
+    genre = factories.GenreFactory(name=name, is_enabled=True)
+    _ = factories.QuizFactory(creator=creator, genre=genre, is_completed=True)
+    params = {
+      'name': updated_name,
+      'is_enabled': False,
+    }
+    form = forms.GenreForm(data=params, instance=genre)
+    is_valid = form.is_valid()
+    errors = form.errors
+
+    assert not is_valid
+    assert 'There is at least one quiz but this genre status is set to &quot;Disable&quot;.' in str(errors)
+
 @pytest.fixture
 def get_each_types_of_genre(django_db_blocker, get_genres):
   with django_db_blocker.unblock():
@@ -294,7 +319,7 @@ class TestGenreDownloadForm(Common):
 @pytest.mark.form
 @pytest.mark.django_db
 class TestQuizSearchForm(Common):
-  callback_user = lambda _self, item: f'{item.quizzes.all().filter(is_completed=True).count()},{item.code}'
+  callback_user = lambda _self, item: f'{item.quizzes.filter(is_completed=True).count()},{item.code}'
 
   def test_invalid_patterns(self, get_has_creator_role_users):
     invalid_genre = factories.GenreFactory(is_enabled=False)
@@ -440,9 +465,9 @@ class TestQuizSearchForm(Common):
     options = json.loads(str_options)
 
     if user.has_manager_role():
-      callback = lambda item: item.quizzes.all().count()
+      callback = lambda item: item.quizzes.count()
     else:
-      callback = lambda item: item.quizzes.all().filter(creator=user).count()
+      callback = lambda item: item.quizzes.filter(creator=user).count()
     exacts = [
       {"text": f'{item}({callback(item)})', "value": str(item.pk), "selected": False} for item in genres
     ]
@@ -461,7 +486,7 @@ class TestQuizSearchForm(Common):
     mocker.patch('account.models.CustomUserManager.collect_creators', return_value=creators)
     form = forms.QuizSearchForm(user=user)
     str_options = form.get_creator_options
-    callback = lambda item: f'{item.quizzes.all().count()},{item.code}'
+    callback = lambda item: f'{item.quizzes.count()},{item.code}'
     options = json.loads(str_options)
 
     if has_manager_role:
@@ -877,7 +902,7 @@ class TestQuizRoomSearchForm(Common):
 @pytest.mark.form
 @pytest.mark.django_db
 class TestQuizRoomForm(Common):
-  callback_user = lambda _self, item: f'{item.quizzes.all().count()},{item.code}'
+  callback_user = lambda _self, item: f'{item.quizzes.count()},{item.code}'
 
   @pytest.mark.parametrize([
     'input_type',
@@ -990,7 +1015,7 @@ class TestQuizRoomForm(Common):
       form.instance = None
     str_options = form.get_genre_options
     options = json.loads(str_options)
-    callback = lambda item: item.quizzes.all().filter(is_completed=True).count()
+    callback = lambda item: item.quizzes.filter(is_completed=True).count()
     if form.instance is not None:
       selected_items = form.instance.genres.all()
       rest_items = genres.exclude(pk__in=self.pk_convertor(selected_items))
