@@ -412,7 +412,7 @@ msgid "Code"
 msgstr "コード"
 
 #: templates/account/profiles/user_profile.html:97
-msgid "Create/Edit/delete indivitual groups"
+msgid "Create/Edit/Delete indivitual groups"
 msgstr "個人グループの作成／更新／削除"
 
 #: templates/account/profiles/user_profile.html:107
@@ -592,7 +592,7 @@ msgid "Next quiz"
 msgstr "クイズ取得"
 
 #: templates/quiz/playing_room.html:70
-msgid "Start Question"
+msgid "Start question"
 msgstr "クイズ出題"
 
 #: templates/quiz/playing_room.html:80
@@ -600,7 +600,7 @@ msgid "End answer"
 msgstr "回答終了"
 
 #: templates/quiz/playing_room.html:90
-msgid "Conduct Judgement"
+msgid "Conduct judgement"
 msgstr "判定実施"
 
 #: templates/quiz/playing_room.html:96 templates/quiz/playing_room.html:111

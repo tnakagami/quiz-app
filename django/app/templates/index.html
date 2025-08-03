@@ -5,10 +5,25 @@
 {% include 'breadcrumbs.html' with title=_("Index") %}
 <div class="row justify-content-center">
   <div class="col">
-    {% if not user.is_authenticated %}
-    <p>{% trans "Please login from side-bar link or create new account." %}</p>
-    {% else %}
     <div class="row row-cols-1 g-2">
+      {# Introduction #}
+      <div class="col">
+        <a href="{% url 'utils:introduction' %}" class="link-underline link-underline-opacity-0">
+          <div class="card custom-boxshadow">
+            <div class="card-header">{% trans "Introduction" %}</div>
+            <div class="card-body">
+              <p class="card-title h3">{% trans "What's quiz app?" %}</p>
+              <p class="card-text">{% trans "Explain quiz app and how to use this app." %}</p>
+            </div>
+          </div>
+        </a>
+      </div>
+    {% if not user.is_authenticated %}
+      {# Anonymous user #}
+      <div class="col">
+        <p>{% trans "Please login from side-bar link or create new account." %}</p>
+      </div>
+    {% else %}
       {# Quiz rooms #}
       <div class="col">
         <a href="{% url 'quiz:room_list' %}" class="link-underline link-underline-opacity-0">
@@ -98,8 +113,8 @@
         </div>
       </div>
       {% endif %}
-    </div>
     {% endif %}
+    </div>
   </div>
 </div>
 {% endblock %}

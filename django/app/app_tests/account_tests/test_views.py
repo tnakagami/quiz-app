@@ -737,6 +737,12 @@ class TestResetPasswordView(Common):
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
+  def test_confirm_password_reset_page_with_invalid_token(self, client):
+    url = reverse('account:confirm_password_reset', kwargs={'uidb64': 'hoge', 'token': 'foo'})
+    response = client.get(url)
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+
   def test_complete_password_reset_page_without_authentication(self, client):
     response = client.get(self.complete_password_reset_url)
 

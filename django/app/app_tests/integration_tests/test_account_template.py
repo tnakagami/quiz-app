@@ -48,6 +48,16 @@ class TestLoginLogout(Common):
     assert response.status_code == status.HTTP_200_OK
     assert 'Index' in str(response)
 
+  # Introduction page
+  def test_can_move_to_introduction_page(self, csrf_exempt_django_app):
+    app = csrf_exempt_django_app
+    page = app.get(self.index_url)
+    response = page.click('Introduction')
+    introduction_url = reverse('utils:introduction')
+
+    assert response.status_code == status.HTTP_200_OK
+    assert get_current_path(response) == introduction_url
+
   # Login page
   def test_can_move_to_login_page(self, csrf_exempt_django_app):
     app = csrf_exempt_django_app
@@ -711,7 +721,7 @@ class TestIndividualGroup(Common):
     _, user = get_players
     app = csrf_exempt_django_app
     page = app.get(self.profile_url, user=user)
-    response = page.click('Create/Edit/delete indivitual groups')
+    response = page.click('Create/Edit/Delete indivitual groups')
 
     assert response.status_code == status.HTTP_200_OK
     assert get_current_path(response) == self.group_list_url
@@ -722,7 +732,7 @@ class TestIndividualGroup(Common):
     page = app.get(self.profile_url, user=user)
 
     with pytest.raises(IndexError):
-      _ = page.click('Create/Edit/delete indivitual groups')
+      _ = page.click('Create/Edit/Delete indivitual groups')
 
   def test_can_move_to_create_page(self, csrf_exempt_django_app, get_players):
     _, user = get_players

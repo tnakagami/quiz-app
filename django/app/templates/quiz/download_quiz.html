@@ -4,6 +4,13 @@
 
 {% block header %}
 <link rel="stylesheet" href="{% static 'css/datatables.min.css' %}">
+<style>
+  .custom-select-box > .dt-column-header {
+    vertical-align: middle !important;
+    justify-content: center !important;
+    column-gap: 0 !important;
+  }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -45,7 +52,7 @@
           <table class="table" id="all-quizzes">
             <thead>
               <tr class="align-middle">
-                <th scope="col"></th>
+                <th scope="col" class="custom-select-box"></th>
                 <th scope="col" class="text-nowrap">{% trans "Creator" %}</th>
                 <th scope="col" class="text-nowrap">{% trans "Genre" %}</th>
                 <th scope="col" class="text-nowrap">{% trans "Question" %}</th>
@@ -163,7 +170,7 @@
             i18n: {
               loadMessage: '',
             },
-            collapse: false,
+            collapse: true,
           },
         },
       },

@@ -175,7 +175,7 @@ class DoneAccountCreationPage(IsNotAuthenticated, TemplateView, DjangoBreadcrumb
 
   ##
   # @brief Get context data
-  # @param kwargs named arguments
+  # @param kwargs Named arguments
   # @return context context which is used in template file
   def get_context_data(self, **kwargs):
     context = super().get_context_data(**kwargs)
@@ -190,7 +190,7 @@ class CompleteAccountCreationPage(IsNotAuthenticated, TemplateView):
   ##
   # @brief Process GET request
   # @param request Django's request instance
-  # @param kwargs named arguments
+  # @param kwargs Named arguments
   # @return response Django's response instance
   def get(self, request, **kwargs):
     timeout_seconds = _get_timelimit_seconds()
@@ -249,7 +249,7 @@ class DonePasswordResetPage(IsNotAuthenticated, PasswordResetDoneView, DjangoBre
 
   ##
   # @brief Get context data
-  # @param kwargs named arguments
+  # @param kwargs Named arguments
   # @return context context which is used in template file
   def get_context_data(self, **kwargs):
     context = super().get_context_data(**kwargs)
@@ -263,6 +263,20 @@ class ConfirmPasswordResetPage(IsNotAuthenticated, PasswordResetConfirmView):
   form_class = forms.CustomSetPasswordForm
   template_name = 'account/passwords/confirm_password_form.html'
   success_url = reverse_lazy('account:complete_password_reset')
+
+  ##
+  # @brief Create response data
+  # @param context Context data
+  # @param response_kwargs Named arguments
+  # @return response Http response data
+  def render_to_response(self, context, **response_kwargs):
+    # Check whether form instance exists or not
+    if context['validlink']:
+      response = super().render_to_response(context, **response_kwargs)
+    else:
+      response = HttpResponseBadRequest('The requested token is invalid.', charset='utf-8')
+
+    return response
 
 class CompletePasswordResetPage(IsNotAuthenticated, PasswordResetCompleteView, DjangoBreadcrumbsMixin):
   raise_exception = True
@@ -295,7 +309,7 @@ class RoleChangeRequestListPage(LoginRequiredMixin, HasManagerRole, ListView, Dj
 
   ##
   # @brief Get context data
-  # @param kwargs named arguments
+  # @param kwargs Named arguments
   # @return context context which is used in template file
   def get_context_data(self, **kwargs):
     context = super().get_context_data(**kwargs)
@@ -411,6 +425,12 @@ class IndividualGroupAjaxResponse(LoginRequiredMixin, IsPlayer, View):
   raise_exception = True
   http_method_names = ['post']
 
+  ##
+  # @brief Process POST request
+  # @param request Requested data
+  # @param args Positional arguments
+  # @param kwargs Named arguments
+  # @return response Json response
   def post(self, request, *args, **kwargs):
     try:
       body = request.body.decode('utf-8')
