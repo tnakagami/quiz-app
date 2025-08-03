@@ -860,7 +860,7 @@ msgstr "管理者はこのアプリ経由で新しいクイズを作成できま
 
 #: templates/introduction.html:379
 msgid "Prepare for CSV file by using same format as creator's one. In addition, you can use creator's list to fill out <code>Creator.pk</code> field. Please see the <a href=\"#quiz-upload-format\">link</a> for detail. In this case, we'll use the following CSV file."
-msgstr "クイズ制作者がアップロードする時と同様のフォーマットで、CSVファイルを作成します。加えて、クイズ制作者一覧を用いて<code>Creator.pk</code>欄を入力してください。フォーマットの詳細は<a href=\"#quiz-upload-format\">link</a>をご覧ください。今回は、以下のようなCSVファイルを利用します。"
+msgstr "クイズ制作者がアップロードする時と同様のフォーマットで、CSVファイルを作成します。加えて、クイズ制作者一覧を用いて<code>Creator.pk</code>欄を入力してください。フォーマットの詳細は<a href=\"#quiz-upload-format\">こちらのリンク</a>をご覧ください。今回は、以下のようなCSVファイルを利用します。"
 
 #: templates/introduction.html:387 templates/introduction.html:523
 msgid "In the <code>Quiz list</code> page, click <code>Helper functions</code> and select <code>Upload quiz</code>."
