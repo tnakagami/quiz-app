@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-07-28 07:42+0900\n"
+"POT-Creation-Date: 2025-08-03 12:06+0900\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -252,30 +252,30 @@ msgstr "パスワードが更新されました。"
 msgid "Reset password"
 msgstr "パスワードのリセット"
 
-#: account/views.py:272
+#: account/views.py:286
 msgid "Password was reset"
 msgstr "パスワードがリセットされました。"
 
-#: account/views.py:286
-msgid "Download creators"
-msgstr "クイズ制作者一覧のダウンロード"
-
-#: account/views.py:322
+#: account/views.py:300
 msgid "Role change requests"
 msgstr "ロール変更要求"
 
-#: account/views.py:358
+#: account/views.py:336
 msgid "Change role"
 msgstr "ロール変更"
 
-#: account/views.py:386
+#: account/views.py:364
 msgid "Register/Unregister friends"
 msgstr "フレンドの登録／解除"
 
-#: account/views.py:409
+#: account/views.py:387
 msgid "Individual groups"
 msgstr "個人グループ"
 
-#: account/views.py:426 account/views.py:437
+#: account/views.py:404 account/views.py:415
 msgid "Create/Update group"
 msgstr "グループの作成／更新"
+
+#: account/views.py:456
+msgid "Download creators"
+msgstr "クイズ制作者一覧のダウンロード"
