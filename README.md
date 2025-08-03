@@ -29,7 +29,7 @@ I assume that host environment is satisfied with the following conditions.
 
     | Envrionment variable name | Example | Enables (option) |
     | :---- | :---- | :---- |
-    | `APP_DOMAINS` | `localhost -> http://nginx:80` | See [https-portal](https://github.com/SteveLTN/https-portal) for details. |
+    | `APP_DOMAINS` | `localhost -> http://django:8001` | See [https-portal](https://github.com/SteveLTN/https-portal) for details. |
     | `APP_ACCESS_PORT` | 8443 | from 1025 to 65535 |
     | `APP_ARCHITECTURE` | arm64v8 | amd64, arm32v5, arm32v6, arm32v7, arm64v8, i386, mips64le, ppc64le, riscv64, s390x |
     | `APP_TIMEZONE` | Asia/Tokyo | UTC, Asia/Tokyo, etc. |
@@ -93,6 +93,13 @@ To access web page using `https:` request, you need to copy relevant certificate
 
 1. Download the certificate to client machine.
 1. Install the certificate as "Trusted Root Certification Authorities".
+
+## Initialize Database
+Run the following command to create relevant tables in your database.
+
+```bash
+./wrapper.sh migrate
+```
 
 ## Access to web site
 Enter your domain to address-bar of web browser and move to the target page.

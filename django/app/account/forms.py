@@ -12,7 +12,11 @@ from django.contrib.auth.forms import (
 from django.contrib.sites.shortcuts import get_current_site
 from django.template.loader import render_to_string
 from django.utils.translation import gettext_lazy
-from utils.models import get_digest, DualListbox
+from utils.models import (
+  generate_default_filename,
+  get_digest,
+  DualListbox,
+)
 from utils.forms import (
   BaseFormWithCSS,
   ModelFormBasedOnUser,
@@ -152,6 +156,20 @@ class CustomPasswordResetForm(PasswordResetForm, BaseFormWithCSS):
   )
 
   ##
+  # @brief Check whether the given email address is registered or not
+  def clean_email(self):
+    email = self.cleaned_data.get('email')
+    user_exists = UserModel.objects.filter(email=email, is_active=True).exists()
+
+    if not user_exists:
+      raise forms.ValidationError(
+        gettext_lazy('The given email address is not registered or not enabled. Please check your email address.'),
+        code='invalid_email',
+      )
+
+    return email
+
+  ##
   # @brief Send email based on input parameters
   # @param kwargs Named arguments
   def save(self, **kwargs):
@@ -170,6 +188,42 @@ class CustomSetPasswordForm(SetPasswordForm, BaseFormWithCSS):
         'autofocus': True,
       }),
     }
+
+class CreatorDownloadForm(BaseFormWithCSS):
+  class Meta:
+    model = UserModel
+    fields = []
+
+  filename = forms.CharField(
+    label=gettext_lazy('CSV filename'),
+    max_length=128,
+    required=True,
+    widget=forms.TextInput(attrs={
+      'class': 'form-control',
+      'autofocus': True,
+    }),
+    help_text=gettext_lazy('You don’t have to enter the extention.'),
+  )
+
+  ##
+  # @brief Constructor of GenreDownloadForm
+  # @param args Positional arguments
+  # @param kwargs Named arguments
+  def __init__(self, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+    self.fields['filename'].initial = generate_default_filename()
+
+  ##
+  # @brief Create response data
+  # @return kwargs Dictionary data
+  def create_response_kwargs(self):
+    filename = self.cleaned_data.get('filename', '').replace('.csv', '')
+    # Check filename
+    if not filename:
+      filename = generate_default_filename()
+    kwargs = UserModel.get_response_kwargs(filename)
+
+    return kwargs
 
 class RoleChangeRequestForm(forms.ModelForm, BaseFormWithCSS):
   class Meta:

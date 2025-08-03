@@ -1,0 +1,943 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load i18n %}
+
+{% block header %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tocbot/4.32.2/tocbot.css">
+<style>
+  .toc-list-item a {
+    @media (any-hover: hover) {
+      color: #6c6c6c;
+      &:hover {
+        color: inherit;
+      }
+    }
+  }
+  .toc-link::before {
+    background-color: unset !important;
+  }
+  .img-shadow {
+    box-shadow: 0 10px 10px rgba(72, 78, 85, 0.6);
+  }
+  code {
+    display: inline-block;
+    background: #f0f5f9;
+    border: 0.125rem solid #e6edf3;
+    padding: 0.125rem;
+    margin: 0rem 0.125rem 0.25rem 0.125rem;
+    border-radius: 0.25rem;
+    line-height: 1.25;
+    font-size: 1rem;
+  }
+  .custom-width-of-table {
+    width: 95% !important;
+  }
+  .custom-width-of-table > tbody {
+    border-top: 0.25rem solid #212529 !important;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+{% include 'breadcrumbs.html' with title=_("Introduction") %}
+<article class="justify-content-center">
+  <div class="row">
+    <div class="col-12 col-md-4 col-lg-3 d-none d-md-block border-end">
+      <div class="d-flex flex-column align-self-start sticky-top" style="top: 1rem;">
+        <span class="ms-1 fw-bold">{% trans "Table of contents" %}</span>
+        <div id="table-of-contents" class="ms-2 js-toc"></div>
+      </div>
+    </div>
+    <div class="col-12 col-md-8 col-lg-9">
+      <div
+        data-bs-spy="scroll"
+        data-bs-target="#table-of-contents"
+        data-bs-smooth-scroll="true"
+        data-bs-offset="0"
+        class="js-scrollspy"
+        tabindex="0"
+      >
+        <div class="row row-cols-1 g-4 js-toc-content">
+          {# About quiz app #}
+          <section class="col">
+            <h2 class="h2 text-decoration-underline" id="about-quiz-app">{% trans "What's quiz app?" %}</h2>
+            <p>{% blocktrans trimmed %}
+              User can play quizzes provided from registered creators with specific relevant users.
+              Specifically, this app provides the following functions.
+            {% endblocktrans %}</p>
+            <p class="small fw-bold text-success">{% trans "[Note] It's overview. Please see the following sections for detail." %}</p>
+            <ol class="list-group list-group-numbered">
+              <li class="list-group-item">{% trans "User role function such as Guest, Creator, and Manager" %}</li>
+              <li class="list-group-item">{% trans "Genre registration/modifiction function (Manager only)" %}</li>
+              <li class="list-group-item">{% trans "Quiz creation/modifiction function (Creator/Manager only)" %}</li>
+              <li class="list-group-item">{% trans "Quiz room creation/modification function (Creator/Guest only)" %}</li>
+            </ol>
+          </section>
+          {# How to use this app #}
+          <section class="col">
+            <h2 class="h2 text-decoration-underline" id="new-account-creation">{% trans "New account creation" %}</h2>
+            <p>{% trans "In this section, we'll explain how to register new account." %}</p>
+
+            <section class="my-3">
+              <h3 class="h3" id="register-user-information">{% trans "Register user information" %}</h3>
+              <p>{% blocktrans trimmed %}
+                At first, access to index page and then, click <code>Create account</code> link after opening the side-bar.
+              {% endblocktrans %}</p>
+              <p>
+                <img class="img-fluid border rounded img-shadow" src="{% static 'img/introduction/account/001_new-account-creation.webp' %}" alt="Click `Create account` link" />
+              </p>
+              <p>{% trans "After that, enter the your email-address, screen nam, password, (today's) hash value." %}</p>
+              <p class="small fw-bold text-success">{% trans "[Note] You need to confirm today's hash value to managers or site administrator." %}</p>
+              <p>
+                <img class="img-fluid border rounded img-shadow" src="{% static 'img/introduction/account/002_new-account-creation.webp' %}" alt="Enter your account information" />
+              </p>
+              <p>{% blocktrans trimmed %}
+                After entering all fields, click <code>Provisional registration</code> button.
+              {% endblocktrans %}</p>
+              <p>{% trans "If your account information is valid, the system send an email with definitive registration link. Please check your mail box." %}</p>
+              <p class="small fw-bold text-success">{% trans "[Note] The definitive registration link is valid for 10 minutes. If the link was invalid, please conduct registration process again." %}</p>
+              <p>
+                <img class="img-fluid border rounded img-shadow" src="{% static 'img/introduction/account/003_new-account-creation.webp' %}" alt="Sent an email" />
+              </p>
+            </section>
+
+            <section class="my-3">
+              <h3 class="h3" id="conduct-definitive-registration">{% trans "Conduct definitive registration" %}</h3>
+              <p>{% trans "After receiving definitive registration link, click its link to complete registration process." %}</p>
+              <p>
+                <img class="img-fluid border rounded img-shadow" src="{% static 'img/introduction/account/004_new-account-creation.webp' %}" alt="Receive definitive registration url" />
+              </p>
+              <p>{% trans "If your token is valid, then definitive registration process is completed." %}</p>
+              <p>
+                <img class="img-fluid border rounded img-shadow" src="{% static 'img/introduction/account/005_new-account-creation.webp' %}" alt="Complete definitive registration" />
+              </p>
+            </section>
+
+            <section class="my-3">
+              <h3 class="h3" id="change-your-role">{% trans "[Optional] Change your role" %}</h3>
+              <p>{% blocktrans trimmed %}
+                If you want to create qiuzzes, you need to request role-change process (Default role is <code>GUEST</code>).
+                The detail is shown below.
+              {% endblocktrans %}</p>
+              <ol class="list-group list-group-numbered">
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    After logged-in, open the side-bar and click <code>User Profile</code> link.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/account/011_change-user-role.webp' %}" alt="Click user profile link" />
+                </li>
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    In your profile page, click <code>Change own role to "CREATOR"</code> button.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/account/012_change-user-role.webp' %}" alt="Click `Change own role to CREATOR` button" />
+                </li>
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    Finally, after checking the content of role-change request, click <code>Request</code> button.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/account/013_change-user-role.webp' %}" alt="Click request button" />
+                </li>
+                <li class="list-group-item">{% blocktrans trimmed %}If a manager accepts your request, you role becomes a <code>CREATOR</code>.{% endblocktrans %}</li>
+              </ol>
+            </section>
+          </section>
+
+          {# For common functions #}
+          <section class="col">
+            <h2 class="h2 text-decoration-underline" id="for-common-functions">{% trans "Functions for all users" %}</h2>
+            <p>{% trans "In this section, we'll introduce the functions provided to all users." %}</p>
+
+            <section class="my-3">
+              <h3 class="h3" id="update-screen-name">{% trans "Update screen name" %}</h3>
+              <p>{% blocktrans trimmed %}
+                You can update screen name. In general, its name is used in several situation.
+                For example, when you play quiz game with your friends, its name is used to tell the other players your player name.
+                How to change your screen name is shown below.
+              {% endblocktrans %}</p>
+              <ol class="list-group list-group-numbered">
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    Access to User Profile page and then, click <code>Update user profile</code> button.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/account/021_update-screen-name.webp' %}" alt="Click `Update user profile` button" />
+                </li>
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    Enter your new screen name and click <code>Update</code> button.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/account/022_update-screen-name.webp' %}" alt="Click `Update` button" />
+                </li>
+                <li class="list-group-item">
+                  <span>{% trans "You can check (updated) own screen name in user profile page." %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/account/023_update-screen-name.webp' %}" alt="Check updated own screen name" />
+                </li>
+              </ol>
+            </section>
+
+            <section class="my-3">
+              <h3 class="h3" id="change-login-password">{% trans "Update/Reset login password" %}</h3>
+              <p>{% blocktrans trimmed %}
+                If you want to change login password or forget own password, then you can update/reset your password.
+                The detail is shown below.
+              {% endblocktrans %}</p>
+              {# User can login #}
+              <p class="fw-bold text-decoration-underline">{% trans "In the case of being logged in" %}</p>
+              <p>{% trans "If you can login to the site, please conduct the following activities." %}</p>
+              <ol class="list-group list-group-numbered">
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    Access to <code>User Profile</code> page and then, click <code>Update password</code> button.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/account/031_change-login-password.webp' %}" alt="Click `Update password` button" />
+                </li>
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    Enter your old password and new password and then, click <code>Update</code> button.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/account/032_change-login-password.webp' %}" alt="Enter your passwords and click `Update` button" />
+                  <p class="small fw-bold text-success">{% trans "[Note] You cannt use old password as new one." %}</p>
+                </li>
+                <li class="list-group-item">
+                  <span>{% trans "If your passwords are valid, you can use the new password." %}</span>
+                </li>
+              </ol>
+              {# User cannot login #}
+              <p class="mt-3 mb-1 fw-bold text-decoration-underline">{% trans "In the case of not being able to login" %}</p>
+              <p>{% trans "On the other hand, if you cannot login to the site, you need to conduct the following process to change your password without login process." %}</p>
+              <ol class="list-group list-group-numbered">
+                <li class="list-group-item">
+                  <span>{% trans "Access to login page by opening side-bar." %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/account/033_change-login-password.webp' %}" alt="Access to login page" />
+                </li>
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    Click <code>Forget own password</code> button.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/account/034_change-login-password.webp' %}" alt="Click `Forget own password` button" />
+                </li>
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    Enter your email-address and then click <code>Send</code> button.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/account/035_change-login-password.webp' %}" alt="Enter your email address and click `Send` button" />
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/account/036_change-login-password.webp' %}" alt="Show message" />
+                </li>
+                <li class="list-group-item">
+                  <span>{% trans "After receiving reset-password link, click its link to access to reset password page." %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/account/037_change-login-password.webp' %}" alt="Click reset-password link" />
+                </li>
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    Enter your new password and then, click <code>Reset</code> button.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/account/038_change-login-password.webp' %}" alt="Click `Reset` button" />
+                </li>
+                <li class="list-group-item">
+                  <span>{% trans "If your passwords are valid, you can use the new password." %}</span>
+                </li>
+              </ol>
+            </section>
+          </section>
+
+          {# For manager #}
+          <section class="col">
+            <h2 class="h2 text-decoration-underline" id="for-manager">{% trans "Functions for manager only" %}</h2>
+            <p>{% trans "In this section, we'll explain what only manager can conduct in this app." %}</p>
+
+            <section class="my-3">
+              <h3 class="h3" id="add-genres">{% trans "Add genres" %}</h3>
+              <p>{% blocktrans trimmed %}
+                When a creator registers own quiz to the system, a manager need to define relevant genres in advance.
+                In addition, the system supports the CSV file import function. Therefore, a manager doesn't have to register all genres manually.
+                The concrete procedures are shown below.
+              {% endblocktrans %}</p>
+              <ol class="list-group list-group-numbered">
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    Access to <code>Quiz genre</code> page from index page.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/manager/101_quiz-genre.webp' %}" alt="Access to `Quiz genre` page" />
+                </li>
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    Click <code>Create a new genre</code> button to add a new genre.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/manager/102_quiz-genre.webp' %}" alt="Click `Create a new genre` button" />
+                </li>
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    After entering genre name, click <code>Create/Update</code> button.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/manager/103_quiz-genre.webp' %}" alt="Click `Create/Update` button" />
+                  <span class="small fw-bold text-success">{% blocktrans trimmed %}
+                    [Note] You cannot add same genre name and delete registered genres.
+                    Therefore, if you want to ignore specific genres, please change the status from <code>Enable</code> to <code>Disable</code>.
+                  {% endblocktrans %}</span>
+                </li>
+              </ol>
+              <p class="mt-3 mb-1">{% trans "As the other additional procedure, you can conduct uploading CSV file. The detail is shown below." %}</p>
+              <ol class="list-group list-group-numbered">
+                <li class="list-group-item">
+                  <span>{% trans "Prepare for CSV file for the following format." %}</span>
+                  <div class="table-responsive">
+                    <table class="table ms-3 border rounded custom-width-of-table">
+                      <thead><tr class="align-middle"><th scope="col">Name</th></tr></thead>
+                      <tbody>
+                        <tr class="align-middle"><td scope="row">{% trans "Game" %}</td></tr>
+                        <tr class="align-middle"><td scope="row">{% trans "Food" %}</td></tr>
+                        <tr class="align-middle"><td scope="row">{% trans "Japanese cartoons" %}</td></tr>
+                        <tr class="align-middle"><td scope="row">...</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </li>
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    Access to <code>Genre list</code> page and click <code>Upload genre</code> button.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/manager/104_quiz-genre.webp' %}" alt="Click `Upload genre` button" />
+                </li>
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    After selecting <code>Encoding</code>, <code>CSV file</code>, and <code>Header status</code>, click <code>Upload</code> button.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/manager/105_quiz-genre.webp' %}" alt="Click `Upload` button" />
+                </li>
+                <li class="list-group-item"><span>{% trans "Finally, you can confirm the genres added via CSV file from list." %}</span></li>
+              </ol>
+            </section>
+
+            <section class="my-3">
+              <h3 class="h3" id="accept-or-reject-role-change-request">{% trans "Accept/Reject role change request" %}</h3>
+              <p>{% blocktrans trimmed %}
+                In general, guest user cannot register own quizzes. Therefore, guest users need to request role-change to managers.
+                To accept/reject the received requests, the system provides approval function. Please see the following explanation for detail.
+              {% endblocktrans %}</p>
+              <p class="small fw-bold text-success">{% blocktrans trimmed %}
+                [Note] When you process the requests, the system doesn't confirm your judgement.
+                Therefore, if you mistake your judgement, please make a request again to the guest user by using the other communication (e.g., email or chat).
+                The system does't provide any request functions for a manager.
+              {% endblocktrans %}</p>
+              <ol class="list-group list-group-numbered">
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    Access to <code>Role change request</code> page from the index page.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/manager/111_role-change-request.webp' %}" alt="Access to `Role change request` page" />
+                </li>
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    If some requests exist, they are listed up.
+                    Therefore, after checking the requested contents, please click <code>Accept/Reject</code> button.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/manager/112_role-change-request.webp' %}" alt="Click `Role change request` button" />
+                  <span class="small fw-bold text-success">{% trans "[Note] If you reject the request, then the relevant guest user can send role-change request again." %}</span>
+                </li>
+              </ol>
+              <p class="mt-3 mb-1">{% trans "If you finished processing all requests, you can see empty list." %}</p>
+              <p>
+                <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/manager/113_role-change-request.webp' %}" alt="Empty list" />
+              </p>
+            </section>
+
+            <section class="my-3">
+              <h3 class="h3" id="download-creator-list">{% trans "Download creator list" %}</h3>
+              <p>{% blocktrans trimmed %}
+                When a manager register quizzes, you need to collect creator's information.
+                Therefore, the system provides the function to download creator's list.
+              {% endblocktrans %}</p>
+              <ol class="list-group list-group-numbered">
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    Access to <code>Download creator</code> page from the index page.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/manager/121_download-creator.webp' %}" alt="Access to `Download creator` page" />
+                </li>
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    After entering suffix of CSV file, click <code>Download</code> button.
+                    Incidentally, default name is the current access time and its format is <code>YYYYMMDD-hhmmss</code>.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/manager/122_download-creator.webp' %}" alt="Click `Download` button" />
+                </li>
+                <li class="list-group-item">
+                  <span>{% trans "Finally, you can download the following CSV file." %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/manager/123_download-creator.webp' %}" alt="Example of downloaded CSV file" />
+                </li>
+              </ol>
+            </section>
+
+            <section class="my-3">
+              <h3 class="h3" id="upload-quizzes">{% trans "Upload quizzes for all creators" %}</h3>
+              <p>{% blocktrans trimmed %}
+                Manager cannot create a new quiz via this app, but you can upload new quizzes created by some creators insted of them.
+                The concrete procedure is shown below.
+              {% endblocktrans %}</p>
+              <ol class="list-group list-group-numbered">
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    Prepare for CSV file by using same format as creator's one. In addition, you can use creator's list to fill out <code>Creator.pk</code> field.
+                    Please see the <a href="#quiz-upload-format">link</a> for detail.
+                    In this case, we'll use the following CSV file.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/manager/131_upload-quiz.webp' %}" alt="Example of CSV file" />
+                </li>
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    In the <code>Quiz list</code> page, click <code>Helper functions</code> and select <code>Upload quiz</code>.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/manager/132_upload-quiz.webp' %}" alt="Select `Upload quiz`" />
+                </li>
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    After selecting <code>Encoding</code>, <code>CSV file</code>, and <code>Header status</code>, click <code>Upload</code> button.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/manager/133_upload-quiz.webp' %}" alt="Click `Upload` button" />
+                </li>
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    If the uploaded CSV file is valid, then all quizzes are registered to this app.
+                    In addition, you can confirm uploaded quizzes in the <code>Quiz list</code> page.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/manager/134_upload-quiz.webp' %}" alt="Confirm the uploaded quizzes in the `Quiz list`" />
+                </li>
+              </ol>
+            </section>
+
+            <section class="my-3">
+              <h3 class="h3" id="download-quizzes">{% trans "Download quizzes for all creators" %}</h3>
+              <p>{% blocktrans trimmed %}
+                Manager can download all registered quizzes. The concrete procedure is shown below.
+              {% endblocktrans %}</p>
+              <ol class="list-group list-group-numbered">
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    In the <code>Quiz list</code> page, click <code>Helper functions</code> and select <code>Download quiz</code>.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/manager/141_download-quiz.webp' %}" alt="Select `Download quiz`" />
+                </li>
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    In this page, you can select arbitrary quizzes you want to download.
+                    On the left side of the following table, you select some items and enter suffix of CSV file.
+                    Finally, click <code>Download</code> button.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/manager/142_download-quiz.webp' %}" alt="Click `Download` button" />
+                </li>
+                <li class="list-group-item">
+                  <span>{% trans "Finally, you can confirm your selected quizzes on your CSV file." %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/manager/143_download-quiz.webp' %}" alt="Example of downloaded quizzes" />
+                </li>
+              </ol>
+            </section>
+          </section>
+
+          {# For creator #}
+          <section class="col">
+            <h2 class="h2 text-decoration-underline" id="for-creator">{% trans "Functions for creator" %}</h2>
+            <p>{% trans "In this section, we'll explain what a creator can conduct in this app." %}</p>
+            <p class="small fw-bold text-success">{% trans "[Note] These activities include what a manager can conduct too." %}</p>
+
+            <section class="my-3">
+              <h3 class="h3" id="create-new-quizzes">{% trans "Create new quizzes" %}</h3>
+              <p>{% blocktrans trimmed %}
+                Creators can add new quizzes based on relevant genres provided from managers.
+                The concrete procedure is shown below.
+              {% endblocktrans %}</p>
+              <ol class="list-group list-group-numbered">
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    Access to <code>Quiz</code> page from the index page.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/creator/201_quiz.webp' %}" alt="Access to `Quiz` page" />
+                </li>
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    Click <code>Create a new quiz (creator only)</code> button.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/creator/202_quiz.webp' %}" alt="Click `Create a new quiz (creator only)` button" />
+                </li>
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    Select <code>Genre</code> and enter <code>Question</code>, <code>Answer</code>, and <code>Quiz status (Created/Creating)</code>.
+                    After that, click <code>Create/Update</code> button.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/creator/203_quiz.webp' %}" alt="Click `Create/Update` button" />
+                  <span class="small fw-bold text-success">{% blocktrans trimmed %}
+                    If you selected <code>Creating</code>, the relevant item in the list is filled by gray cell.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/creator/204_quiz.webp' %}" alt="Example of the quiz which is `creating status`" />
+                </li>
+              </ol>
+            </section>
+
+            <section class="my-3">
+              <h3 class="h3" id="upload-own-quizzes">{% trans "Upload own quizzes" %}</h3>
+              <p>{% trans "In addition, you can upload CSV file to add own quizzes. The detail is shown below." %}</p>
+              <ol class="list-group list-group-numbered">
+                <li class="list-group-item">
+                  <span id="quiz-upload-format">{% trans "Prepare for CSV file for the following format." %}</span>
+                  <div class="table-responsive">
+                    <table class="table ms-3 border rounded custom-width-of-table text-align-center">
+                      <thead>
+                        <tr class="align-middle">
+                          <th scope="col" class="text-nowrap">Creator.pk</th>
+                          <th scope="col" class="text-nowrap">Genre</th>
+                          <th scope="col" class="text-nowrap">Question</th>
+                          <th scope="col" class="text-nowrap">Answer</th>
+                          <th scope="col" class="text-nowrap">IsCompleted</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td scope="row">your-primary-key</td>
+                          <td>{% trans "Game" %}</td>
+                          <td>{% blocktrans trimmed %}
+                            How long is one side of a block used in Minecraft?<br /><br />1. 100cm<br />2. 80cm<br />3. 16cm<br />4. 50cm
+                          {% endblocktrans %}</td>
+                          <td>{% trans "1. 100cm" %}</td>
+                          <td>TRUE</td>
+                        </tr>
+                        <tr>
+                          <td scope="row">your-primary-key</td>
+                          <td>{% trans "Game" %}</td>
+                          <td>{% blocktrans trimmed %}
+                            How many minutes in real time is one day in Minecraft?<br /><br />1. 40min<br />2. 35min<br />3. 20min<br />4. 15min
+                          {% endblocktrans %}</td>
+                          <td>{% trans "3. 20min" %}</td>
+                          <td>TRUE</td>
+                        </tr>
+                        <tr>
+                          <td scope="row">...</td>
+                          <td>...</td>
+                          <td>...</td>
+                          <td>...</td>
+                          <td>...</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </li>
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    In the <code>Quiz list</code> page, click <code>Helper functions</code> and select <code>Upload quiz</code>.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/creator/211_quiz.webp' %}" alt="Select `Upload quiz`" />
+                </li>
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    After selecting <code>Encoding</code>, <code>CSV file</code>, and <code>Header status</code>, click <code>Upload</code> button.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/creator/212_quiz.webp' %}" alt="Click `Upload` button" />
+                </li>
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    If the uploaded CSV file is valid, then all quizzes are registered to this app.
+                    In addition, you can confirm uploaded quizzes in the <code>Quiz list</code> page.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/creator/213_quiz.webp' %}" alt="Confirm the uploaded quizzes in the `Quiz list`" />
+                </li>
+              </ol>
+            </section>
+
+            <section class="my-3">
+              <h3 class="h3" id="download-genres">{% trans "Download genres" %}</h3>
+              <p>{% blocktrans trimmed %}
+                If creators add new quizzes via CSV file, you need to collect genre list.
+                Therefore, the system provides the function to download active genres.
+                In addition, managers can also use this function.
+              {% endblocktrans %}</p>
+              <ol class="list-group list-group-numbered">
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    In the <code>Quiz list</code> page, click <code>Helper functions</code> and select <code>Download genre</code>.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/creator/221_quiz.webp' %}" alt="Select `Download genre`" />
+                </li>
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    After entering suffix of CSV file, click <code>Download</code> button.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/creator/222_quiz.webp' %}" alt="Click `Download` button" />
+                </li>
+                <li class="list-group-item">
+                  <div>{% trans "You can collect active genres only." %}</div>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/creator/223_quiz.webp' %}" alt="Example of active genres" />
+                </li>
+              </ol>
+            </section>
+
+            <section class="my-3">
+              <h3 class="h3" id="download-quizzes">{% trans "Download quizzes" %}</h3>
+              <p>{% trans "Same as downloading genre, creators can also download own quizzes." %}</p>
+              <ol class="list-group list-group-numbered">
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    In the <code>Quiz list</code> page, click <code>Helper functions</code> and select <code>Download quiz</code>.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/creator/231_quiz.webp' %}" alt="Select `Download quiz`" />
+                </li>
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    In this page, you can select arbitrary quizzes you want to download.
+                    On the left side of the following table, you select some items and enter suffix of CSV file.
+                    Finally, click <code>Download</code> button.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/creator/232_quiz.webp' %}" alt="Click `Download` button" />
+                </li>
+                <li class="list-group-item">
+                  <span>{% trans "Finally, you can confirm your selected quizzes on your CSV file." %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/creator/233_quiz.webp' %}" alt="Example of downloaded quizzes" />
+                </li>
+              </ol>
+            </section>
+          </section>
+
+          {# For player #}
+          <section class="col">
+            <h2 class="h2 text-decoration-underline" id="for-player">{% trans "Functions for player (Creator/Guest)" %}</h2>
+            <p>{% trans "In this section, we'll explain what a player can conduct in this app." %}</p>
+            <p class="small fw-bold text-success">{% trans "[Note] The player means either Guest user or Creator." %}</p>
+
+            <section class="my-3">
+              <h3 class="h3" id="add-friends">{% trans "Add friends" %}</h3>
+              <p>{% trans "When you play the quiz app, you need to add your friends. Please see the following activities for detail." %}</p>
+              <p class="small fw-bold text-success">{% trans "[Note] In this app, the friend registration function is not bidirectional. This means that even if you add a user as a friend, he/she may not add you as a friend." %}</p>
+              <ol class="list-group list-group-numbered">
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    Access to <code>User Profile</code> page and then, click <code>Register/Unregister friends</code> button.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/player/301_add-friends.webp' %}" alt="Access to `Register/Unregister friends` page" />
+                </li>
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    After selecting some friends you want to add, click <code>Update</code> button.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/player/302_add-friends.webp' %}" alt="Click `Update` button" />
+                </li>
+              </ol>
+            </section>
+
+            <section class="my-3">
+              <h3 class="h3" id="create-individual-group">{% trans "Create individual groups" %}</h3>
+              <p>{% blocktrans trimmed %}
+                When you have many many friends, it takes time to search target friends.
+                To avoid this situation, this app provides <code>individual group</code> function.
+                This is group creation function and you can add arbitrary friends to a group based on meaningful units such as <code>L.E.D member</code>, <code>Alcohol team</code>, <code>Boardgame team</code>, and so on.
+                The concrete procedures are shown below.
+              {% endblocktrans %}</p>
+              <ol class="list-group list-group-numbered">
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    Access to <code>User Profile</code> page and then, click <code>Create/Edit/Delete individual groups</code> button.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/player/311_individual-groups.webp' %}" alt="Access to `Create/Edit/Delete individual groups` page" />
+                </li>
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    Click <code>Create a new group</code> button.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/player/312_individual-groups.webp' %}" alt="Click `Create a new group` button" />
+                </li>
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    After selecting friends you want to add, click <code>Create/Update</code> button.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/player/313_individual-groups.webp' %}" alt="Click `Create/Update`" />
+                </li>
+                <li class="list-group-item">{% trans "After you came back to previous page, you can find the added group with the number of friends." %}</li>
+              </ol>
+              <p class="small fw-bold text-success">{% blocktrans trimmed %}
+                [Note] There's a relationship between arbitrary groups and your friends.
+                Therefore, if you have a group with a friend, you cannot remove the friend from you friend list.
+                In this case, at first, you remove the friend from the group, after that, you need to update friend list.
+              {% endblocktrans %}</p>
+            </section>
+
+            <section class="my-3">
+              <h3 class="h3" id="create-quiz-room">{% trans "Create quiz room" %}</h3>
+              <p>{% blocktrans trimmed %}
+                The system provides the room creation function for players to play quiz game with relevant players.
+                In the following steps, you can create quiz room.
+              {% endblocktrans %}</p>
+              <ol class="list-group list-group-numbered">
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    Access to <code>Quiz room</code> page from the index page.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/player/331_create-quiz-room.webp' %}" alt="Access to `Quiz room` page" />
+                </li>
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    Click <code>Create a new quiz room (player only)</code> button.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/player/332_create-quiz-room.webp' %}" alt="Click `Create a new quiz room` button" />
+                </li>
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    After entering <code>Quiz room name</code> and <code>Max question</code>, and selecting <code>Genres</code>, <code>Creators</code>, <code>Room members</code>, and <code>Room status</code> click <code>Create/Update</code> button.
+                    In addition, there're several restrictions in this setting. Please check the following notes.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/player/333_create-quiz-room.webp' %}" alt="Select genres and creators" />
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/player/334_create-quiz-room.webp' %}" alt="Click `Create/Update` button" />
+                </li>
+              </ol>
+              <p class="small fw-bold text-success">{% blocktrans trimmed %}
+                [Note 1] As the restriction, you need to select at least one of <code>Genres</code> or <code>Creators</code>.
+              {% endblocktrans %}</p>
+              <p>
+                <div class="small fw-bold text-success">{% trans "[Note 2] The number of maximum quizzes the system can select is calculated by the following conditions." %}</div>
+                <ul class="small fw-bold text-success">
+                  <li>{% trans "The genre of created quizzes is included into the requested ones." %}</li>
+                  <li>{% trans "The creator of created quizzes is included into the requested ones." %}</li>
+                </ul>
+              </p>
+              <div class="row row-cols-1 g-2">
+                <div class="col"><span class="fw-bold">{% trans "Examples" %}: </span>{% blocktrans trimmed %}
+                  In the following case, the system can select ID <code>1, 2, 4, 6, and 7</code>.
+                  Therefore, you must set <code>Max question</code> to <code>less than or equals five</code>.
+                {% endblocktrans %}</div>
+                <div class="col">
+                  <span class="fw-bold">{% trans "Selected genre" %}: </span>{% trans "Food" %},
+                  <span class="fw-bold">{% trans "Selected creators" %}: </span>{% trans "Player 1 and Player 2" %}
+                </div>
+                <div class="col">
+                  <div class="table-responsive">
+                    <table class="table ms-3 border rounded custom-width-of-table text-align-center">
+                      <thead>
+                        <tr class="align-middle">
+                          <th scope="col" class="text-nowrap">ID</th>
+                          <th scope="col" class="text-nowrap">Genre</th>
+                          <th scope="col" class="text-nowrap">Creator</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr class="align-middle"><td scope="row">1</td><td>{% trans "Game" %}</td><td>{% trans "Player 1" %}</td></tr>
+                        <tr class="align-middle"><td scope="row">2</td><td>{% trans "Food" %}</td><td>{% trans "Player 2" %}</td></tr>
+                        <tr class="align-middle"><td scope="row">3</td><td>{% trans "Game" %}</td><td>{% trans "Player 3" %}</td></tr>
+                        <tr class="align-middle"><td scope="row">4</td><td>{% trans "Japanese cartoons" %}</td><td>{% trans "Player 2" %}</td></tr>
+                        <tr class="align-middle"><td scope="row">5</td><td>{% trans "Japanese cartoons" %}</td><td>{% trans "Player 3" %}</td></tr>
+                        <tr class="align-middle"><td scope="row">6</td><td>{% trans "Food" %}</td><td>{% trans "Player 1" %}</td></tr>
+                        <tr class="align-middle"><td scope="row">7</td><td>{% trans "Food" %}</td><td>{% trans "Player 3" %}</td></tr>
+                        <tr class="align-middle"><td scope="row">8</td><td>{% trans "Japanese cartoons" %}</td><td>{% trans "Player 3" %}</td></tr>
+                        <tr class="align-middle"><td scope="row">9</td><td>{% trans "Game" %}</td><td>{% trans "Player 3" %}</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </section>
+
+          {# How to play quiz game #}
+          <section class="col">
+            <h2 class="h2 text-decoration-underline" id="how-to-play-quiz-game">{% trans "How to play quiz game" %}</h2>
+            <p>{% trans "In this section, we'll explain how to play guiz game in this app." %}</p>
+
+            <section class="my-3">
+              <h3 class="h3" id="access-to-quiz-room">{% trans "Access to quiz room" %}</h3>
+              <p>{% blocktrans trimmed %}
+                In the <code>Quiz room list</code> page, you can access to the quiz room assigned by room owner.
+              {% endblocktrans %}</p>
+              <p>
+                <img class="img-fluid border rounded img-shadow" src="{% static 'img/introduction/quiz-game/401_quiz-game.webp' %}" alt="Access to `Quiz room`" />
+              </p>
+              <p>{% blocktrans trimmed %}
+                When you access to the quiz room, the system message is added to <code>chat log</code> field.
+                In addition, when the other players enter the room, the system notifies it to each joined player.
+              {% endblocktrans %}</p>
+              <p>
+                <img class="img-fluid border rounded img-shadow" src="{% static 'img/introduction/quiz-game/402_quiz-game.webp' %}" alt="Chat log" />
+              </p>
+              <p>
+                <img class="img-fluid border rounded img-shadow" src="{% static 'img/introduction/quiz-game/403_quiz-game.webp' %}" alt="Chat log with relevant to the other players" />
+              </p>
+            </section>
+
+            <section class="my-3">
+              <h3 class="h3" id="reset-quiz-room">{% trans "Reset quiz room" %}</h3>
+              <p>{% blocktrans trimmed %}
+                The <code>owner</code> clicks <code>Reset status</code> button to initialize the room status.
+              {% endblocktrans %}</p>
+              <p>
+                <img class="img-fluid border rounded img-shadow" src="{% static 'img/introduction/quiz-game/411_quiz-game.webp' %}" alt="Click `Reset status` button" />
+              </p>
+              <p class="small fw-bold text-success">{% trans "[Note] This process includes shuffling quizzes. Therefore, if you want to resume previous quiz, you don't have to conduct the process." %}</p>
+              <p>{% trans "After initialization, the system notifies the message to the owner only." %}</p>
+              <p>
+                <img class="img-fluid border rounded img-shadow" src="{% static 'img/introduction/quiz-game/412_quiz-game.webp' %}" alt="Receive the message from server (owner only)" />
+              </p>
+            </section>
+
+            <section class="my-3">
+              <h3 class="h3" id="get-next-quiz">{% trans "Get next quiz" %}</h3>
+              <p>{% blocktrans trimmed %}
+                To minimalize the communication delay, each player receives the next quiz from the server in advance.
+                Therefore, the <code>owner</code> needs to click <code>Next quiz</code> button to request that the server sends a quiz to each player.
+              {% endblocktrans %}</p>
+              <p>
+                <img class="img-fluid border rounded img-shadow" src="{% static 'img/introduction/quiz-game/421_quiz-game.webp' %}" alt="Click `Next quiz` button" />
+              </p>
+              <p>{% blocktrans trimmed %}
+                When the client receives the next quiz, the client sends the status to server.
+                After all clients sent the status, the server sends the message to the owner.
+              {% endblocktrans %}</p>
+              <p>
+                <img class="img-fluid border rounded img-shadow" src="{% static 'img/introduction/quiz-game/422_quiz-game.webp' %}" alt="Receive the message from server (owner only)" />
+              </p>
+              <p class="small fw-bold text-success">{% blocktrans trimmed %}
+                [Note] If all players are not joined, <code>Get next quiz</code> process is not completed.
+                Therefore, the <code>owner</code> has to check whether all players are joined or not.
+              {% endblocktrans %}</p>
+              <p>
+                <img class="img-fluid border rounded img-shadow" src="{% static 'img/introduction/quiz-game/423_quiz-game.webp' %}" alt="Invalid pattern for `Get next quiz` process" />
+              </p>
+            </section>
+
+            <section class="my-3">
+              <h3 class="h3" id="start-question">{% trans "Start question" %}</h3>
+              <p>{% blocktrans trimmed %}
+                When the <code>owner</code> clicks <code>Start question</code> button, the received quiz is shown to the <code>Question</code> field.
+                In addition, <code>each player</code> can answer the question using answer field.
+              {% endblocktrans %}</p>
+              <p>
+                <img class="img-fluid border rounded img-shadow" src="{% static 'img/introduction/quiz-game/431_quiz-game.webp' %}" alt="Click `Start question` button" />
+              </p>
+              <p>
+                <img class="img-fluid border rounded img-shadow" src="{% static 'img/introduction/quiz-game/432_quiz-game.webp' %}" alt="Each member can answer the question" />
+              </p>
+              <p>
+                <img class="img-fluid border rounded img-shadow" src="{% static 'img/introduction/quiz-game/433_quiz-game.webp' %}" alt="Example of answering the question" />
+              </p>
+            </section>
+
+            <section class="my-3">
+              <h3 class="h3" id="end-answer">{% trans "End answer" %}</h3>
+              <p>{% blocktrans trimmed %}
+                When all players answered the question or the answering time was over, the <code>owner</code> needs to click <code>End answer</code> button.
+                After clicking the button, all players cannot answer the question any more.
+              {% endblocktrans %}</p>
+              <p>
+                <img class="img-fluid border rounded img-shadow" src="{% static 'img/introduction/quiz-game/441_quiz-game.webp' %}" alt="Click `End answer` button" />
+              </p>
+              <p>
+                <img class="img-fluid border rounded img-shadow" src="{% static 'img/introduction/quiz-game/442_quiz-game.webp' %}" alt="All players cannot answer the question" />
+              </p>
+            </section>
+
+            <section class="my-3">
+              <h3 class="h3" id="conduct-judgement">{% trans "Conduct judgement" %}</h3>
+              <p>{% blocktrans trimmed %}
+                After stopping answering question, the <code>owner</code> needs to click <code>Conduct judgement</code> button to evaluate each player's answer.
+                When the owner clicked the button, the score table is shown to the owner monitor and each player received the correct answer.
+              {% endblocktrans %}</p>
+              <p>
+                <img class="img-fluid border rounded img-shadow" src="{% static 'img/introduction/quiz-game/451_quiz-game.webp' %}" alt="Click `Conduct judgement` button" />
+              </p>
+              <p>
+                <img class="img-fluid border rounded img-shadow" src="{% static 'img/introduction/quiz-game/452_quiz-game.webp' %}" alt="Show score table and receive the correct answer" />
+              </p>
+              <p>{% blocktrans trimmed %}
+                The <code>owner</code> check each player's answer and evaluate whether the answer is correct or incorrect. (Default status is <code>incorrect</code>.)
+                As the option function, the owner can adjust the additional score to some players who answered correctly.
+              {% endblocktrans %}</p>
+              <p>
+                <img class="img-fluid border rounded img-shadow" src="{% static 'img/introduction/quiz-game/453_quiz-game.webp' %}" alt="Evaluate each player's answer" />
+              </p>
+              <p>{% blocktrans trimmed %}
+                After the owner finished the evaluation, the <code>owner</code> needs to click <code>Send</code> button to notify the score to the server.
+                After sending the score, all players receive the lastest score and reflect it to the <code>Status of each member</code> table.
+              {% endblocktrans %}</p>
+              <p>
+                <img class="img-fluid border rounded img-shadow" src="{% static 'img/introduction/quiz-game/454_quiz-game.webp' %}" alt="Click `Send` button" />
+              </p>
+              <p>
+                <img class="img-fluid border rounded img-shadow" src="{% static 'img/introduction/quiz-game/455_quiz-game.webp' %}" alt="Update score table" />
+              </p>
+              <p>{% blocktrans trimmed %}
+                As the next step is same as <code>Get next quiz</code>. Please check the <a href="#get-next-quiz">link</a>.
+              {% endblocktrans %}</p>
+            </section>
+
+            <section class="my-3">
+              <h3 class="h3" id="answered-all-quizzes">{% trans "Answered all quizzes" %}</h3>
+              <p>{% blocktrans trimmed %}
+                If you answered all quizzes, you can select either to play quiz game again after shuffling quizzes or to come back to the quiz room list page.
+              {% endblocktrans %}</p>
+              <p>
+                <img class="img-fluid border rounded img-shadow" src="{% static 'img/introduction/quiz-game/461_quiz-game.webp' %}" alt="Answered all quizzes" />
+              </p>
+              <p class="small fw-bold text-success">{% blocktrans trimmed %}
+                [Note 1] The status of quiz game is updated at <code>Conduct judgement</code> phase.
+                Therefore, you can pause the quiz game until you evaluate each player's answer.
+              {% endblocktrans %}</p>
+              <p class="small fw-bold text-success">{% blocktrans trimmed %}
+                [Note 2] In the <code>Conduct judgement</code> phase, you can check long answer by clicking the comment button.
+              {% endblocktrans %}</p>
+              <p>
+                <img class="img-fluid border rounded img-shadow" src="{% static 'img/introduction/quiz-game/462_quiz-game.webp' %}" alt="Check long answer" />
+              </p>
+            </section>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
+</article>
+{% endblock %}
+
+{% block bodyjs %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tocbot/4.32.2/tocbot.min.js"></script>
+<script>
+(function () {
+  // Add DOM event
+  document.addEventListener('DOMContentLoaded', () => {
+    const tocLinkClass ='toc-link';
+    const backgroundColor = 'bg-danger-subtle';
+    const attrName = 'data-isClicked';
+    // Initialize tocbot
+    tocbot.init({
+      tocSelector: '.js-toc',
+      contentSelector: '.js-toc-content',
+      activeLinkClass: 'is-active-link',
+      headingSelector: 'h2, h3',
+      hasInnerContainers: true,
+      listClass: 'toc-list',
+      extraListClasses: 'd-flex flex-column',
+      listItemClass: 'toc-list-item ms-2',
+      linkClass: tocLinkClass,
+      collapseDepth: 3,
+      scrollEndCallback: function (event) {
+        const tocLinks = document.querySelectorAll(`.${tocLinkClass}`);
+        // Check whether specific class exists or not
+        tocLinks.forEach((item) => {
+          if (item.classList.contains('is-active-link')) {
+            item.classList.add(backgroundColor);
+          }
+          else {
+            item.classList.remove(backgroundColor);
+          }
+          item.removeAttribute(attrName);
+        });
+      },
+    });
+    // Add event listener
+    document.querySelectorAll(`.${tocLinkClass}`).forEach((item) => {
+      item.addEventListener('click', (event) => {
+        if (!item.hasAttribute(attrName)) {
+          setTimeout(() => {
+            item.setAttribute(attrName, 'true');
+            item.click();
+          }, 100);
+        }
+      })
+    });
+    // Add current position
+    const topLinkElement = document.querySelector(`.${tocLinkClass}`);
+    topLinkElement.classList.add(backgroundColor);
+  });
+})();
+</script>
+{% endblock %}

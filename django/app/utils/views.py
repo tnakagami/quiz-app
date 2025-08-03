@@ -131,3 +131,11 @@ class Index(TemplateView, DjangoBreadcrumbsMixin):
     context['hash_value'] = get_digest()
 
     return context
+
+class Introduction(TemplateView, DjangoBreadcrumbsMixin):
+  template_name = 'introduction.html'
+  crumbles = DjangoBreadcrumbsMixin.get_target_crumbles(
+    url_name='utils:introduction',
+    title=gettext_lazy('Introduction'),
+    parent_view_class=Index,
+  )

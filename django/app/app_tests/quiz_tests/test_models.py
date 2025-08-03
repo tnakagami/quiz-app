@@ -12,39 +12,33 @@ from quiz import models
 
 UserModel = get_user_model()
 
+@pytest.fixture(scope='module', params=[
+  'superuser-manager',
+  'superuser-creator',
+  'superuser-guest',
+  'normal-manager',
+  'normal-creator',
+  'normal-guest',
+  'not-active',
+], ids=lambda xs: str(xs))
+def get_several_users(django_db_blocker, request):
+  with django_db_blocker.unblock():
+    _user_table = {
+      'superuser-manager': factories.UserFactory(is_active=True, is_staff=True, is_superuser=True, role=RoleType.MANAGER),
+      'superuser-creator': factories.UserFactory(is_active=True, is_staff=True, is_superuser=True, role=RoleType.CREATOR),
+      'superuser-guest': factories.UserFactory(is_active=True, is_staff=True, is_superuser=True, role=RoleType.GUEST),
+      'normal-manager': factories.UserFactory(is_active=True, role=RoleType.MANAGER),
+      'normal-creator': factories.UserFactory(is_active=True, role=RoleType.CREATOR),
+      'normal-guest': factories.UserFactory(is_active=True, role=RoleType.GUEST),
+      'not-active': factories.UserFactory(is_active=False),
+    }
+  key = request.param
+  user = _user_table[key]
+
+  return key, user
+
 class Common:
   pk_convertor = lambda _self, xs: [item.pk for item in xs]
-
-  @pytest.fixture(scope='module', params=[
-    'superuser-manager',
-    'superuser-creator',
-    'superuser-guest',
-    'staff-manager',
-    'staff-creator',
-    'staff-guest',
-    'normal-manager',
-    'normal-creator',
-    'normal-guest',
-    'not-active',
-  ], ids=lambda xs: str(xs))
-  def get_user(self, django_db_blocker, request):
-    with django_db_blocker.unblock():
-      _user_table = {
-        'superuser-manager': factories.UserFactory(is_active=True, is_staff=True, is_superuser=True, role=RoleType.MANAGER),
-        'superuser-creator': factories.UserFactory(is_active=True, is_staff=True, is_superuser=True, role=RoleType.CREATOR),
-        'superuser-guest': factories.UserFactory(is_active=True, is_staff=True, is_superuser=True, role=RoleType.GUEST),
-        'staff-manager': factories.UserFactory(is_active=True, is_staff=True, role=RoleType.MANAGER),
-        'staff-creator': factories.UserFactory(is_active=True, is_staff=True, role=RoleType.CREATOR),
-        'staff-guest': factories.UserFactory(is_active=True, is_staff=True, role=RoleType.GUEST),
-        'normal-manager': factories.UserFactory(is_active=True, role=RoleType.MANAGER),
-        'normal-creator': factories.UserFactory(is_active=True, role=RoleType.CREATOR),
-        'normal-guest': factories.UserFactory(is_active=True, role=RoleType.GUEST),
-        'not-active': factories.UserFactory(is_active=False),
-      }
-    key = request.param
-    user = _user_table[key]
-
-    return key, user
 
 # =========
 # = Genre =
@@ -85,26 +79,21 @@ class TestGenre(Common):
       instance = factories.GenreFactory.build(name=name)
       instance.save()
 
-  @pytest.mark.parametrize([
-    'role',
-    'is_valid',
-  ], [
-    (RoleType.MANAGER, True),
-    (RoleType.CREATOR, False),
-    (RoleType.GUEST, False),
-  ], ids=[
-    'is-manager',
-    'is-creator',
-    'is-guest',
-  ])
-  def test_check_update_permission_based_on_role(self, get_genres, role, is_valid):
-    user = factories.UserFactory(is_active=True, role=role)
+  def test_check_update_permission(self, get_genres, get_users):
+    patterns = {
+      'superuser': True,
+      'manager': True,
+      'creator': False,
+      'guest': False,
+    }
+    key, user = get_users
     instance = get_genres[0]
+    is_valid = patterns[key]
 
     assert instance.has_update_permission(user) == is_valid
 
-  def test_check_update_permission_from_user_pattern(self, get_genres, get_user):
-    _, user = get_user
+  def test_check_delete_permission(self, get_genres, get_several_users):
+    _, user = get_several_users
     instance = get_genres[0]
 
     assert not instance.has_delete_permission(user)
@@ -153,6 +142,73 @@ class TestGenre(Common):
     assert queryset.count() == count
     assert callback(queryset, exacts)
 
+  @pytest.mark.parametrize([
+    'row',
+    'is_valid',
+  ], [
+    ([1, ], True),
+    ([1, 2], False),
+  ], ids=[
+    'length-is-1',
+    'length-is-2',
+  ])
+  def test_check_length_checker(self, row, is_valid):
+    assert models.Genre.length_checker(row) == is_valid
+
+  def test_valid_records_by_using_record_checker(self, mocker):
+    genres = [
+      factories.GenreFactory(name='hoge00-012', is_enabled=True),
+      factories.GenreFactory(name='foobar-123', is_enabled=True),
+      factories.GenreFactory(name='xyzw01-234', is_enabled=True),
+    ]
+    rows = [['valid-01',], ['valid-02',], ['valid-03',]]
+    genres = models.Genre.objects.filter(pk__in=self.pk_convertor(genres))
+    mocker.patch('quiz.models.Genre.objects.collect_active_genres', return_value=genres)
+    is_valid, err = models.Genre.record_checker(rows)
+
+    assert is_valid
+    assert err is None
+
+  def test_invalid_records_by_using_record_checker(self, mocker):
+    genres = [
+      factories.GenreFactory(name='hoge00-012', is_enabled=True),
+      factories.GenreFactory(name='foobar-123', is_enabled=True),
+      factories.GenreFactory(name='xyzw01-234', is_enabled=True),
+      factories.GenreFactory(name='invalid-99', is_enabled=True),
+    ]
+    pk1, pk3 = genres[1].pk, genres[3].pk
+    rows = [['valid-01',], ['foobar-123',], ['invalid-99',]]
+    genres = models.Genre.objects.filter(pk__in=self.pk_convertor(genres))
+    mocker.patch('quiz.models.Genre.objects.all', return_value=genres)
+    # Define error message
+    invalids = models.Genre.objects.filter(pk__in=[pk1, pk3]).order_by('name')
+    msg = ','.join([str(_genre) for _genre in invalids])
+    exact_err = f'The csv file includes invalid genre(s). Details: {msg}'
+    # Raise exception
+    with pytest.raises(ValidationError) as ex:
+      is_valid, err = models.Genre.record_checker(rows)
+      raise err
+
+    assert not is_valid
+    assert exact_err in str(ex.value)
+
+  @pytest.mark.parametrize([
+    'rows',
+    'expected',
+  ], [
+    ([('valid-01',), ('valid-02',), ('valid-03',)], ['valid-01', 'valid-02', 'valid-03']),
+    ([('valid-01',), ('valid-02',), ('valid-03',), ('valid-02',), ('valid-01',)], ['valid-01', 'valid-02', 'valid-03']),
+  ], ids=[
+    'unique-list',
+    'duplication-list',
+  ])
+  def test_check_get_instances_from_list_method(self, rows, expected):
+    instances = models.Genre.get_instances_from_list(rows)
+
+    assert len(instances) == len(expected)
+    assert all([obj.name in expected for obj in instances])
+    assert all([obj.is_enabled for obj in instances])
+
   def test_check_get_response_kwargs_method(self, mocker, get_genres):
     genres = get_genres
     genres = models.Genre.objects.filter(pk__in=self.pk_convertor(genres)).order_by('name')
@@ -164,13 +220,26 @@ class TestGenre(Common):
     assert 'header' in keys
     assert 'filename' in keys
     assert len(list(kwargs['rows'])) == len(genres)
-    assert all([item.pk == exact.pk for item, exact in zip(kwargs['rows'], genres)])
+    assert all([item[0] == exact.name for item, exact in zip(list(kwargs['rows']), genres)])
     assert len(kwargs['header']) == 1
     assert kwargs['filename'] == 'genre-foobar.csv'
 
 # ========
 # = Quiz =
 # ========
+@pytest.fixture(scope='class')
+def get_quizzes_info(django_db_blocker, get_genres):
+  with django_db_blocker.unblock():
+    creators = factories.UserFactory.create_batch(3, is_active=True, role=RoleType.CREATOR)
+    genres = get_genres[:4]
+    # Create quiz
+    for creator in creators:
+      for genre in genres:
+        _ = factories.QuizFactory(creator=creator, genre=genre, is_completed=True)
+    models.Quiz.objects.filter(creator=creators[0], genre=genres[2]).update(is_completed=False)
+
+  return creators, genres
+
 @pytest.mark.quiz
 @pytest.mark.model
 @pytest.mark.django_db
@@ -195,7 +264,7 @@ class TestQuiz(Common):
     'too-long-quiz',
     'not-set',
   ])
-  def test_create_instance(self, get_genres, question, answer, is_completed, short_question, short_answer):
+  def test_create_instance(self, get_genres, get_creator, question, answer, is_completed, short_question, short_answer):
     kwargs = {
       'question': question,
       'answer': answer,
@@ -212,7 +281,7 @@ class TestQuiz(Common):
     else:
       exact_answer = answer
     # Create instance
-    user = factories.UserFactory(is_active=True, role=RoleType.CREATOR)
+    user = get_creator
     genre = get_genres[0]
     instance = models.Quiz.objects.create(
       creator=user,
@@ -249,19 +318,6 @@ class TestQuiz(Common):
     out = instance._split_text(**kwargs)
 
     assert out == expected
-
-  @pytest.fixture(scope='class')
-  def get_quizzes_info(self, django_db_blocker, get_genres):
-    with django_db_blocker.unblock():
-      creators = factories.UserFactory.create_batch(3, is_active=True, role=RoleType.CREATOR)
-      genres = get_genres[:4]
-      # Create quiz
-      for creator in creators:
-        for genre in genres:
-          _ = factories.QuizFactory(creator=creator, genre=genre, is_completed=True)
-      models.Quiz.objects.filter(creator=creators[0], genre=genres[2]).update(is_completed=False)
-
-    return creators, genres
 
   @pytest.mark.parametrize([
     'input_type',
@@ -318,34 +374,12 @@ class TestQuiz(Common):
     assert len(expected) == len(ids)
     assert all([pk in expected for pk in ids])
 
-  @pytest.mark.parametrize([
-    'user_type',
-    'can_update',
-  ], [
-    ('owner', True),
-    ('superuser', True),
-    ('manager', True),
-    ('creator', False),
-    ('guest', False),
-  ], ids=[
-    'is-owner',
-    'is-superuser',
-    'is-manager',
-    'is-creator',
-    'is-guest',
-  ])
-  def test_has_update_permission(self, user_type, can_update):
-    owner = factories.UserFactory(is_active=True, role=RoleType.CREATOR)
+  def test_has_update_permission(self, get_members_with_owner):
+    key, user = get_members_with_owner(RoleType.CREATOR)
+    is_owner = key == 'owner'
+    owner = user if is_owner else factories.UserFactory(is_active=True, role=RoleType.CREATOR)
     instance = factories.QuizFactory(creator=owner)
-    # Create pattern
-    patterns = {
-      'owner': owner,
-      'superuser': factories.UserFactory(is_active=True, is_staff=True, is_superuser=True, role=RoleType.GUEST),
-      'manager': factories.UserFactory(is_active=True, role=RoleType.MANAGER),
-      'creator': factories.UserFactory(is_active=True, role=RoleType.CREATOR),
-      'guest': factories.UserFactory(is_active=True, role=RoleType.GUEST),
-    }
-    user = patterns[user_type]
+    can_update = is_owner or user.has_manager_role()
 
     assert can_update == instance.has_update_permission(user)
 
@@ -499,7 +533,8 @@ class TestQuiz(Common):
 
   def test_check_get_response_kwargs_method(self, get_quizzes_info):
     creators, _ = get_quizzes_info
-    ids = creators[0].quizzes.all().order_by('genre__name', 'creator__screen_name').values_list('pk', flat=True)
+    ids = creators[0].quizzes.order_by('genre__name', 'creator__screen_name').values_list('pk', flat=True)
+    queryset = models.Quiz.objects.filter(pk__in=list(ids))
     kwargs = models.Quiz.get_response_kwargs('hoge', ids)
     keys = kwargs.keys()
 
@@ -507,26 +542,20 @@ class TestQuiz(Common):
     assert 'header' in keys
     assert 'filename' in keys
     assert len(list(kwargs['rows'])) == len(ids)
-    assert all([item.pk == exact for item, exact in zip(kwargs['rows'], ids)])
+    assert all([
+      all([item[0] == str(exact.creator.pk), item[1] == exact.genre.name, item[2] == exact.question, item[3] == exact.answer, item[4] == exact.is_completed])
+      for item, exact in zip(list(kwargs['rows']), queryset)
+    ])
     assert len(kwargs['header']) == 5
     assert kwargs['filename'] == 'quiz-hoge.csv'
 
-  @pytest.mark.parametrize([
-    'has_manager_role',
-  ], [
-    (True, ),
-    (False, ),
-  ], ids=[
-    'is-manager',
-    'is-creator',
-  ])
-  def test_get_quizzes_based_on_userpk(self, mocker, get_quizzes_info, has_manager_role):
+  def test_get_quizzes_based_on_userpk(self, mocker, get_quizzes_info, get_has_creator_role_users):
     creators, _ = get_quizzes_info
     quizzes = models.Quiz.objects.filter(creator__pk__in=self.pk_convertor(creators))
     mocker.patch('quiz.models.Quiz.objects.select_related', return_value=quizzes)
+    _, user = get_has_creator_role_users
     # Define expected content
-    if has_manager_role:
-      user = factories.UserFactory(is_active=True, role=RoleType.MANAGER)
+    if user.has_manager_role():
       use_qs = quizzes
     else:
       user = creators[0]
@@ -601,10 +630,10 @@ class TestQuizRoom(Common):
     assert len(ids) == len(can_use_rooms)
     assert all([pk in exacts for pk in ids])
 
-  def test_check_is_assigned_method(self, get_user):
-    key, user = get_user
+  def test_check_is_assigned_method(self, get_several_users):
+    key, user = get_several_users
     owner = factories.UserFactory(is_active=True)
-    is_player = key in ['staff-creator', 'staff-guest', 'normal-creator', 'normal-guest', 'not-active']
+    is_player = key in ['normal-creator', 'normal-guest', 'not-active']
     instance = factories.QuizRoomFactory(owner=owner, members=[user.pk], is_enabled=True)
 
     assert is_player == instance.is_assigned(user)
@@ -681,147 +710,80 @@ class TestQuizRoom(Common):
     assert all([pk in expected['detail'] for pk in room.score.detail.keys()])
 
   @pytest.mark.parametrize([
-    'role',
     'is_enabled',
-    'expected',
   ], [
-    (RoleType.MANAGER, True, False),
-    (RoleType.CREATOR, True, True),
-    (RoleType.GUEST, True, True),
-    (RoleType.MANAGER, False, False),
-    (RoleType.CREATOR, False, False),
-    (RoleType.GUEST, False, False),
+    (True, ),
+    (False, ),
   ], ids=[
-    'is-manager-and-enable',
-    'is-creator-and-enable',
-    'is-guest-and-enable',
-    'is-manager-and-disable',
-    'is-creator-and-disable',
-    'is-guest-and-disable',
+    'enable',
+    'disable',
   ])
-  def test_validation_for_owner_and_enable_flag(self, role, is_enabled, expected):
-    owner = factories.UserFactory(is_active=True, role=role)
+  def test_validation_for_owner_and_enable_flag(self, get_users, is_enabled):
+    _, owner = get_users
     members = factories.UserFactory.create_batch(3, is_active=True)
     instance = factories.QuizRoomFactory(owner=owner, members=list(members), is_enabled=is_enabled)
+    expected = is_enabled and owner.is_player()
 
     assert instance.is_assigned(owner) == expected
     assert instance.is_owner(owner)
 
-  @pytest.mark.parametrize([
-    'role',
-    'is_creator',
-  ], [
-    (RoleType.MANAGER, False),
-    (RoleType.CREATOR, True),
-    (RoleType.GUEST, False),
-  ], ids=[
-    'is-manager',
-    'is-creator',
-    'is-guest',
-  ])
-  def test_check_creator_assignment(self, role, is_creator):
+  def test_check_creator_assignment(self, get_users):
     users = factories.UserFactory.create_batch(2, is_active=True, role=RoleType.CREATOR)
-    _user = factories.UserFactory(is_active=True, role=role)
+    _, _user = get_users
     members = list(users) + [_user]
+    is_creator = _user.is_creator()
 
     assert is_creator == models.QuizRoom.is_only_creator(members)
 
-  @pytest.mark.parametrize([
-    'role',
-    'is_player',
-  ], [
-    (RoleType.MANAGER, False),
-    (RoleType.CREATOR, True),
-    (RoleType.GUEST, True),
-  ], ids=[
-    'is-manager',
-    'is-creator',
-    'is-guest',
-  ])
-  def test_check_player_assignment(self, role, is_player):
+  def test_check_player_assignment(self, get_users):
+    _, user = get_users
     members = [
       factories.UserFactory(is_active=True, role=RoleType.GUEST),
       factories.UserFactory(is_active=True, role=RoleType.CREATOR),
-      factories.UserFactory(is_active=True, role=role),
+      user,
     ]
+    is_player = user.is_player()
 
     assert is_player == models.QuizRoom.is_only_player(members)
 
   @pytest.mark.parametrize([
-    'user_type',
-    'can_update',
+    'role',
   ], [
-    ('owner-creator', True),
-    ('owner-guest', True),
-    ('superuser', True),
-    ('manager', True),
-    ('creator', False),
-    ('guest', False),
+    (RoleType.GUEST, ),
+    (RoleType.CREATOR, ),
   ], ids=[
-    'is-owner-of-creator',
-    'is-owner-of-guest',
-    'is-superuser',
-    'is-manager',
-    'is-creator',
-    'is-guest',
+    'creator-owner',
+    'guest-owner',
   ])
-  def test_check_update_permission(self, user_type, can_update):
-    _role = RoleType.GUEST if user_type == 'owner-guest' else RoleType.CREATOR
-    owner = factories.UserFactory(is_active=True, role=_role)
+  def test_check_update_permission(self, get_members_with_owner, role):
+    key, user = get_members_with_owner(role)
+    is_owner = key == 'owner'
+    owner = user if is_owner else factories.UserFactory(is_active=True)
     instance = factories.QuizRoomFactory(owner=owner)
-    # Create pattern
-    patterns = {
-      'owner-creator': owner,
-      'owner-guest': owner,
-      'superuser': factories.UserFactory(is_active=True, is_staff=True, is_superuser=True, role=RoleType.GUEST),
-      'manager': factories.UserFactory(is_active=True, role=RoleType.MANAGER),
-      'creator': factories.UserFactory(is_active=True, role=RoleType.CREATOR),
-      'guest': factories.UserFactory(is_active=True, role=RoleType.GUEST),
-    }
-    user = patterns[user_type]
+    can_update = is_owner or not user.is_player()
 
     assert can_update == instance.has_update_permission(user)
 
   @pytest.mark.parametrize([
-    'user_type',
+    'role',
     'is_enabled',
-    'can_delete',
   ], [
-    ('owner-creator', True, False),
-    ('owner-creator', False, True),
-    ('owner-guest', True, False),
-    ('owner-guest', False, True),
-    ('manager', True, False),
-    ('manager', False, True),
-    ('creator', True, False),
-    ('creator', False, False),
-    ('guest', True, False),
-    ('guest', False, False),
+    (RoleType.GUEST, True),
+    (RoleType.GUEST, False),
+    (RoleType.CREATOR, True),
+    (RoleType.CREATOR, False),
   ], ids=[
-    'is-owner-of-creator-and-is-enabled',
-    'is-owner-of-creator-and-is-not-enabled',
-    'is-owner-of-guest-and-is-enabled',
-    'is-owner-of-guest-and-is-not-enabled',
-    'is-manager-and-is-enabled',
-    'is-manager-and-is-not-enabled',
-    'is-creator-and-is-enabled',
-    'is-creator-and-is-not-enabled',
-    'is-guest-and-is-enabled',
-    'is-guest-and-is-not-enabled',
+    'guest-and-enabled',
+    'guest-and-disabled',
+    'creator-and-enabled',
+    'creator-and-disabled',
   ])
-  def test_check_delete_permission(self, user_type, is_enabled, can_delete):
-    _role = RoleType.GUEST if user_type == 'owner-guest' else RoleType.CREATOR
-    owner = factories.UserFactory(is_active=True, role=_role)
+  def test_check_delete_permission(self, get_members_with_owner, role, is_enabled):
+    key, user = get_members_with_owner(role)
+    is_owner = key == 'owner'
+    owner = user if is_owner else factories.UserFactory(is_active=True)
     instance = factories.QuizRoomFactory(owner=owner, is_enabled=is_enabled)
-    # Create pattern
-    patterns = {
-      'owner-creator': owner,
-      'owner-guest': owner,
-      'manager': factories.UserFactory(is_active=True, role=RoleType.MANAGER),
-      'creator': factories.UserFactory(is_active=True, role=RoleType.CREATOR),
-      'guest': factories.UserFactory(is_active=True, role=RoleType.GUEST),
-    }
-    user = patterns[user_type]
+    can_delete = not is_enabled and (is_owner or user.has_manager_role())
 
     assert can_delete == instance.has_delete_permission(user)
 

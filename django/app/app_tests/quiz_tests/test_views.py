@@ -23,52 +23,6 @@ class Common:
   pk_convertor = lambda _self, xs: [item.pk for item in xs]
   compare_qs = lambda _self, qs, exacts: all([val.pk == exact.pk for val, exact in zip(qs, exacts)])
 
-  @pytest.fixture(scope='module', params=['superuser', 'manager', 'creator', 'guest'])
-  def get_user(self, django_db_blocker, request):
-    patterns = {
-      'superuser': {'is_active': True, 'is_staff': True, 'is_superuser': True, 'role': RoleType.GUEST},
-      'manager': {'is_active': True, 'role': RoleType.MANAGER},
-      'creator': {'is_active': True, 'role': RoleType.CREATOR},
-      'guest': {'is_active': True, 'role': RoleType.GUEST},
-    }
-    key = request.param
-    kwargs = patterns[key]
-    # Get user instance
-    with django_db_blocker.unblock():
-      user = factories.UserFactory(**kwargs)
-
-    return key, user
-
-  @pytest.fixture(scope='module')
-  def get_manager(self, django_db_blocker):
-    with django_db_blocker.unblock():
-      manager = factories.UserFactory(is_active=True, role=RoleType.MANAGER)
-
-    return manager
-
-  @pytest.fixture(scope='module')
-  def get_creator(self, django_db_blocker):
-    with django_db_blocker.unblock():
-      creator = factories.UserFactory(is_active=True, role=RoleType.CREATOR)
-
-    return creator
-
-  @pytest.fixture(scope='module', params=['is-manager', 'is-creator'])
-  def get_has_creator_role_members(self, get_manager, get_creator, request):
-    if request.param == 'is-manager':
-      user = get_manager
-    else:
-      user = get_creator
-
-    return user
-
-  @pytest.fixture(scope='module')
-  def get_guest(self, django_db_blocker):
-    with django_db_blocker.unblock():
-      guest = factories.UserFactory(is_active=True, role=RoleType.GUEST)
-
-    return guest
-
 # =============
 # = GenreView =
 # =============
@@ -80,27 +34,27 @@ class TestGenreView(Common):
   create_view_url = reverse('quiz:create_genre')
   update_view_url = lambda _self, pk: reverse('quiz:update_genre', kwargs={'pk': pk})
 
-  def test_get_access_to_listpage(self, get_user, client):
+  def test_get_access_to_listpage(self, get_users, client):
     exact_types = {
       'superuser': status.HTTP_200_OK,
       'manager': status.HTTP_200_OK,
       'creator': status.HTTP_403_FORBIDDEN,
       'guest': status.HTTP_403_FORBIDDEN,
     }
-    key, user = get_user
+    key, user = get_users
     client.force_login(user)
     response = client.get(self.list_view_url)
 
     assert response.status_code == exact_types[key]
 
-  def test_get_access_to_createpage(self, get_user, client):
+  def test_get_access_to_createpage(self, get_users, client):
     exact_types = {
       'superuser': status.HTTP_200_OK,
       'manager': status.HTTP_200_OK,
       'creator': status.HTTP_403_FORBIDDEN,
       'guest': status.HTTP_403_FORBIDDEN,
     }
-    key, user = get_user
+    key, user = get_users
     client.force_login(user)
     response = client.get(self.create_view_url)
 
@@ -150,14 +104,14 @@ class TestGenreView(Common):
     assert response.status_code == status.HTTP_200_OK
     assert err_msg in str(form.errors)
 
-  def test_get_access_to_updatepage(self, get_genres, get_user, client):
+  def test_get_access_to_updatepage(self, get_genres, get_users, client):
     exact_types = {
       'superuser': status.HTTP_200_OK,
       'manager': status.HTTP_200_OK,
       'creator': status.HTTP_403_FORBIDDEN,
       'guest': status.HTTP_403_FORBIDDEN,
     }
-    key, user = get_user
+    key, user = get_users
     client.force_login(user)
     instance = get_genres[0]
     response = client.get(self.update_view_url(instance.pk))
@@ -189,9 +143,54 @@ class TestGenreView(Common):
     assert instance.name == params['name']
     assert instance.is_enabled == params['is_enabled']
 
+  @pytest.mark.parametrize([
+    'updated_name',
+  ], [
+    ('hogehoge-uv', ),
+    ('foobar-uv', ),
+  ], ids=[
+    'same-name',
+    'different-name',
+  ])
+  def test_invalid_post_request_in_updatepage(self, get_manager, get_creator, client, updated_name):
+    user = get_manager
+    creator = get_creator
+    client.force_login(user)
+    genre = factories.GenreFactory(name='hogehoge-uv', is_enabled=True)
+    _ = factories.QuizFactory(creator=creator, genre=genre, is_completed=True)
+    url = self.update_view_url(genre.pk)
+    params = {
+      'name': updated_name,
+      'is_enabled': False,
+    }
+    response = client.post(url, data=params)
+    form = response.context['form']
+    err_msg = 'There is at least one quiz but this genre status is set to &quot;Disable&quot;.'
+
+    assert response.status_code == status.HTTP_200_OK
+    assert err_msg in str(form.errors)
+
 # ============
 # = QuizView =
 # ============
+@pytest.fixture(scope='class')
+def get_specific_quizzes(django_db_blocker, get_genres):
+  with django_db_blocker.unblock():
+    genres = get_genres[:3]
+    creators = factories.UserFactory.create_batch(3, is_active=True, role=RoleType.CREATOR)
+    # Create instance
+    instances = []
+    for genre in genres:
+      instances += [factories.QuizFactory(creator=creators[0], genre=genre, is_completed=False)]
+
+      for creator in creators:
+        instances += [
+          factories.QuizFactory(creator=creator, genre=genre, is_completed=True),
+          factories.QuizFactory(creator=creator, genre=genre, is_completed=False),
+        ]
+
+  return genres, creators, instances
+
 @pytest.mark.quiz
 @pytest.mark.view
 @pytest.mark.django_db
@@ -202,44 +201,42 @@ class TestQuizView(Common):
   delete_view_url = lambda _self, pk: reverse('quiz:delete_quiz', kwargs={'pk': pk})
   paginate_by = 15
 
-  def test_get_access_to_listpage(self, get_user, client):
+  def test_get_access_to_listpage(self, get_users, client):
     exact_types = {
       'superuser': status.HTTP_200_OK,
       'manager': status.HTTP_200_OK,
       'creator': status.HTTP_200_OK,
       'guest': status.HTTP_403_FORBIDDEN,
     }
-    key, user = get_user
+    key, user = get_users
     client.force_login(user)
     response = client.get(self.list_view_url)
 
     assert response.status_code == exact_types[key]
 
-  @pytest.mark.parametrize([
-    'role',
-    'is_staff',
-    'is_superuser',
-  ], [
-    (RoleType.GUEST, True, True),
-    (RoleType.MANAGER, False, False),
-    (RoleType.CREATOR, False, False),
-  ], ids=[
-    'is-superuser',
-    'is-manager',
-    'is-creator',
-  ])
-  def test_queryset_method_in_listpage(self, get_genres, rf, role, is_staff, is_superuser):
+  def test_queryset_method_in_listpage(self, get_has_creator_role_users, get_genres, rf, mocker):
     genres = get_genres
-    user = factories.UserFactory(is_active=True, role=role, is_staff=is_staff, is_superuser=is_superuser)
-    other_creator = factories.UserFactory(is_active=True, role=RoleType.CREATOR)
-    _ = factories.QuizFactory(creator=other_creator, genre=genres[0], is_completed=True)
-    _ = factories.QuizFactory(creator=other_creator, genre=genres[0], is_completed=False)
-    if role == RoleType.CREATOR:
-      _ = factories.QuizFactory.create_batch(2, creator=user, genre=genres[0], is_completed=True)
-      _ = factories.QuizFactory.create_batch(3, creator=user, genre=genres[0], is_completed=False)
+    _, user = get_has_creator_role_users
+    # Check user role
+    if user.is_creator():
+      quizzes = [
+        *factories.QuizFactory.create_batch(2, creator=user, genre=genres[0], is_completed=True),
+        *factories.QuizFactory.create_batch(3, creator=user, genre=genres[0], is_completed=False)
+      ]
+      quizzes = models.Quiz.objects.filter(pk__in=self.pk_convertor(quizzes))
+      # Mock for related_name's elements
+      mock_user = mocker.patch('account.models.User', side_effect=UserModel())
+      mock_user.quizzes.all.return_value = quizzes
       expected_count = 5
     else:
-      expected_count = models.Quiz.objects.all().count()
+      other_creator = factories.UserFactory(is_active=True, role=RoleType.CREATOR)
+      quizzes = [
+        factories.QuizFactory(creator=other_creator, genre=genres[0], is_completed=True),
+        factories.QuizFactory(creator=other_creator, genre=genres[0], is_completed=False)
+      ]
+      quizzes = models.Quiz.objects.filter(pk__in=self.pk_convertor(quizzes))
+      mocker.patch('quiz.models.QuizQuerySet.select_related', return_value=quizzes)
+      expected_count = 2
     # Call `get_queryset` method
     request = rf.get(self.list_view_url)
     request.user = user
@@ -263,21 +260,9 @@ class TestQuizView(Common):
     'is-manager-and-condition',
     'is-manager-or-condition',
   ])
-  def test_post_reqeust_to_extract_queryset(self, get_genres, mocker, client, has_manager_role, is_and_op):
-    genres = get_genres[:3]
-    creators = factories.UserFactory.create_batch(3, is_active=True, role=RoleType.CREATOR)
-    creators = UserModel.objects.filter(pk__in=self.pk_convertor(creators))
+  def test_post_reqeust_to_extract_queryset(self, get_specific_quizzes, mocker, client, has_manager_role, is_and_op):
+    genres, creators, instances = get_specific_quizzes
     user = creators[0] if not has_manager_role else factories.UserFactory(is_active=True, role=RoleType.MANAGER)
-    # Create instance
-    instances = []
-    for genre in genres:
-      instances += [factories.QuizFactory(creator=creators[0], genre=genre, is_completed=False)]
-
-      for creator in creators:
-        instances += [
-          factories.QuizFactory(creator=creator, genre=genre, is_completed=True),
-          factories.QuizFactory(creator=creator, genre=genre, is_completed=False),
-        ]
     # Create parameters
     all_queryset = models.Quiz.objects.filter(pk__in=self.pk_convertor(instances))
     if not has_manager_role:
@@ -314,21 +299,9 @@ class TestQuizView(Common):
     assert estimated.count() == len(expected)
     assert self.compare_qs(estimated, expected)
 
-  def test_invalid_post_reqeust_to_extract_queryset(self, get_genres, mocker, client):
-    genres = get_genres[:3]
-    creators = factories.UserFactory.create_batch(3, is_active=True, role=RoleType.CREATOR)
-    creators = UserModel.objects.filter(pk__in=self.pk_convertor(creators))
-    user = factories.UserFactory(is_active=True, role=RoleType.MANAGER)
-    # Create instance
-    instances = []
-    for genre in genres:
-      instances += [factories.QuizFactory(creator=creators[0], genre=genre, is_completed=False)]
-
-      for creator in creators:
-        instances += [
-          factories.QuizFactory(creator=creator, genre=genre, is_completed=True),
-          factories.QuizFactory(creator=creator, genre=genre, is_completed=False),
-        ]
+  def test_invalid_post_reqeust_to_extract_queryset(self, get_specific_quizzes, get_manager, mocker, client):
+    genres, creators, instances = get_specific_quizzes
+    user = get_manager
     # Create parameters
     all_queryset = models.Quiz.objects.filter(pk__in=self.pk_convertor(instances)).order_by('pk')
     mocker.patch('quiz.views.QuizListPage.get_queryset', return_value=all_queryset)
@@ -347,14 +320,14 @@ class TestQuizView(Common):
     assert estimated.count() == len(expected)
     assert self.compare_qs(estimated, expected)
 
-  def test_get_access_to_createpage(self, get_user, client):
+  def test_get_access_to_createpage(self, get_users, client):
     exact_types = {
       'superuser': status.HTTP_403_FORBIDDEN,
       'manager': status.HTTP_403_FORBIDDEN,
       'creator': status.HTTP_200_OK,
       'guest': status.HTTP_403_FORBIDDEN,
     }
-    key, user = get_user
+    key, user = get_users
     client.force_login(user)
     response = client.get(self.create_view_url)
 
@@ -401,53 +374,28 @@ class TestQuizView(Common):
     assert response.status_code == status.HTTP_200_OK
     assert err_msg in str(form.errors)
 
-  @pytest.mark.parametrize([
-    'role',
-    'is_staff',
-    'is_superuser',
-    'is_owner',
-    'status_code',
-  ], [
-    (RoleType.GUEST, True, True, False, status.HTTP_200_OK),
-    (RoleType.MANAGER, False, False, False, status.HTTP_200_OK),
-    (RoleType.CREATOR, False, False, True, status.HTTP_200_OK),
-    (RoleType.CREATOR, False, False, False, status.HTTP_403_FORBIDDEN),
-    (RoleType.GUEST, False, False, False, status.HTTP_403_FORBIDDEN),
-  ], ids=[
-    'is-superuser',
-    'is-manager',
-    'is-creator-with-own-quiz',
-    'is-creator-without-own-quiz',
-    'is-guest',
-  ])
-  def test_get_access_to_updatepage(self, get_genres, client, role, is_staff, is_superuser, is_owner, status_code):
+  def test_get_access_to_updatepage(self, get_genres, client, get_members_with_owner):
+    patterns = {
+      'superuser': status.HTTP_200_OK,
+      'manager': status.HTTP_200_OK,
+      'creator': status.HTTP_403_FORBIDDEN,
+      'guest': status.HTTP_403_FORBIDDEN,
+      'owner': status.HTTP_200_OK,
+    }
     genres = get_genres
-    user = factories.UserFactory(is_active=True, role=role, is_staff=is_staff, is_superuser=is_superuser)
-    creator = user if is_owner else factories.UserFactory(is_active=True, role=RoleType.CREATOR)
+    key, user = get_members_with_owner(RoleType.CREATOR)
+    creator = user if key == 'owner' else factories.UserFactory(is_active=True, role=RoleType.CREATOR)
     instance = factories.QuizFactory(creator=creator, genre=genres[0])
     client.force_login(user)
     response = client.get(self.update_view_url(instance.pk))
+    status_code = patterns[key]
 
     assert response.status_code == status_code
 
-  @pytest.mark.parametrize([
-    'role',
-    'is_staff',
-    'is_superuser',
-    'is_owner',
-  ], [
-    (RoleType.GUEST, True, True, False),
-    (RoleType.MANAGER, False, False, False),
-    (RoleType.CREATOR, False, False, True),
-  ], ids=[
-    'is-superuser',
-    'is-manager',
-    'is-creator',
-  ])
-  def test_post_access_to_updatepage(self, get_genres, client, role, is_staff, is_superuser, is_owner):
+  def test_post_access_to_updatepage(self, get_genres, client, get_has_creator_role_users):
     genres = get_genres
-    user = factories.UserFactory(is_active=True, role=role, is_staff=is_staff, is_superuser=is_superuser)
-    creator = user if is_owner else factories.UserFactory(is_active=True, role=RoleType.CREATOR)
+    key, user = get_has_creator_role_users
+    creator = user if key == 'creator' else factories.UserFactory(is_active=True, role=RoleType.CREATOR)
     original = factories.QuizFactory(creator=creator, genre=genres[0], is_completed=False)
     client.force_login(user)
     url = self.update_view_url(original.pk)
@@ -470,9 +418,9 @@ class TestQuizView(Common):
     assert instance.answer == params['answer']
     assert instance.is_completed == params['is_completed']
 
-  def test_invalid_post_request_to_updatepage(self, get_genres, client):
+  def test_invalid_post_request_to_updatepage(self, get_genres, get_creator, client):
     genres = get_genres
-    user = factories.UserFactory(is_active=True, role=RoleType.CREATOR)
+    user = get_creator
     invalid_genre = factories.GenreFactory(is_enabled=False)
     instance = factories.QuizFactory(creator=user, genre=genres[0])
     client.force_login(user)
@@ -496,8 +444,8 @@ class TestQuizView(Common):
     'is-owner',
     'is-not-owner',
   ])
-  def test_get_access_to_deletepage(self, get_genres, get_user, client, is_owner):
-    key, user = get_user
+  def test_get_access_to_deletepage(self, get_genres, get_users, client, is_owner):
+    key, user = get_users
     genres = get_genres
     expected_type = {
       'superuser': status.HTTP_405_METHOD_NOT_ALLOWED,
@@ -525,7 +473,7 @@ class TestQuizView(Common):
     'is-completed-and-other',
     'is-not-completed',
   ])
-  def test_post_access_to_deletepage(self, get_genres, get_user, client, is_completed, is_owner):
+  def test_post_access_to_deletepage(self, get_genres, get_users, client, is_completed, is_owner):
     exact_types = {
       'superuser': status.HTTP_302_FOUND,
       'manager': status.HTTP_302_FOUND,
@@ -538,7 +486,7 @@ class TestQuizView(Common):
       'creator': 0 if is_owner else 1,
       'guest': 1,
     }
-    key, user = get_user
+    key, user = get_users
     genres = get_genres
     creator = user if key == 'creator' and is_owner else factories.UserFactory(is_active=True, role=RoleType.CREATOR)
     instance = factories.QuizFactory(creator=creator, genre=genres[0], is_completed=is_completed)
@@ -564,30 +512,15 @@ class TestQuizRoomView(Common):
   delete_view_url = lambda _self, pk: reverse('quiz:delete_room', kwargs={'pk': pk})
   detail_view_url = lambda _self, pk: reverse('quiz:enter_room', kwargs={'pk': pk})
 
-  def test_get_access_to_listpage(self, get_user, client):
-    _, user = get_user
+  def test_get_access_to_listpage(self, get_users, client):
+    _, user = get_users
     client.force_login(user)
     response = client.get(self.list_view_url)
 
     assert response.status_code == status.HTTP_200_OK
 
-  @pytest.mark.parametrize([
-    'role',
-    'is_staff',
-    'is_superuser',
-  ], [
-    (RoleType.GUEST, True, True),
-    (RoleType.MANAGER, False, False),
-    (RoleType.CREATOR, False, False),
-    (RoleType.GUEST, False, False),
-  ], ids=[
-    'is-superuser',
-    'is-manager',
-    'is-creator',
-    'is-guest',
-  ])
-  def test_queryset_method_in_listpage(self, rf, role, is_staff, is_superuser):
-    user = factories.UserFactory(is_active=True, role=role, is_staff=is_staff, is_superuser=is_superuser)
+  def test_queryset_method_in_listpage(self, rf, get_users):
+    _, user = get_users
     other_creators = factories.UserFactory.create_batch(3, is_active=True, role=RoleType.CREATOR)
     other_guests = factories.UserFactory.create_batch(2, is_active=True, role=RoleType.GUEST)
     # ========================
@@ -683,14 +616,14 @@ class TestQuizRoomView(Common):
     assert response.status_code == status.HTTP_200_OK
     assert estimated.count() == count
 
-  def test_get_access_to_createpage(self, get_user, client):
+  def test_get_access_to_createpage(self, get_users, client):
     exact_types = {
       'superuser': status.HTTP_403_FORBIDDEN,
       'manager': status.HTTP_403_FORBIDDEN,
       'creator': status.HTTP_200_OK,
       'guest': status.HTTP_200_OK,
     }
-    key, user = get_user
+    key, user = get_users
     client.force_login(user)
     response = client.get(self.create_view_url)
 
@@ -717,17 +650,8 @@ class TestQuizRoomView(Common):
 
     return genres, creators, members
 
-  @pytest.mark.parametrize([
-    'role',
-  ], [
-    (RoleType.CREATOR, ),
-    (RoleType.GUEST, ),
-  ], ids=[
-    'is-creator',
-    'is-guest',
-  ])
-  def test_post_access_to_createpage(self, get_querysets, client, role):
-    user = factories.UserFactory(is_active=True, role=role)
+  def test_post_access_to_createpage(self, get_querysets, client, get_players):
+    _, user = get_players
     genres, creators, members = get_querysets
     # Define post data
     params = {
@@ -770,14 +694,14 @@ class TestQuizRoomView(Common):
     'is-owner',
     'is-not-owner',
   ])
-  def test_get_access_to_updatepage(self, get_user, get_querysets, client, is_owner):
+  def test_get_access_to_updatepage(self, get_users, get_querysets, client, is_owner):
     exact_types = {
       'superuser': status.HTTP_200_OK,
       'manager': status.HTTP_200_OK,
       'creator': status.HTTP_200_OK if is_owner else status.HTTP_403_FORBIDDEN,
       'guest': status.HTTP_200_OK if is_owner else status.HTTP_403_FORBIDDEN,
     }
-    key, user = get_user
+    key, user = get_users
     owner = user if is_owner else factories.UserFactory(is_active=True, role=user.role)
     genres, creators, members = get_querysets
     instance = factories.QuizRoomFactory(
@@ -792,8 +716,8 @@ class TestQuizRoomView(Common):
 
     assert response.status_code == exact_types[key]
 
-  def test_post_access_to_updatepage(self, get_user, get_querysets, client):
-    _, user = get_user
+  def test_post_access_to_updatepage(self, get_users, get_querysets, client):
+    _, user = get_users
     owner = user if user.is_player() else factories.UserFactory(is_active=True, role=RoleType.CREATOR)
     genres, creators, members = get_querysets
     original = factories.QuizRoomFactory(
@@ -899,8 +823,8 @@ class TestQuizRoomView(Common):
     'is-owner',
     'is-not-owner',
   ])
-  def test_get_access_to_deletepage(self, get_user, get_querysets, client, is_owner):
-    _, user = get_user
+  def test_get_access_to_deletepage(self, get_users, get_querysets, client, is_owner):
+    _, user = get_users
     can_access = is_owner and user.is_player()
     genres, creators, members = get_querysets
     owner = user if can_access else factories.UserFactory(is_active=True, role=RoleType.GUEST)
@@ -928,7 +852,7 @@ class TestQuizRoomView(Common):
     'is-enabled-and-other',
     'is-not-enabled',
   ])
-  def test_post_access_to_deletepage(self, get_user, get_querysets, client, is_enabled, is_owner):
+  def test_post_access_to_deletepage(self, get_users, get_querysets, client, is_enabled, is_owner):
     can_delete_for_having_manager_role = not is_enabled
     can_delete_for_player = is_owner and not is_enabled
     exact_flags = {
@@ -937,7 +861,7 @@ class TestQuizRoomView(Common):
       'creator': can_delete_for_player,
       'guest': can_delete_for_player,
     }
-    key, user = get_user
+    key, user = get_users
     genres, creators, members = get_querysets
     owner = user if is_owner else factories.UserFactory(is_active=True, role=RoleType.GUEST)
     instance = factories.QuizRoomFactory(
@@ -979,7 +903,7 @@ class TestQuizRoomView(Common):
     'is-assigned-and-cannot-access',
     'invalid-user',
   ])
-  def test_get_access_to_detailpage(self, get_genres, get_user, client, is_owner, is_assigned, is_enabled):
+  def test_get_access_to_detailpage(self, get_genres, get_users, client, is_owner, is_assigned, is_enabled):
     can_access = (is_owner or is_assigned) and is_enabled
     expected_type = {
       'superuser': status.HTTP_403_FORBIDDEN,
@@ -987,7 +911,7 @@ class TestQuizRoomView(Common):
       'creator': status.HTTP_200_OK if can_access else status.HTTP_403_FORBIDDEN,
       'guest': status.HTTP_200_OK if can_access else status.HTTP_403_FORBIDDEN,
     }
-    key, user = get_user
+    key, user = get_users
     genres = get_genres[:3]
     genres = models.Genre.objects.filter(pk__in=self.pk_convertor(genres)).order_by('pk')
     creators = factories.UserFactory.create_batch(5, is_active=True, role=RoleType.CREATOR)
@@ -1035,6 +959,137 @@ class TestQuizRoomView(Common):
 
     assert view.crumbles[-1].title == 'hoge-room'
 
+# ===================
+# = UploadGenreView =
+# ===================
+@pytest.mark.quiz
+@pytest.mark.view
+@pytest.mark.django_db
+class TestUploadGenreView(Common):
+  form_view_url = reverse('quiz:upload_genre')
+
+  def test_check_get_access(self, get_users, client):
+    exact_types = {
+      'superuser': status.HTTP_200_OK,
+      'manager': status.HTTP_200_OK,
+      'creator': status.HTTP_403_FORBIDDEN,
+      'guest': status.HTTP_403_FORBIDDEN,
+    }
+    key, user = get_users
+    client.force_login(user)
+    response = client.get(self.form_view_url)
+
+    assert response.status_code == exact_types[key]
+
+  @pytest.fixture(params=[
+    'utf-8-with-header',
+    'utf-8-without-header',
+    'sjis-with-header',
+    'sjis-without-header',
+    'cp932-with-header',
+    'cp932-without-header',
+  ])
+  def get_valid_form_param(self, request, get_manager):
+    config = {
+      'utf-8-with-header':    ('utf-8', True),
+      'utf-8-without-header': ('utf-8', False),
+      'sjis-with-header':     ('shift_jis', True),
+      'sjis-without-header':  ('shift_jis', False),
+      'cp932-with-header':    ('cp932', True),
+      'cp932-without-header': ('cp932', False),
+    }
+    user = get_manager
+    encoding, header = config[request.param]
+    # Set genre
+    valid_data = [
+      'test-genre-0x0101',
+      'test-genre-0x0221',
+      'test-genre-0x0341',
+    ]
+    csv_file = SimpleUploadedFile('hoge.csv', bytes('foo,bar\n', encoding=encoding))
+    # Create form data
+    params = {
+      'encoding': encoding,
+      'csv_file': csv_file,
+      'header': header,
+    }
+
+    yield user, params, valid_data
+
+    # Post-process
+    csv_file.close()
+
+  @pytest.mark.parametrize([
+    'data_indices',
+  ], [
+    ([0, 2, 1], ),
+    ([0, 2, 1, 0, 1], ),
+  ], ids=[
+    'unique-list',
+    'duplication-list',
+  ])
+  def test_check_valid_post_access(self, mocker, get_valid_form_param, client, data_indices):
+    user, params, valid_data = get_valid_form_param
+    records = [(valid_data[idx], ) for idx in data_indices]
+    mock_csv_validator = mocker.patch('quiz.forms.validators.CustomCSVFileValidator.validate', return_value=None)
+    mock_get_record_method = mocker.patch('quiz.forms.validators.CustomCSVFileValidator.get_record', return_value=records)
+    # Send request
+    client.force_login(user)
+    response = client.post(self.form_view_url, data=params)
+    # Collect expected queryset
+    queryset = models.Genre.objects.filter(name__contains='test-genre-0x')
+
+    assert response.status_code == status.HTTP_302_FOUND
+    assert response['Location'] == reverse('quiz:genre_list')
+    assert all([queryset.filter(name=name).exists() for name in valid_data])
+    assert mock_csv_validator.call_count == 1
+    assert mock_get_record_method.call_count == 1
+
+  @pytest.fixture(params=['form-invalid', 'invalid-bulk-create'])
+  def get_invalid_form_param(self, mocker, request):
+    input_header = True
+    err_msg = ''
+
+    if request.param == 'form-invalid':
+      mocker.patch('quiz.forms.GenreUploadForm.clean', side_effect=ValidationError('invalid-inputs'))
+      err_msg = 'invalid-inputs'
+    elif request.param == 'invalid-bulk-create':
+      from django.db.utils import IntegrityError
+      mocker.patch('quiz.forms.GenreUploadForm.clean', return_value=None)
+      mocker.patch('quiz.forms.validators.CustomCSVFileValidator.get_record', return_value=[])
+      mocker.patch('quiz.models.Genre.objects.bulk_create', side_effect=IntegrityError('test'))
+      err_msg = 'Include invalid records. Please check the detail: test.'
+    # Setup temporary file
+    encoding = 'utf-8'
+    tmp_fp = tempfile.NamedTemporaryFile(mode='r+', encoding=encoding, suffix='.csv')
+    with open(tmp_fp.name, encoding=encoding, mode='w') as csv_file:
+      csv_file.write('Genre\ng1-pk\ng2-pk\n')
+    with open(tmp_fp.name, encoding=encoding, mode='r') as fin:
+      csv_file = SimpleUploadedFile(fin.name, bytes(fin.read(), encoding=fin.encoding))
+      # Create form data
+      params = {
+        'encoding': encoding,
+        'csv_file': csv_file,
+        'header': input_header,
+      }
+
+    yield params, err_msg
+
+    # Post-process
+    csv_file.close()
+    tmp_fp.close()
+
+  def test_check_invalid_post_access(self, get_manager, get_invalid_form_param, client):
+    user = get_manager
+    params, err_msg = get_invalid_form_param
+    # Send request
+    client.force_login(user)
+    response = client.post(self.form_view_url, data=params)
+    errors = response.context['form'].errors
+
+    assert response.status_code == status.HTTP_200_OK
+    assert err_msg in str(errors)
+
 # =====================
 # = DownloadGenreView =
 # =====================
@@ -1044,31 +1099,31 @@ class TestQuizRoomView(Common):
 class TestDownloadGenreView(Common):
   form_view_url = reverse('quiz:download_genre')
 
-  def test_check_get_access(self, get_user, client):
+  def test_check_get_access(self, get_users, client):
     exact_types = {
       'superuser': status.HTTP_200_OK,
       'manager': status.HTTP_200_OK,
       'creator': status.HTTP_200_OK,
       'guest': status.HTTP_403_FORBIDDEN,
     }
-    key, user = get_user
+    key, user = get_users
     client.force_login(user)
     response = client.get(self.form_view_url)
 
     assert response.status_code == exact_types[key]
 
-  def test_check_post_access(self, mocker, get_has_creator_role_members, client):
+  def test_check_post_access(self, mocker, get_has_creator_role_users, client):
     output = {
-      'rows': (row for row in [['hoge', 'abc'], ['foo', '123']]),
-      'header': ['name', 'pk'],
+      'rows': (row for row in [['hoge'], ['foo']]),
+      'header': ['Name'],
       'filename': 'genre-test1.csv',
     }
     mocker.patch('quiz.forms.GenreDownloadForm.create_response_kwargs', return_value=output)
-    user = get_has_creator_role_members
+    _, user = get_has_creator_role_users
     params = {
       'filename': 'dummy-name',
     }
-    expected = bytes('name,pk\nhoge,abc\nfoo,123\n', 'utf-8')
+    expected = bytes('Name\nhoge\nfoo\n', 'utf-8')
     # Post access
     client.force_login(user)
     response = client.post(self.form_view_url, data=params)
@@ -1091,8 +1146,8 @@ class TestDownloadGenreView(Common):
     'is-empty',
     'too-long-filename',
   ])
-  def test_invalid_post_request(self, get_has_creator_role_members, client, params, err_msg):
-    user = get_has_creator_role_members
+  def test_invalid_post_request(self, get_has_creator_role_users, client, params, err_msg):
+    _, user = get_has_creator_role_users
     # Post access
     client.force_login(user)
     response = client.post(self.form_view_url, data=params)
@@ -1110,14 +1165,14 @@ class TestDownloadGenreView(Common):
 class TestUploadQuizView(Common):
   form_view_url = reverse('quiz:upload_quiz')
 
-  def test_check_get_access(self, get_user, client):
+  def test_check_get_access(self, get_users, client):
     exact_types = {
       'superuser': status.HTTP_200_OK,
       'manager': status.HTTP_200_OK,
       'creator': status.HTTP_200_OK,
       'guest': status.HTTP_403_FORBIDDEN,
     }
-    key, user = get_user
+    key, user = get_users
     client.force_login(user)
     response = client.get(self.form_view_url)
 
@@ -1131,7 +1186,7 @@ class TestUploadQuizView(Common):
     'cp932-with-header',
     'cp932-without-header',
   ])
-  def get_valid_form_param(self, request, get_genres, get_has_creator_role_members):
+  def get_valid_form_param(self, request, get_genres, get_has_creator_role_users):
     genre = get_genres[0]
     creators = factories.UserFactory.create_batch(3, is_active=True, role=RoleType.CREATOR)
     config = {
@@ -1142,7 +1197,7 @@ class TestUploadQuizView(Common):
       'cp932-with-header':    ('cp932', True),
       'cp932-without-header': ('cp932', False),
     }
-    user = get_has_creator_role_members
+    _, user = get_has_creator_role_users
     encoding, header = config[request.param]
     # Set creator's members
     if user.has_manager_role():
@@ -1221,13 +1276,13 @@ class TestUploadQuizView(Common):
       csv_file.write('c-pk,g-pk,q-1,a-1,True\n')
       csv_file.write('c-pk,g-pk,q-2,a-2,False\n')
     with open(tmp_fp.name, encoding=encoding, mode='r') as fin:
-        csv_file = SimpleUploadedFile(fin.name, bytes(fin.read(), encoding=fin.encoding))
-        # Create form data
-        params = {
-          'encoding': encoding,
-          'csv_file': csv_file,
-          'header': input_header,
-        }
+      csv_file = SimpleUploadedFile(fin.name, bytes(fin.read(), encoding=fin.encoding))
+      # Create form data
+      params = {
+        'encoding': encoding,
+        'csv_file': csv_file,
+        'header': input_header,
+      }
 
     yield params, err_msg
 
@@ -1235,8 +1290,8 @@ class TestUploadQuizView(Common):
     csv_file.close()
     tmp_fp.close()
 
-  def test_check_invalid_post_access(self, get_has_creator_role_members, get_invalid_form_param, client):
-    user = get_has_creator_role_members
+  def test_check_invalid_post_access(self, get_has_creator_role_users, get_invalid_form_param, client):
+    _, user = get_has_creator_role_users
     params, err_msg = get_invalid_form_param
     # Send request
     client.force_login(user)
@@ -1255,21 +1310,21 @@ class TestUploadQuizView(Common):
 class TestDownloadQuizView(Common):
   form_view_url = reverse('quiz:download_quiz')
 
-  def test_check_get_access(self, get_user, client):
+  def test_check_get_access(self, get_users, client):
     exact_types = {
       'superuser': status.HTTP_200_OK,
       'manager': status.HTTP_200_OK,
       'creator': status.HTTP_200_OK,
       'guest': status.HTTP_403_FORBIDDEN,
     }
-    key, user = get_user
+    key, user = get_users
     client.force_login(user)
     response = client.get(self.form_view_url)
 
     assert response.status_code == exact_types[key]
 
   @pytest.fixture(params=['select-valid-quizzes', 'include-invalid-quizzes', 'no-quizzes'])
-  def get_several_form_param(self, mocker, request, get_genres, get_has_creator_role_members):
+  def get_several_form_param(self, mocker, request, get_genres, get_has_creator_role_users):
     def generate_csv_data(instance):
       c_pk = str(instance.creator.pk)
       name = instance.genre.name
@@ -1281,7 +1336,7 @@ class TestDownloadQuizView(Common):
       return val
 
     genres = get_genres[:3]
-    user = get_has_creator_role_members
+    _, user = get_has_creator_role_users
     _is_manager = user.has_manager_role()
     params = {
       'filename': 'hoge',
@@ -1349,8 +1404,8 @@ class TestDownloadQuizView(Common):
     'is-empty',
     'too-long-filename',
   ])
-  def test_invalid_post_request(self, get_has_creator_role_members, client, params, err_msg):
-    user = get_has_creator_role_members
+  def test_invalid_post_request(self, get_has_creator_role_users, client, params, err_msg):
+    _, user = get_has_creator_role_users
     # Post access
     client.force_login(user)
     response = client.post(self.form_view_url, data=params)
@@ -1368,23 +1423,23 @@ class TestDownloadQuizView(Common):
 class TestQuizAjaxResponse(Common):
   ajax_url = reverse('quiz:ajax_get_quizzes')
 
-  def test_check_get_access(self, get_user, client):
+  def test_check_get_access(self, get_users, client):
     exact_types = {
       'superuser': status.HTTP_200_OK,
       'manager': status.HTTP_200_OK,
       'creator': status.HTTP_200_OK,
       'guest': status.HTTP_403_FORBIDDEN,
     }
-    key, user = get_user
+    key, user = get_users
     client.force_login(user)
     response = client.get(self.ajax_url)
 
     assert response.status_code == exact_types[key]
 
-  def test_valid_get_request(self, mocker, get_genres, get_has_creator_role_members, client):
+  def test_valid_get_request(self, mocker, get_genres, get_has_creator_role_users, client):
     genre = get_genres[0]
     creators = factories.UserFactory.create_batch(3, is_active=True, role=RoleType.CREATOR)
-    user = get_has_creator_role_members
+    _, user = get_has_creator_role_users
     # Create quiz
     quizzes = [factories.QuizFactory(creator=creator, genre=genre, is_completed=True) for creator in creators]
 
@@ -1419,8 +1474,8 @@ class TestQuizAjaxResponse(Common):
     'is-authenticated',
     'is-not-authenticated',
   ])
-  def test_check_post_access(self, get_user, client, is_authenticated, status_code):
-    key, user = get_user
+  def test_check_post_access(self, get_users, client, is_authenticated, status_code):
+    key, user = get_users
 
     if is_authenticated:
       client.force_login(user)

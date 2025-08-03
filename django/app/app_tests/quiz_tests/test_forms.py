@@ -7,26 +7,10 @@ from django.db.utils import IntegrityError
 from app_tests import factories, g_compare_options
 from account.models import RoleType, IndividualGroup
 from quiz import forms, models
-from datetime import datetime, timezone
 import json
 import tempfile
 
 UserModel = get_user_model()
-
-# ====================
-# = Global functions =
-# ====================
-@pytest.mark.quiz
-@pytest.mark.form
-def test_generate_default_filename(mocker):
-  mocker.patch(
-    'quiz.forms.get_current_time',
-    return_value=datetime(2021,7,3,11,7,48,microsecond=123456,tzinfo=timezone.utc),
-  )
-  expected = '20210703-200748'
-  filename = forms.generate_default_filename()
-
-  assert filename == expected
 
 class DummyFile:
   def __init__(self, val):
@@ -79,20 +63,6 @@ def test_invalid_check_filesize_function(mock_csv_filesize):
 class Common:
   pk_convertor = lambda _self, xs: [val.pk for val in xs]
 
-  @pytest.fixture(params=['is-creator', 'is-manager'], scope='module')
-  def get_quiz_accounts(self, request, django_db_blocker):
-    config = {
-      'is-creator': {'is_active': True, 'role': RoleType.CREATOR},
-      'is-manager': {'is_active': True, 'role': RoleType.MANAGER},
-    }
-    key = request.param
-    # Create account
-    with django_db_blocker.unblock():
-      kwargs = config[key]
-      user = factories.UserFactory(**kwargs)
-
-    return user
-
 # =============
 # = GenreForm =
 # =============
@@ -121,6 +91,31 @@ class TestGenreForm(Common):
 
     assert form.is_valid() == is_valid
 
+  @pytest.mark.parametrize([
+    'updated_name',
+  ], [
+    ('test-hogehoge-form', ),
+    ('test-fugafuga-form', ),
+  ], ids=[
+    'same-name',
+    'different-name',
+  ])
+  def test_at_least_one_quiz_exists(self, get_creator, updated_name):
+    creator = get_creator
+    name = 'test-hogehoge-form'
+    genre = factories.GenreFactory(name=name, is_enabled=True)
+    _ = factories.QuizFactory(creator=creator, genre=genre, is_completed=True)
+    params = {
+      'name': updated_name,
+      'is_enabled': False,
+    }
+    form = forms.GenreForm(data=params, instance=genre)
+    is_valid = form.is_valid()
+    errors = form.errors
+
+    assert not is_valid
+    assert 'There is at least one quiz but this genre status is set to &quot;Disable&quot;.' in str(errors)
+
 @pytest.fixture
 def get_each_types_of_genre(django_db_blocker, get_genres):
   with django_db_blocker.unblock():
@@ -128,6 +123,142 @@ def get_each_types_of_genre(django_db_blocker, get_genres):
     invalid_genre = factories.GenreFactory(is_enabled=False)
 
   return valid_genres, invalid_genre
+
+# ===================
+# = GenreUploadForm =
+# ===================
+@pytest.mark.quiz
+@pytest.mark.form
+@pytest.mark.django_db
+class TestGenreUploadForm(Common):
+  @pytest.fixture
+  def get_form_params_with_fds(self):
+    def inner(encoding, suffix='.csv'):
+      # Setup temporary file
+      tmp_fp = tempfile.NamedTemporaryFile(mode='r+', encoding=encoding, suffix=suffix)
+      with open(tmp_fp.name, encoding=encoding, mode='w') as csv_file:
+        csv_file.writelines(['Genre\n', 'a\n', 'b\n'])
+        csv_file.flush()
+      with open(tmp_fp.name, encoding=encoding, mode='r') as fin:
+        csv_file = SimpleUploadedFile(fin.name, bytes(fin.read(), encoding=fin.encoding))
+        # Create form data
+        params = {
+          'encoding': encoding,
+          'header': True,
+        }
+        files = {
+          'csv_file': csv_file,
+        }
+
+      return tmp_fp, csv_file, params, files
+
+    return inner
+
+  @pytest.fixture(params=['utf-8-encoding', 'sjis-encoding', 'cp932-encoding'])
+  def get_valid_form_param(self, request, get_form_params_with_fds):
+    encoding = 'utf-8'
+    # Define encoding
+    if request.param == 'utf-8-encoding':
+      encoding = 'utf-8'
+    elif request.param == 'sjis-encoding':
+      encoding = 'shift_jis'
+    elif request.param == 'cp932-encoding':
+      encoding = 'cp932'
+    # Setup temporary file
+    tmp_fp, csv_file, params, files = get_form_params_with_fds(encoding)
+
+    yield params, files
+
+    # Post-process
+    csv_file.close()
+    tmp_fp.close()
+
+  def test_valid_input_pattern(self, mocker, get_valid_form_param):
+    params, files = get_valid_form_param
+    form = forms.GenreUploadForm(data=params, files=files)
+    mocker.patch.object(form.validator, 'validate', return_value=None)
+    is_valid = form.is_valid()
+
+    assert is_valid
+
+  @pytest.fixture(params=['without-encoding', 'without-csvfile', 'without-header'])
+  def get_invalid_form_param(self, request, get_form_params_with_fds):
+    # Setup temporary file
+    tmp_fp, csv_file, params, files = get_form_params_with_fds('utf-8')
+    err_msg = 'This field is required'
+    # Setup form data
+    if request.param == 'without-encoding':
+      del params['encoding']
+    elif request.param == 'without-csvfile':
+      del files['csv_file']
+    elif request.param == 'without-header':
+      del params['header']
+
+    yield params, files, err_msg
+
+    # Post-process
+    csv_file.close()
+    tmp_fp.close()
+
+  def test_invalid_field_data(self, mocker, get_invalid_form_param):
+    params, files, err_msg = get_invalid_form_param
+    form = forms.GenreUploadForm(data=params, files=files)
+    mocker.patch.object(form.validator, 'validate', return_value=None)
+    is_valid = form.is_valid()
+
+    assert not is_valid
+    assert err_msg in str(form.errors)
+
+  @pytest.fixture
+  def get_params_for_register_method(self, get_form_params_with_fds):
+    tmp_fp, csv_file, params, files = get_form_params_with_fds('utf-8')
+
+    yield params, files
+
+    # Post-process
+    csv_file.close()
+    tmp_fp.close()
+
+  @pytest.mark.parametrize([
+    'records',
+    'expected',
+  ], [
+    ([('test-genre-01', ), ('test-genre-02', ), ('test-genre-03', )], ['test-genre-01', 'test-genre-02', 'test-genre-03']),
+    ([('test-genre-01', ), ('test-genre-02', ), ('test-genre-03', ), ('test-genre-02', ), ('test-genre-01', )], ['test-genre-01', 'test-genre-02', 'test-genre-03']),
+  ], ids=[
+    'unique-list',
+    'duplication-list',
+  ])
+  def test_check_register_genres(self, mocker, get_params_for_register_method, records, expected):
+    params, files = get_params_for_register_method
+    form = forms.GenreUploadForm(data=params, files=files)
+    mocker.patch.object(form.validator, 'validate', return_value=None)
+    mocker.patch.object(form.validator, 'get_record', return_value=records)
+    is_valid = form.is_valid()
+    instances = form.register_genres()
+    counts = models.Genre.objects.filter(pk__in=self.pk_convertor(instances)).count()
+
+    assert is_valid
+    assert not form.has_error(NON_FIELD_ERRORS)
+    assert counts == len(expected)
+    assert all([obj.name in expected for obj in instances])
+
+  def test_raise_exception_in_bulk_create(self, mocker, get_params_for_register_method):
+    err_msg = 'Include invalid records. Please check the detail:'
+    # Create form
+    params, files = get_params_for_register_method
+    form = forms.GenreUploadForm(data=params, files=files)
+    mocker.patch.object(form.validator, 'validate', return_value=None)
+    mocker.patch.object(form.validator, 'get_record', return_value=[[1], [2], [3]])
+    mocker.patch('quiz.models.Genre.get_instances_from_list', return_value=[factories.GenreFactory.build(name='hoge-test-bulk023', is_enabled=True)])
+    mocker.patch('quiz.models.Genre.objects.bulk_create', side_effect=IntegrityError('Invalid data'))
+    is_valid = form.is_valid()
+    instances = form.register_genres()
+
+    assert is_valid
+    assert form.has_error(NON_FIELD_ERRORS)
+    assert err_msg in str(form.non_field_errors())
+    assert len(instances) == 0
 
 # =====================
 # = GenreDownloadForm =
@@ -138,10 +269,7 @@ def get_each_types_of_genre(django_db_blocker, get_genres):
 class TestGenreDownloadForm(Common):
   @pytest.fixture
   def set_custom_mock(self, mocker):
-    mocker.patch(
-      'quiz.forms.get_current_time',
-      return_value=datetime(2022,7,3,10,58,3,microsecond=123456,tzinfo=timezone.utc),
-    )
+    mocker.patch('quiz.forms.generate_default_filename', return_value='20210703-205803')
     mocker.patch('quiz.models.Genre.get_response_kwargs',
       side_effect=lambda name: {'filename': f'genre-{name}.csv'},
     )
@@ -155,7 +283,7 @@ class TestGenreDownloadForm(Common):
     ('hoge', 'genre-hoge.csv'),
     ('foo.csv', 'genre-foo.csv'),
     ('foo.txt', 'genre-foo.txt.csv'),
-    ('.csv', 'genre-20220703-195803.csv'),
+    ('.csv', 'genre-20210703-205803.csv'),
   ], ids=[
     'norma-pattern',
     'with-extention',
@@ -191,34 +319,25 @@ class TestGenreDownloadForm(Common):
 @pytest.mark.form
 @pytest.mark.django_db
 class TestQuizSearchForm(Common):
-  callback_user = lambda _self, item: f'{item.quizzes.all().filter(is_completed=True).count()},{item.code}'
+  callback_user = lambda _self, item: f'{item.quizzes.filter(is_completed=True).count()},{item.code}'
 
-  @pytest.mark.parametrize([
-    'input_type',
-    'has_manager_role',
-  ], [
-    ('genre', False),
-    ('creator', True),
-    ('creaotr', False),
-  ], ids=lambda xs: str(xs))
-  def test_invalid_patterns(self, input_type, has_manager_role):
+  def test_invalid_patterns(self, get_has_creator_role_users):
     invalid_genre = factories.GenreFactory(is_enabled=False)
-    creators = factories.UserFactory.create_batch(2, is_active=True, role=RoleType.CREATOR)
-    user = creators[0] if not has_manager_role else factories.UserFactory(is_active=True, role=RoleType.MANAGER)
+    other = factories.UserFactory(is_active=True, role=RoleType.CREATOR)
+    key, user = get_has_creator_role_users
 
-    if input_type == 'genre':
+    if key == 'superuser':
       params = {
         'genres': [invalid_genre.pk],
       }
+    elif key == 'manager':
+      params = {
+        'creators': [user.pk]
+      }
     else:
-      if has_manager_role:
-        params = {
-          'creators': [user.pk]
-        }
-      else:
-        params = {
-          'creators': [creators[1].pk],
-        }
+      params = {
+        'creators': [other.pk],
+      }
     form = forms.QuizSearchForm(user=user, data=params)
 
     assert not form.is_valid()
@@ -329,17 +448,8 @@ class TestQuizSearchForm(Common):
     assert queryset.count() == all_quizzes.count()
     assert all([est.pk == exact.pk for est, exact in zip(queryset.order_by('pk'), all_quizzes.order_by('pk'))])
 
-  @pytest.mark.parametrize([
-    'role',
-  ], [
-    (RoleType.CREATOR, ),
-    (RoleType.MANAGER, ),
-  ], ids=[
-    'is-creator',
-    'is-manager',
-  ])
-  def test_check_genre_options(self, mocker, get_genres, role):
-    user = factories.UserFactory(is_active=True, role=role)
+  def test_check_genre_options(self, mocker, get_genres, get_editors):
+    _, user = get_editors
     creator = factories.UserFactory(is_active=True, role=RoleType.CREATOR)
     genres = get_genres
     genres = models.Genre.objects.filter(pk__in=self.pk_convertor(genres)).order_by('-pk')
@@ -355,9 +465,9 @@ class TestQuizSearchForm(Common):
     options = json.loads(str_options)
 
     if user.has_manager_role():
-      callback = lambda item: item.quizzes.all().count()
+      callback = lambda item: item.quizzes.count()
     else:
-      callback = lambda item: item.quizzes.all().filter(creator=user).count()
+      callback = lambda item: item.quizzes.filter(creator=user).count()
     exacts = [
       {"text": f'{item}({callback(item)})', "value": str(item.pk), "selected": False} for item in genres
     ]
@@ -366,24 +476,17 @@ class TestQuizSearchForm(Common):
     assert len(options) == len(exacts)
     assert g_compare_options(options, exacts)
 
-  @pytest.mark.parametrize([
-    'has_manager_role',
-  ], [
-    (True, ),
-    (False, ),
-  ], ids=[
-    'by-manager',
-    'by-creator',
-  ])
-  def test_check_creator_options(self, mocker, has_manager_role):
+  def test_check_creator_options(self, mocker, get_editors):
     creators = factories.UserFactory.create_batch(3, is_active=True, role=RoleType.CREATOR)
     creators = UserModel.objects.filter(pk__in=self.pk_convertor(creators)).order_by('-pk')
-    user = creators[0] if not has_manager_role else factories.UserFactory(is_active=True, role=RoleType.MANAGER)
+    key, _u_tmp = get_editors
+    has_manager_role = key == 'manager'
+    user = creators[0] if not has_manager_role else _u_tmp
     # Mock
     mocker.patch('account.models.CustomUserManager.collect_creators', return_value=creators)
     form = forms.QuizSearchForm(user=user)
     str_options = form.get_creator_options
-    callback = lambda item: f'{item.quizzes.all().count()},{item.code}'
+    callback = lambda item: f'{item.quizzes.count()},{item.code}'
     options = json.loads(str_options)
 
     if has_manager_role:
@@ -449,8 +552,8 @@ class TestQuizUploadForm(Common):
     csv_file.close()
     tmp_fp.close()
 
-  def test_valid_input_pattern(self, mocker, get_quiz_accounts, get_valid_form_param):
-    user = get_quiz_accounts
+  def test_valid_input_pattern(self, mocker, get_editors, get_valid_form_param):
+    _, user = get_editors
     params, files = get_valid_form_param
     form = forms.QuizUploadForm(user=user, data=params, files=files)
     mocker.patch.object(form.validator, 'validate', return_value=None)
@@ -477,8 +580,8 @@ class TestQuizUploadForm(Common):
     csv_file.close()
     tmp_fp.close()
 
-  def test_invalid_field_data(self, mocker, get_quiz_accounts, get_invalid_form_param):
-    user = get_quiz_accounts
+  def test_invalid_field_data(self, mocker, get_editors, get_invalid_form_param):
+    _, user = get_editors
     params, files, err_msg = get_invalid_form_param
     form = forms.QuizUploadForm(user=user, data=params, files=files)
     mocker.patch.object(form.validator, 'validate', return_value=None)
@@ -497,9 +600,9 @@ class TestQuizUploadForm(Common):
     csv_file.close()
     tmp_fp.close()
 
-  def test_check_register_quizzes(self, mocker, get_genres, get_quiz_accounts, get_params_for_register_method):
+  def test_check_register_quizzes(self, mocker, get_genres, get_editors, get_params_for_register_method):
     genres = get_genres
-    user = get_quiz_accounts
+    _, user = get_editors
     creator = user if user.is_creator() else factories.UserFactory(is_active=True, role=RoleType.CREATOR)
     records = [
       [str(creator.pk), genres[0].name, 'quiz-hogehoge', 'foofoo', True],
@@ -520,9 +623,9 @@ class TestQuizUploadForm(Common):
     assert not form.has_error(NON_FIELD_ERRORS)
     assert counts == len(records)
 
-  def test_raise_exception_in_bulk_create(self, get_genres, mocker, get_quiz_accounts, get_params_for_register_method):
+  def test_raise_exception_in_bulk_create(self, get_genres, mocker, get_editors, get_params_for_register_method):
     genre = get_genres[0]
-    user = get_quiz_accounts
+    _, user = get_editors
     creator = user if user.is_creator() else factories.UserFactory(is_active=True, role=RoleType.CREATOR)
     err_msg = 'Include invalid records. Please check the detail:'
     # Create form
@@ -581,12 +684,9 @@ def test_custom_multiple_choicefield(data):
 class TestQuizDownloadForm(Common):
   @pytest.fixture
   def set_custom_mock(self, mocker):
-    mocker.patch(
-      'quiz.forms.get_current_time',
-      return_value=datetime(2022,7,3,11,58,3,microsecond=123456,tzinfo=timezone.utc),
-    )
-    mocker.patch('quiz.models.Genre.get_response_kwargs',
-      side_effect=lambda name: {'filename': f'genre-{name}.csv'},
+    mocker.patch('quiz.forms.generate_default_filename', return_value='20210703-205803')
+    mocker.patch('quiz.models.Quiz.get_response_kwargs',
+      side_effect=lambda name, ids: {'filename': f'quiz-{name}.csv'},
     )
 
     return mocker
@@ -598,16 +698,16 @@ class TestQuizDownloadForm(Common):
     ('hoge', 'quiz-hoge.csv'),
     ('foo.csv', 'quiz-foo.csv'),
     ('foo.txt', 'quiz-foo.txt.csv'),
-    ('.csv', 'quiz-20220703-205803.csv'),
+    ('.csv', 'quiz-20210703-205803.csv'),
   ], ids=[
     'norma-pattern',
     'with-extention',
     'with-other-extention',
     'only-extension',
   ])
-  def test_valid_get_response_kwargs(self, set_custom_mock, get_quiz_accounts, name, expected):
+  def test_valid_get_response_kwargs(self, set_custom_mock, get_editors, name, expected):
     _ = set_custom_mock
-    user = get_quiz_accounts
+    _, user = get_editors
     params = {
       'filename': name,
     }
@@ -618,9 +718,9 @@ class TestQuizDownloadForm(Common):
     assert is_valid
     assert kwargs['filename'] == expected
 
-  def test_invalid_params(self, set_custom_mock, get_quiz_accounts):
+  def test_invalid_params(self, set_custom_mock, get_editors):
     _ = set_custom_mock
-    user = get_quiz_accounts
+    _, user = get_editors
     params = {
       'filename': '1'*129,
     }
@@ -629,8 +729,8 @@ class TestQuizDownloadForm(Common):
 
     assert not is_valid
 
-  def test_check_clean_quizzes_method(self, get_genres, get_quiz_accounts):
-    user = get_quiz_accounts
+  def test_check_clean_quizzes_method(self, get_genres, get_editors):
+    _, user = get_editors
     genre = get_genres[0]
     creators = factories.UserFactory.create_batch(2, is_active=True, role=RoleType.CREATOR)
     instances = [factories.QuizFactory(creator=creator, genre=genre) for creator in creators]
@@ -666,8 +766,8 @@ class TestQuizForm(Common):
     ('without-genre', False),
     ('invalid-genre', False),
   ], ids=lambda xs: str(xs))
-  def test_validate_inputs(self, get_each_types_of_genre, input_type, is_valid):
-    user = factories.UserFactory(is_active=True, role=RoleType.CREATOR)
+  def test_validate_inputs(self, get_creator, get_each_types_of_genre, input_type, is_valid):
+    user = get_creator
     valid_genres, invalid_genre = get_each_types_of_genre
     # Define default param
     params = {
@@ -696,21 +796,8 @@ class TestQuizForm(Common):
     assert form.is_valid() == is_valid
     assert err_msg in str(form.errors)
 
-  @pytest.mark.parametrize([
-    'role',
-    'is_valid',
-    'err_msg',
-  ], [
-    (RoleType.MANAGER, True, ''),
-    (RoleType.CREATOR, True, ''),
-    (RoleType.GUEST, False, 'Need to be a creator role. Please check your role.'),
-  ], ids=[
-    'is-manager',
-    'is-creator',
-    'is-guest',
-  ])
-  def test_check_user_role(self, get_each_types_of_genre, role, is_valid, err_msg):
-    user = factories.UserFactory(is_active=True, role=role)
+  def test_check_user_role(self, get_users, get_each_types_of_genre):
+    key, user = get_users
     valid_genres, _ = get_each_types_of_genre
     params = {
       'genre': str(valid_genres[0].pk),
@@ -719,6 +806,13 @@ class TestQuizForm(Common):
       'is_completed': True,
     }
     form = forms.QuizForm(user=user, data=params)
+    # Create expected value
+    if key == 'guest':
+      is_valid = False
+      err_msg = 'Need to be a creator role. Please check your role.'
+    else:
+      is_valid = True
+      err_msg = ''
 
     assert form.is_valid() == is_valid
     assert err_msg in str(form.errors)
@@ -808,7 +902,7 @@ class TestQuizRoomSearchForm(Common):
 @pytest.mark.form
 @pytest.mark.django_db
 class TestQuizRoomForm(Common):
-  callback_user = lambda _self, item: f'{item.quizzes.all().count()},{item.code}'
+  callback_user = lambda _self, item: f'{item.quizzes.count()},{item.code}'
 
   @pytest.mark.parametrize([
     'input_type',
@@ -921,7 +1015,7 @@ class TestQuizRoomForm(Common):
       form.instance = None
     str_options = form.get_genre_options
     options = json.loads(str_options)
-    callback = lambda item: item.quizzes.all().filter(is_completed=True).count()
+    callback = lambda item: item.quizzes.filter(is_completed=True).count()
     if form.instance is not None:
       selected_items = form.instance.genres.all()
       rest_items = genres.exclude(pk__in=self.pk_convertor(selected_items))

@@ -3,7 +3,7 @@ from utils.tags import room_tags
 from app_tests import factories
 from account.models import RoleType
 
-@pytest.fixture
+@pytest.fixture(scope='module')
 def get_participants_and_quizzes(django_db_blocker):
   with django_db_blocker.unblock():
     genre = factories.GenreFactory(is_enabled=True)

@@ -15,40 +15,12 @@ from account.models import (
   RoleApproval,
   IndividualGroup,
 )
+import urllib.parse
 
 UserModel = get_user_model()
 
 class Common:
   index_url = reverse('utils:index')
-
-  @pytest.fixture(params=['creator', 'guest'], scope='module')
-  def get_players(self, django_db_blocker, request):
-    key = request.param
-    roles = {
-      'creator': RoleType.CREATOR,
-      'guest': RoleType.GUEST,
-    }
-    with django_db_blocker.unblock():
-      role = roles[key]
-      user = factories.UserFactory(is_active=True, role=role)
-
-    return key, user
-
-  @pytest.fixture(params=['superuser', 'manager', 'creator', 'guest'], scope='module')
-  def get_users(self, django_db_blocker, request):
-    patterns = {
-      'superuser': {'is_active': True, 'is_staff': True, 'is_superuser': True, 'role': RoleType.GUEST},
-      'manager': {'is_active': True, 'role': RoleType.MANAGER},
-      'creator': {'is_active': True, 'role': RoleType.CREATOR},
-      'guest': {'is_active': True, 'role': RoleType.GUEST},
-    }
-    key = request.param
-    kwargs = patterns[key]
-    # Get user instance
-    with django_db_blocker.unblock():
-      user = factories.UserFactory(**kwargs)
-
-    return key, user
 
 # ======================
 # = Index/Login/Logout =
@@ -75,6 +47,16 @@ class TestLoginLogout(Common):
 
     assert response.status_code == status.HTTP_200_OK
     assert 'Index' in str(response)
+
+  # Introduction page
+  def test_can_move_to_introduction_page(self, csrf_exempt_django_app):
+    app = csrf_exempt_django_app
+    page = app.get(self.index_url)
+    response = page.click('Introduction')
+    introduction_url = reverse('utils:introduction')
+
+    assert response.status_code == status.HTTP_200_OK
+    assert get_current_path(response) == introduction_url
 
   # Login page
   def test_can_move_to_login_page(self, csrf_exempt_django_app):
@@ -385,20 +367,30 @@ class TestResetPassword(Common):
     assert response.status_code == status.HTTP_200_OK
     assert get_current_path(response) == self.parent_page_url
 
+  def test_send_post_request(self, mocker, csrf_exempt_django_app):
+    email_mock = mocker.patch('django.contrib.auth.forms.EmailMultiAlternatives.send', return_value=None)
+    user = factories.UserFactory(is_active=True, email='hoge@good.email.com')
+    # Get form and submit form
+    app = csrf_exempt_django_app
+    forms = app.get(self.reset_password_url).forms
+    form = forms['reset-password-form']
+    form['email'] = 'hoge@good.email.com'
+    response = form.submit().follow()
+
+    assert response.status_code == status.HTTP_200_OK
+    assert email_mock.call_count == 1
+
   @pytest.mark.parametrize([
     'email',
     'is_active',
-    'call_count',
   ], [
-    ('hoge@good.email.com', True, 1),
-    ('hoge@good.email.com', False, 0),
-    ('nobody@bad.email', True, 0),
+    ('hoge@good.email.com', False),
+    ('nobody@bad.email', True),
   ], ids=[
-    'is-valid-request',
     'user-is-not-active',
     'user-does-not-exist',
   ])
-  def test_send_post_request(self, mocker, csrf_exempt_django_app, email, is_active, call_count):
+  def test_send_invalid_post_request(self, mocker, csrf_exempt_django_app, email, is_active):
     email_mock = mocker.patch('django.contrib.auth.forms.EmailMultiAlternatives.send', return_value=None)
     user = factories.UserFactory(is_active=is_active, email='hoge@good.email.com')
     # Get form and submit form
@@ -406,10 +398,10 @@ class TestResetPassword(Common):
     forms = app.get(self.reset_password_url).forms
     form = forms['reset-password-form']
     form['email'] = email
-    response = form.submit().follow()
+    response = form.submit()
 
     assert response.status_code == status.HTTP_200_OK
-    assert email_mock.call_count == call_count
+    assert email_mock.call_count == 0
 
   @pytest.fixture
   def get_confirm_page_url(self):
@@ -461,6 +453,91 @@ class TestResetPassword(Common):
     assert response.status_code == status.HTTP_200_OK
     assert get_current_path(response) == output_url
 
+# =========================
+# = Download creator list =
+# =========================
+@pytest.mark.webtest
+@pytest.mark.django_db
+class TestDownloadCreator(Common):
+  form_view_url = reverse('account:download_creator')
+
+  def test_can_move_to_download_page(self, csrf_exempt_django_app, get_has_manager_role_user):
+    app = csrf_exempt_django_app
+    _, user = get_has_manager_role_user
+    page = app.get(self.index_url, user=user)
+    response = page.click('Download creator list')
+
+    assert response.status_code == status.HTTP_200_OK
+    assert get_current_path(response) == self.form_view_url
+
+  def test_cannot_move_to_download_page(self, csrf_exempt_django_app, get_players):
+    app = csrf_exempt_django_app
+    _, user = get_players
+    page = app.get(self.index_url, user=user)
+
+    with pytest.raises(IndexError):
+      _ = page.click('Download creator list')
+
+  def test_can_move_to_parent_page_from_download_page(self, csrf_exempt_django_app, get_has_manager_role_user):
+    _, user = get_has_manager_role_user
+    app = csrf_exempt_django_app
+    page = app.get(self.form_view_url, user=user)
+    response = page.click('Cancel')
+
+    assert response.status_code == status.HTTP_200_OK
+    assert get_current_path(response) == self.index_url
+
+  @pytest.mark.parametrize([
+    'filename',
+    'exact_fname',
+  ], [
+    ('hoge-test', 'creator-hoge-test.csv'),
+    ('foo-test.csv', 'creator-foo-test.csv'),
+    ('.csv', 'creator-20200102-100518.csv'),
+  ], ids=[
+    'normal-name',
+    'with-extensions',
+    'only-extensions',
+  ])
+  def test_send_post_request(self, mocker, csrf_exempt_django_app, get_has_manager_role_user, filename, exact_fname):
+    mocker.patch('account.forms.generate_default_filename', return_value='20200102-100518')
+    _, user = get_has_manager_role_user
+    creators = factories.UserFactory.create_batch(5, is_active=True, role=RoleType.CREATOR)
+    creators = UserModel.objects.filter(pk__in=[obj.pk for obj in creators])
+    mocker.patch('account.models.User.objects.collect_creators', return_value=creators)
+    # Create expected value
+    lines = '\n'.join(['{},{},{}'.format(str(obj.pk), str(obj), obj.code) for obj in creators.order_by('email')]) + '\n'
+    expected = {
+      'data': bytes('Creator.pk,Screen name,Code\n' + lines, 'utf-8'),
+      'filename': exact_fname,
+    }
+    # Send post request
+    app = csrf_exempt_django_app
+    forms = app.get(self.form_view_url, user=user).forms
+    form = forms['creator-download-form']
+    form['filename'] = filename
+    response = form.submit()
+    cookie = response.client.cookies.get('creator_download_status')
+    attachment = response['content-disposition']
+    stream = response.content
+
+    assert expected['filename'] == urllib.parse.unquote(attachment.split('=')[1].replace('"', ''))
+    assert cookie.value == 'completed'
+    assert expected['data'] in stream
+
+  def test_send_invalid_request(self, csrf_exempt_django_app, get_has_manager_role_user):
+    _, user = get_has_manager_role_user
+    # Send post request
+    app = csrf_exempt_django_app
+    forms = app.get(self.form_view_url, user=user).forms
+    form = forms['creator-download-form']
+    form['filename'] = '1'*129
+    response = form.submit()
+    errors = response.context['form'].errors
+
+    assert response.status_code == status.HTTP_200_OK
+    assert 'Ensure this value has at most 128 character' in str(errors)
+
 # ===============
 # = Change role =
 # ===============
@@ -472,34 +549,25 @@ class TestChangeRole(Common):
   create_role_url = reverse('account:create_role_change_request')
   update_role_url = lambda _self, pk: reverse('account:update_role_approval', kwargs={'pk': pk})
 
-  def test_can_move_to_change_role_page(self, csrf_exempt_django_app):
+  def test_can_move_to_change_role_page(self, csrf_exempt_django_app, get_manager):
     app = csrf_exempt_django_app
-    user = factories.UserFactory(is_active=True, role=RoleType.MANAGER)
+    user = get_manager
     page = app.get(self.index_url, user=user)
     response = page.click('Role change request')
 
     assert response.status_code == status.HTTP_200_OK
     assert get_current_path(response) == self.role_list_url
 
-  @pytest.mark.parametrize([
-    'role',
-  ], [
-    (RoleType.CREATOR, ),
-    (RoleType.GUEST, ),
-  ], ids=[
-    'is-creator',
-    'is-guest',
-  ])
-  def test_cannot_move_to_change_role_page(self, csrf_exempt_django_app, role):
+  def test_cannot_move_to_change_role_page(self, csrf_exempt_django_app, get_players):
     app = csrf_exempt_django_app
-    user = factories.UserFactory(is_active=True, role=role)
+    _, user = get_players
     page = app.get(self.index_url, user=user)
 
     with pytest.raises(IndexError):
       _ = page.click('Check/update role change requests')
 
-  def test_can_move_to_role_change_request_page(self, csrf_exempt_django_app):
-    user = factories.UserFactory(is_active=True, role=RoleType.GUEST)
+  def test_can_move_to_role_change_request_page(self, csrf_exempt_django_app, get_guest):
+    user = get_guest
     app = csrf_exempt_django_app
     page = app.get(self.profile_url, user=user)
     response = page.click('Change own role to "CREATOR"')
@@ -507,8 +575,8 @@ class TestChangeRole(Common):
     assert response.status_code == status.HTTP_200_OK
     assert get_current_path(response) == self.create_role_url
 
-  def test_can_move_to_parent_page_from_role_change_request_page(self, csrf_exempt_django_app):
-    user = factories.UserFactory(is_active=True, role=RoleType.GUEST)
+  def test_can_move_to_parent_page_from_role_change_request_page(self, csrf_exempt_django_app, get_guest):
+    user = get_guest
     app = csrf_exempt_django_app
     page = app.get(self.create_role_url, user=user)
     response = page.click('Cancel')
@@ -516,27 +584,10 @@ class TestChangeRole(Common):
     assert response.status_code == status.HTTP_200_OK
     assert get_current_path(response) == self.profile_url
 
-  @pytest.mark.parametrize([
-    'role',
-    'is_staff',
-    'is_superuser',
-    'has_record',
-  ], [
-    (RoleType.GUEST, True, True, False),
-    (RoleType.GUEST, True, False, True),
-    (RoleType.MANAGER, False, False, False),
-    (RoleType.CREATOR, False, False, False),
-    (RoleType.GUEST, False, False, True),
-  ], ids=[
-    'is-superuser',
-    'is-staff-with-own-record',
-    'is-manager',
-    'is-creator',
-    'is-guest-with-own-record',
-  ])
-  def test_cannot_move_to_role_change_request_page(self, csrf_exempt_django_app, role, is_staff, is_superuser, has_record):
-    user = factories.UserFactory(is_active=True, role=role, is_staff=is_staff, is_superuser=is_superuser)
-    if has_record:
+  def test_cannot_move_to_role_change_request_page(self, csrf_exempt_django_app, get_users):
+    key, user = get_users
+
+    if key == 'guest':
       _ = factories.RoleApprovalFactory(user=user, is_completed=False)
     app = csrf_exempt_django_app
 
@@ -545,8 +596,8 @@ class TestChangeRole(Common):
 
     assert str(status.HTTP_403_FORBIDDEN) in ex.value.args[0]
 
-  def test_send_post_request(self, csrf_exempt_django_app):
-    user = factories.UserFactory(is_active=True, role=RoleType.GUEST)
+  def test_send_post_request(self, csrf_exempt_django_app, get_guest):
+    user = get_guest
     app = csrf_exempt_django_app
     forms = app.get(self.create_role_url, user=user).forms
     form = forms['change-role-form']
@@ -567,10 +618,10 @@ class TestChangeRole(Common):
     'is-approve',
     'is-not-approve',
   ])
-  def test_approve_role_change_request(self, csrf_exempt_django_app, is_approve, count):
+  def test_approve_role_change_request(self, csrf_exempt_django_app, get_manager, is_approve, count):
     guest = factories.UserFactory(is_active=True, role=RoleType.GUEST)
     instance = factories.RoleApprovalFactory(user=guest, is_completed=False)
-    user = factories.UserFactory(is_active=True, role=RoleType.MANAGER)
+    user = get_manager
     app = csrf_exempt_django_app
     url = self.update_role_url(instance.pk)
     response = app.post(url, {'is_approve': is_approve}, user=user).follow()
@@ -597,19 +648,8 @@ class TestUpdateFriends(Common):
     assert response.status_code == status.HTTP_200_OK
     assert get_current_path(response) == self.update_friend_url
 
-  @pytest.mark.parametrize([
-    'role',
-    'is_staff',
-    'is_superuser',
-  ], [
-    (RoleType.GUEST, True, True),
-    (RoleType.MANAGER, False, False),
-  ], ids=[
-    'is-superuser',
-    'is-manager',
-  ])
-  def test_cannot_move_to_update_friend(self, csrf_exempt_django_app, role, is_staff, is_superuser):
-    user = factories.UserFactory(is_active=True, role=role, is_staff=is_staff, is_superuser=is_superuser)
+  def test_cannot_move_to_update_friend(self, csrf_exempt_django_app, get_has_manager_role_user):
+    _, user = get_has_manager_role_user
     app = csrf_exempt_django_app
     page = app.get(self.profile_url, user=user)
 
@@ -642,10 +682,10 @@ class TestUpdateFriends(Common):
     assert all_friends.count() == 2
     assert all([str(user.pk) in ids for user in all_friends])
 
-  def test_invalid_post_request(self, csrf_exempt_django_app):
+  def test_invalid_post_request(self, csrf_exempt_django_app, get_guest, get_friends):
     # In the case of that target user has individual group which includes user's friends
-    other = factories.UserFactory(is_active=True, role=RoleType.GUEST)
-    friends = list(factories.UserFactory.create_batch(2, is_active=True, role=RoleType.GUEST))
+    other = get_guest
+    friends = get_friends
     friends = UserModel.objects.filter(pk__in=[val.pk for val in friends]).order_by('pk')
     user = factories.UserFactory(
       is_active=True,
@@ -681,29 +721,18 @@ class TestIndividualGroup(Common):
     _, user = get_players
     app = csrf_exempt_django_app
     page = app.get(self.profile_url, user=user)
-    response = page.click('Create/Edit/delete indivitual groups')
+    response = page.click('Create/Edit/Delete indivitual groups')
 
     assert response.status_code == status.HTTP_200_OK
     assert get_current_path(response) == self.group_list_url
 
-  @pytest.mark.parametrize([
-    'role',
-    'is_staff',
-    'is_superuser',
-  ], [
-    (RoleType.GUEST, True, True),
-    (RoleType.MANAGER, False, False),
-  ], ids=[
-    'is-superuser',
-    'is-manager',
-  ])
-  def test_cannot_move_to_group_list(self, csrf_exempt_django_app, role, is_staff, is_superuser):
-    user = factories.UserFactory(is_active=True, role=role, is_staff=is_staff, is_superuser=is_superuser)
+  def test_cannot_move_to_group_list(self, csrf_exempt_django_app, get_has_manager_role_user):
+    _, user = get_has_manager_role_user
     app = csrf_exempt_django_app
     page = app.get(self.profile_url, user=user)
 
     with pytest.raises(IndexError):
-      _ = page.click('Create/Edit/delete indivitual groups')
+      _ = page.click('Create/Edit/Delete indivitual groups')
 
   def test_can_move_to_create_page(self, csrf_exempt_django_app, get_players):
     _, user = get_players
@@ -723,8 +752,8 @@ class TestIndividualGroup(Common):
     assert response.status_code == status.HTTP_200_OK
     assert get_current_path(response) == self.group_list_url
 
-  def test_send_create_request(self, csrf_exempt_django_app, get_players):
-    friends = list(factories.UserFactory.create_batch(2, is_active=True, role=RoleType.GUEST))
+  def test_send_create_request(self, csrf_exempt_django_app, get_players, get_friends):
+    friends = get_friends
     _, user = get_players
     user = factories.UserFactory(is_active=True, role=user.role, friends=friends)
     app = csrf_exempt_django_app
@@ -738,9 +767,9 @@ class TestIndividualGroup(Common):
     assert response.status_code == status.HTTP_200_OK
     assert all_counts == 1
 
-  def test_invalid_create_request(self, csrf_exempt_django_app, get_players):
-    other = factories.UserFactory(is_active=True)
-    friends = list(factories.UserFactory.create_batch(2, is_active=True, role=RoleType.GUEST))
+  def test_invalid_create_request(self, csrf_exempt_django_app, get_guest, get_friends, get_players):
+    other = get_guest
+    friends = get_friends
     _, user = get_players
     user = factories.UserFactory(is_active=True, role=user.role, friends=friends)
     app = csrf_exempt_django_app
@@ -751,8 +780,8 @@ class TestIndividualGroup(Common):
     with pytest.raises(ValueError):
       form['members'] = [str(other.pk)]
 
-  def test_can_move_to_edit_page(self, csrf_exempt_django_app, get_players):
-    friends = list(factories.UserFactory.create_batch(3, is_active=True, role=RoleType.GUEST))
+  def test_can_move_to_edit_page(self, csrf_exempt_django_app, get_friends, get_players):
+    friends = get_friends
     _, user = get_players
     user = factories.UserFactory(is_active=True, role=user.role, friends=friends)
     instance = factories.IndividualGroupFactory(owner=user, members=[friends[0], friends[1]])
@@ -771,8 +800,8 @@ class TestIndividualGroup(Common):
     with pytest.raises(IndexError):
       _ = page.click('Edit')
 
-  def test_send_update_request(self, csrf_exempt_django_app, get_players):
-    friends = list(factories.UserFactory.create_batch(3, is_active=True, role=RoleType.GUEST))
+  def test_send_update_request(self, csrf_exempt_django_app, get_friends, get_players):
+    friends = get_friends
     _, user = get_players
     user = factories.UserFactory(is_active=True, role=user.role, friends=friends)
     instance = factories.IndividualGroupFactory(owner=user, members=[friends[0], friends[1]])
@@ -790,9 +819,9 @@ class TestIndividualGroup(Common):
     assert queryset.count() == 1
     assert all([user.pk == friends[2].pk for user in target.members.all()])
 
-  def test_invalid_update_request(self, csrf_exempt_django_app, get_players):
-    other = factories.UserFactory(is_active=True, role=RoleType.GUEST)
-    friends = list(factories.UserFactory.create_batch(3, is_active=True, role=RoleType.GUEST))
+  def test_invalid_update_request(self, csrf_exempt_django_app, get_guest, get_friends, get_players):
+    other = get_guest
+    friends = get_friends
     _, user = get_players
     user = factories.UserFactory(is_active=True, role=user.role, friends=friends)
     instance = factories.IndividualGroupFactory(owner=user, members=[friends[0], friends[1]])
@@ -806,31 +835,21 @@ class TestIndividualGroup(Common):
       form['members'] = [str(other.pk)]
 
   @pytest.mark.parametrize([
-    'role',
-    'is_staff',
-    'is_superuser',
+    'config',
   ], [
-    (RoleType.GUEST, True, True),
-    (RoleType.GUEST, True, False),
-    (RoleType.MANAGER, False, False),
-    (RoleType.CREATOR, False, False),
-    (RoleType.GUEST, False, False),
+    ({'role': RoleType.GUEST,   'is_staff': True,  'is_superuser': True}, ),
+    ({'role': RoleType.MANAGER, 'is_staff': False, 'is_superuser': False}, ),
+    ({'role': RoleType.CREATOR, 'is_staff': False, 'is_superuser': False}, ),
+    ({'role': RoleType.GUEST,   'is_staff': False, 'is_superuser': False}, ),
   ], ids=[
     'is-superuser',
-    'is-staff',
     'is-manager',
     'is-creator',
     'is-guest',
   ])
-  def test_cannot_get_access_of_delete_request(self, csrf_exempt_django_app, role, is_staff, is_superuser):
-    friends = list(factories.UserFactory.create_batch(3, is_active=True, role=RoleType.GUEST))
-    user = factories.UserFactory(
-      is_active=True,
-      role=role,
-      is_staff=is_staff,
-      is_superuser=is_superuser,
-      friends=friends,
-    )
+  def test_cannot_get_access_of_delete_request(self, csrf_exempt_django_app, get_friends, config):
+    friends = get_friends
+    user = factories.UserFactory(is_active=True, friends=friends, **config)
     instance = factories.IndividualGroupFactory(owner=user, members=[friends[0], friends[1]])
     app = csrf_exempt_django_app
     url = self.delete_group_url(instance.pk)
@@ -840,9 +859,9 @@ class TestIndividualGroup(Common):
 
     assert str(status.HTTP_405_METHOD_NOT_ALLOWED) in ex.value.args[0]
 
-  def test_send_delete_request(self, csrf_exempt_django_app, get_players):
+  def test_send_delete_request(self, csrf_exempt_django_app, get_players, get_friends):
     _, user = get_players
-    friends = list(factories.UserFactory.create_batch(3, is_active=True, role=RoleType.GUEST))
+    friends = get_friends
     user = factories.UserFactory(
       is_active=True,
       role=user.role,
@@ -857,9 +876,9 @@ class TestIndividualGroup(Common):
     assert response.status_code == status.HTTP_200_OK
     assert all_counts == 0
 
-  def test_invalid_delete_request(self, csrf_exempt_django_app, get_players):
+  def test_invalid_delete_request(self, csrf_exempt_django_app, get_players, get_friends):
     _, user = get_players
-    friends = list(factories.UserFactory.create_batch(3, is_active=True, role=RoleType.GUEST))
+    friends = get_friends
     user = factories.UserFactory(
       is_active=True,
       role=user.role,
@@ -912,9 +931,9 @@ class TestGroupAjax(Common):
 
     assert str(exact_types[key]) in ex.value.args[0]
 
-  def test_send_post_request(self, csrf_exempt_django_app, get_players):
+  def test_send_post_request(self, csrf_exempt_django_app, get_players, get_friends):
     _, user = get_players
-    friends = list(factories.UserFactory.create_batch(3, is_active=True, role=RoleType.GUEST))
+    friends = get_friends
     user = factories.UserFactory(
       is_active=True,
       role=user.role,
@@ -931,9 +950,9 @@ class TestGroupAjax(Common):
     assert 'options' in data.keys()
     assert g_compare_options(expected, data['options'])
 
-  def test_invalid_post_request(self, csrf_exempt_django_app):
+  def test_invalid_post_request(self, csrf_exempt_django_app, get_guest):
     user = factories.UserFactory(is_active=True, role=RoleType.GUEST)
-    other = factories.UserFactory(is_active=True, role=RoleType.GUEST)
+    other = get_guest
     app = csrf_exempt_django_app
     response = app.post_json(self.ajax_url, dict(owner_pk=str(other.pk)), user=user)
     data = response.json

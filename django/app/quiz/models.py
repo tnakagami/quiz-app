@@ -72,6 +72,62 @@ class Genre(BaseModel):
     return False
 
   ##
+  # @brief Check the length of each record in csv file
+  # @param row Target row of csv file
+  # @return bool Judgement result
+  # @retval True  File format is valid
+  # @retval False File format is invalid
+  @staticmethod
+  def length_checker(row):
+    ##
+    # CSV header format
+    # Creator Genre name
+    return len(row) == 1
+
+  ##
+  # @brief Check csv file format
+  # @param rows All rows of csv file
+  # @return bool Judgement result
+  # @retval True  File format is valid
+  # @retval False File format is invalid
+  @staticmethod
+  def record_checker(rows):
+    genre_set = {data[0] for data in rows}
+    # Get genre set based on database records
+    genre_names = Genre.objects.filter(name__in=list(genre_set)).values_list('name', flat=True)
+    target_genre = {name for name in genre_names}
+    # Calculate common elements between original set and generated one based on database
+    common_genre = genre_set & target_genre
+
+    if common_genre:
+      genres = Genre.objects.filter(name__in=list(common_genre)).order_by('name')
+      genres = ','.join([str(instance) for instance in genres])
+      # Create output data
+      is_valid = False
+      err = ValidationError(
+        gettext_lazy('The csv file includes invalid genre(s). Details: %(genres)s'),
+        code='invalid_file',
+        params={'genres': genres},
+      )
+    else:
+      is_valid = True
+      err = None
+
+    return is_valid, err
+
+  ##
+  # @brief Create instances from list data
+  # @param cls This class object
+  # @param rows All rows of csv file
+  # @return instances Genres created without saving itself
+  @classmethod
+  def get_instances_from_list(cls, rows):
+    genre_set = {data[0] for data in rows}
+    instances = [cls(name=name, is_enabled=True) for name in genre_set]
+
+    return instances
+
+  ##
   # @brief Write active genres
   # @param cls This class object
   # @param filename Output csv filename
@@ -85,7 +141,7 @@ class Genre(BaseModel):
     rows = ([obj.name] for obj in queryset.iterator())
     kwargs = {
       'rows': rows,
-      'header': ['name'],
+      'header': ['Name'],
       'filename': f'genre-{name}.csv',
     }
 
@@ -227,7 +283,7 @@ class Quiz(BaseModel):
   def length_checker(row):
     ##
     # CSV header format
-    # Creator ID,Genre ID,Question,Answer,IsCompleted
+    # Creator ID,Genre name,Question,Answer,IsCompleted
     return len(row) == 5
 
   ##
@@ -237,7 +293,7 @@ class Quiz(BaseModel):
   @staticmethod
   def record_extractor(row):
     ##
-    # Extract `Creator ID` and `Genre ID`
+    # Extract `Creator ID` and `Genre name`
     return (row[0], row[1])
 
   ##
@@ -460,7 +516,7 @@ class QuizRoom(BaseModel):
       self.is_enabled,
       user.is_player(),
       any([
-        self.members.all().filter(pk__in=[user.pk]).exists(),
+        self.members.filter(pk__in=[user.pk]).exists(),
         self.is_owner(user),
       ])
     ])

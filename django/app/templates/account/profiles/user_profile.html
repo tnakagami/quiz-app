@@ -94,7 +94,7 @@
           href="{% url 'account:individual_group_list' %}"
           class="btn btn-success w-100 custom-boxshadow"
         >
-          {% trans "Create/Edit/delete indivitual groups" %}
+          {% trans "Create/Edit/Delete indivitual groups" %}
         </a>
       </div>
       {% endif %}
@@ -122,9 +122,10 @@
     const helper = new HelperMethods();
     // Add click event for each button
     for (const btn of copyButtons) {
+      const popover = helper.addPopoverEvent(btn);
+      // Add event
       btn.addEventListener('click', (event) => {
         helper.copyToClipboard(null, btn.dataset.text);
-        const popover = helper.addPopoverEvent(btn);
         popover.show();
       }, false);
     }

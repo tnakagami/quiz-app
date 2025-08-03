@@ -27,11 +27,11 @@ from quiz import models
 
 def get_open_port():
   import socket
-  s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-  s.bind(('', 0))
-  s.listen(1)
-  port = s.getsockname()[1]
-  s.close()
+  _sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  _sock.bind(('', 0))
+  _sock.listen(1)
+  _, port = _sock.getsockname()
+  _sock.close()
 
   return port
 
@@ -59,7 +59,7 @@ class ChannelsLiveServer(ClientMixin):
       if connection.vendor == 'sqlite' and connection.is_in_memory_db() and len(connection.settings_dict.get('TEST', {})) == 0:
         raise ImproperlyConfigured('ChannelsLiveServer can not be used with in memory databases')
 
-      self._live_server_modified_settings = modify_settings(ALLOWED_HOSTS={"append": self.host})
+      self._live_server_modified_settings = modify_settings(ALLOWED_HOSTS={'append': self.host})
       self._live_server_modified_settings.enable()
       get_application = functools.partial(
         make_application,
@@ -94,54 +94,53 @@ class ChannelsLiveServer(ClientMixin):
   def http(self):
     return f'http://{self.host}:{self.port}'
 
+@pytest.fixture(scope='module')
+def get_room_info(django_db_blocker):
+  @database_sync_to_async
+  def inner():
+    with django_db_blocker.unblock():
+      owner = factories.UserFactory(is_active=True, role=RoleType.GUEST, screen_name='guest-owner')
+      genres = list(factories.GenreFactory.create_batch(3, is_enabled=True))
+      creators = list(factories.UserFactory.create_batch(3, is_active=True, role=RoleType.GUEST))
+      guests = list(factories.UserFactory.create_batch(4, is_active=True, role=RoleType.GUEST))
+      # Update screen name
+      for idx, creator in enumerate(creators):
+        creator.screen_name = f'creator{idx}'
+        creator.save()
+      for idx, guest in enumerate(guests):
+        guest.screen_name = f'guest{idx}'
+        guest.save()
+      # Note: only creators[2] and guests[3] are members
+      members = [creators[2], guests[3]]
+      # Create quizzes
+      quizzes = [
+        factories.QuizFactory(creator=creators[0], genre=genres[0], is_completed=True),  # 0
+        factories.QuizFactory(creator=creators[1], genre=genres[0], is_completed=True),  # 1
+        factories.QuizFactory(creator=creators[2], genre=genres[0], is_completed=False), # 2 Is not selected
+        factories.QuizFactory(creator=creators[0], genre=genres[1], is_completed=True),  # 3
+        factories.QuizFactory(creator=creators[1], genre=genres[1], is_completed=True),  # 4
+        factories.QuizFactory(creator=creators[2], genre=genres[1], is_completed=True),  # 5 Is not selected
+        factories.QuizFactory(creator=creators[0], genre=genres[2], is_completed=True),  # 6
+        factories.QuizFactory(creator=creators[1], genre=genres[2], is_completed=True),  # 7
+        factories.QuizFactory(creator=creators[2], genre=genres[2], is_completed=True),  # 8
+      ]
+      room = factories.QuizRoomFactory(
+        name='test-consumer-room',
+        owner=owner,
+        creators=[creators[0], creators[1]],
+        genres=[genres[0], genres[2]],
+        members=list(members),
+        max_question=4,
+        is_enabled=True,
+      )
+      room.reset()
+
+    return owner, creators, guests, room
+
+  return inner
+
 class Common:
   pk_convertor = lambda _self, xs: [item.pk for item in xs]
-
-  @pytest.fixture(scope='module')
-  def get_room_info(self, django_db_blocker):
-    @database_sync_to_async
-    def inner():
-      with django_db_blocker.unblock():
-        owner = factories.UserFactory(is_active=True, role=RoleType.GUEST, screen_name='guest-owner')
-        genres = factories.GenreFactory.create_batch(3, is_enabled=True)
-        genres = models.Genre.objects.filter(pk__in=self.pk_convertor(genres))
-        creators = list(factories.UserFactory.create_batch(3, is_active=True, role=RoleType.GUEST))
-        guests = list(factories.UserFactory.create_batch(4, is_active=True, role=RoleType.GUEST))
-        # Update screen name
-        for idx, creator in enumerate(creators):
-          creator.screen_name = f'creator{idx}'
-          creator.save()
-        for idx, guest in enumerate(guests):
-          guest.screen_name = f'guest{idx}'
-          guest.save()
-        # Note: only creators[2] and guests[3] are members
-        members = [creators[2], guests[3]]
-        # Create quizzes
-        quizzes = [
-          factories.QuizFactory(creator=creators[0], genre=genres[0], is_completed=True),  # 0
-          factories.QuizFactory(creator=creators[1], genre=genres[0], is_completed=True),  # 1
-          factories.QuizFactory(creator=creators[2], genre=genres[0], is_completed=False), # 2 Is not selected
-          factories.QuizFactory(creator=creators[0], genre=genres[1], is_completed=True),  # 3
-          factories.QuizFactory(creator=creators[1], genre=genres[1], is_completed=True),  # 4
-          factories.QuizFactory(creator=creators[2], genre=genres[1], is_completed=True),  # 5 Is not selected
-          factories.QuizFactory(creator=creators[0], genre=genres[2], is_completed=True),  # 6
-          factories.QuizFactory(creator=creators[1], genre=genres[2], is_completed=True),  # 7
-          factories.QuizFactory(creator=creators[2], genre=genres[2], is_completed=True),  # 8
-        ]
-        room = factories.QuizRoomFactory(
-          name='test-consumer-room',
-          owner=owner,
-          creators=[creators[0], creators[1]],
-          genres=[genres[0], genres[2]],
-          members=list(members),
-          max_question=4,
-          is_enabled=True,
-        )
-        room.reset()
-
-      return owner, creators, guests, room
-
-    return inner
 
   @database_sync_to_async
   def aget_quiz(self, pk):
@@ -293,6 +292,7 @@ class TestQuizRoomWithLiveServer(Common):
   @pytest.mark.asyncio
   async def test_get_next_quiz_command(self, exec_common_connect_process):
     async def acallback(ws_users, room, **kwargs):
+      await database_sync_to_async(room.reset)()
       # Send message
       await ws_users['owner'].send(json.dumps({'command': 'getNextQuiz'}))
       # Call recv method
@@ -409,6 +409,7 @@ class TestQuizRoomWithLiveServer(Common):
   @pytest.mark.asyncio
   async def test_get_answers_command(self, exec_common_connect_process):
     async def acallback(ws_users, room, **kwargs):
+      await database_sync_to_async(room.reset)()
       # Send message
       await ws_users['owner'].send(json.dumps({'command': 'getNextQuiz'}))
       await self.remove_all_messages(ws_users)
@@ -454,6 +455,7 @@ class TestQuizRoomWithLiveServer(Common):
   async def test_send_result_command(self, exec_common_connect_process, max_question, is_ended, stat_type, out_msg):
     @database_sync_to_async
     def apreproess(room):
+      room.reset()
       room.score.index = 2
       room.score.save()
       room.max_question = max_question
@@ -517,6 +519,9 @@ class TestQuizRoomWithLiveServer(Common):
   @pytest.mark.asyncio
   async def test_invalid_commands(self, exec_common_connect_process, get_room_member, command, data):
     user_type = get_room_member
+    @database_sync_to_async
+    def apreproess(room):
+      room.reset()
 
     async def acallback(ws_users, **kwargs):
       # Send message
@@ -527,7 +532,7 @@ class TestQuizRoomWithLiveServer(Common):
 
       return str(ex)
     # Get result
-    err_msg = await exec_common_connect_process(acallback)
+    err_msg = await exec_common_connect_process(acallback, apreproess=apreproess)
 
     assert 'TimeoutError' in err_msg
 
@@ -541,6 +546,7 @@ class TestQuizRoomWithLiveServer(Common):
       return room.max_question
     # Definetest code
     owner, creators, guests, room = await get_room_info()
+    await database_sync_to_async(room.reset)()
     url = self.room_url(channels_live_server, room)
     all_answers = []
     all_details = []
