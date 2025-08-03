@@ -117,6 +117,18 @@ class CustomUserManager(BaseUserManager):
     return self.get_queryset().collect_valid_normal_users(user)
 
   ##
+  # @brief Get active friends
+  # @param user Target user
+  # @return Queryset which is satisfied with `is_active=True` or empty queryset
+  def collect_valid_friends(self, user):
+    try:
+      queryset = user.friends.filter(is_active=True)
+    except:
+      queryset = self.model.objects.none()
+
+    return queryset
+
+  ##
   # @brief Get creators only
   # @return Queryset which consists of creator's role
   def collect_creators(self):
@@ -462,7 +474,7 @@ class IndividualGroup(BaseModel):
       instance = cls.objects.get(pk=group_pk, owner=owner)
       queryset = instance.members.all()
     except:
-      queryset = User.objects.collect_valid_normal_users()
+      queryset = User.objects.collect_valid_friends(owner)
     # Get options
     items = dual_listbox.create_options(queryset, is_selected=False, callback=callback)
     options = [dual_listbox.convertor(data) for data in items]

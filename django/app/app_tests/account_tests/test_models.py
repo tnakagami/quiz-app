@@ -296,7 +296,45 @@ class TestUser:
     ids = list(queryset.values_list('pk', flat=True))
 
     assert queryset.count() == exacts.count()
-    assert all([instance.pk in ids for instance in queryset])
+    assert all([instance.pk in ids for instance in exacts])
+
+  def test_check_manager_collect_valid_friends(self):
+    friends = [
+      *factories.UserFactory.create_batch(3, is_active=True),
+      factories.UserFactory(is_active=False)
+    ]
+    user =  factories.UserFactory(is_active=True, friends=friends)
+    exacts = user.friends.filter(is_active=True)
+    queryset = models.User.objects.collect_valid_friends(user)
+    ids = list(queryset.values_list('pk', flat=True))
+
+    assert queryset.count() == exacts.count()
+    assert all([instance.pk in ids for instance in exacts])
+
+  def test_invalid_inputs_of_collect_valid_friends(self):
+    user =  factories.UserFactory(is_active=True)
+    user.delete()
+    exacts = models.User.objects.none()
+    queryset = models.User.objects.collect_valid_friends(user)
+
+    assert isinstance(queryset, type(exacts))
+
+  def test_check_manager_collect_creators(self):
+    queryset = models.User.objects.collect_creators()
+    exacts = models.User.objects.filter(is_active=True, is_staff=False, role=models.RoleType.CREATOR)
+    ids = list(queryset.values_list('pk', flat=True))
+
+    assert queryset.count() == exacts.count()
+    assert all([instance.pk in ids for instance in exacts])
+
+  def test_check_manager_collect_valid_creators(self):
+    queryset = models.User.objects.collect_valid_creators()
+    exacts = models.User.objects.annotate(qc=Count('quizzes', filter=Q(quizzes__is_completed=True))) \
+                                .filter(is_active=True, is_staff=False, role=models.RoleType.CREATOR, qc__gt=0)
+    ids = list(queryset.values_list('pk', flat=True))
+
+    assert queryset.count() == exacts.count()
+    assert all([instance.pk in ids for instance in exacts])
 
   def test_check_queryset_collect_valid_normal_users(self):
     valid_users = factories.UserFactory.create_batch(3, is_active=True)
@@ -310,23 +348,6 @@ class TestUser:
 
     assert queryset.count() == len(pks)
     assert all([queryset.filter(pk=pk).exists() for pk in pks])
-
-  def test_check_manager_collect_creators(self):
-    queryset = models.User.objects.collect_creators()
-    exacts = models.User.objects.filter(is_active=True, is_staff=False, role=models.RoleType.CREATOR)
-    ids = list(queryset.values_list('pk', flat=True))
-
-    assert queryset.count() == exacts.count()
-    assert all([instance.pk in ids for instance in queryset])
-
-  def test_check_manager_collect_valid_creators(self):
-    queryset = models.User.objects.collect_valid_creators()
-    exacts = models.User.objects.annotate(qc=Count('quizzes', filter=Q(quizzes__is_completed=True))) \
-                                .filter(is_active=True, is_staff=False, role=models.RoleType.CREATOR, qc__gt=0)
-    ids = list(queryset.values_list('pk', flat=True))
-
-    assert queryset.count() == exacts.count()
-    assert all([instance.pk in ids for instance in queryset])
 
   def test_check_queryset_collect_creators(self):
     all_users = []
@@ -564,8 +585,8 @@ class TestIndividualGroup:
       _ = factories.UserFactory(is_active=True, is_staff=True)
       _ = factories.UserFactory(is_active=True, role=models.RoleType.MANAGER)
       _ = factories.UserFactory(is_active=True, role=models.RoleType.CREATOR)
-      nobody = factories.UserFactory(is_active=True)
       members = list(factories.UserFactory.create_batch(3, is_active=True))
+      nobody = models.User.objects.create_user(is_active=True, email='nobody@test-pattern.com')
       user = factories.UserFactory(is_active=True, friends=members)
       group = factories.IndividualGroupFactory(owner=user, members=[members[0], members[-1]])
       someone = list(factories.UserFactory.create_batch(2, is_active=True))
@@ -574,15 +595,13 @@ class TestIndividualGroup:
       not_exist_group = factories.IndividualGroupFactory(owner=other, members=someone)
       nobody.delete()
       not_exist_group.delete()
-      _specific = g_generate_item([members[0], members[-1]], False)
-      _all = g_generate_item(models.User.objects.collect_valid_normal_users(), False)
     # Define patterns
     patterns = {
-      'valid-pattern':    ({'owner': user,   'group_pk':           group.pk}, _specific),
-      'invalid-owner-pk': ({'owner': nobody, 'group_pk':           group.pk}, _all),
-      'not-exist-owner':  ({'owner': user,   'group_pk':    _other_group.pk}, _all),
-      'invalid-group-pk': ({'owner': user,   'group_pk': not_exist_group.pk}, _all),
-      'not-exist-group':  ({'owner': other,  'group_pk':           group.pk}, _all),
+      'valid-pattern':    ({'owner': user,   'group_pk':           group.pk}, g_generate_item([members[0], members[-1]], False)),
+      'invalid-owner-pk': ({'owner': nobody, 'group_pk':           group.pk}, []),
+      'not-exist-owner':  ({'owner': user,   'group_pk':    _other_group.pk}, g_generate_item(members, False)),
+      'invalid-group-pk': ({'owner': user,   'group_pk': not_exist_group.pk}, g_generate_item(members, False)),
+      'not-exist-group':  ({'owner': other,  'group_pk':           group.pk}, g_generate_item(someone, False)),
     }
     kwargs, exact_arr = patterns[request.param]
 

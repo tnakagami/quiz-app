@@ -646,13 +646,16 @@ class TestQuizRoomView(Common):
     # Mock
     mocker.patch('quiz.models.GenreQuerySet.collect_valid_genres', return_value=genres)
     mocker.patch('account.models.CustomUserManager.collect_valid_creators', return_value=creators)
-    mocker.patch('account.models.CustomUserManager.collect_valid_normal_users', return_value=members)
+    mocker.patch('account.models.CustomUserManager.collect_valid_friends', return_value=members)
 
     return genres, creators, members
 
   def test_post_access_to_createpage(self, get_querysets, client, get_players):
     _, user = get_players
     genres, creators, members = get_querysets
+    # Add friend
+    user.friends.add(*members)
+    user.save()
     # Define post data
     params = {
       'name': 'hoge-room',
@@ -675,6 +678,9 @@ class TestQuizRoomView(Common):
     all_genres = instance.genres.all().order_by('pk')
     all_creators = instance.creators.all().order_by('pk')
     all_members = instance.members.all().order_by('pk')
+    # Rollback user's friends
+    user.friends.clear()
+    user.save()
 
     assert response.status_code == status.HTTP_302_FOUND
     assert response['Location'] == self.list_view_url
@@ -720,6 +726,9 @@ class TestQuizRoomView(Common):
     _, user = get_users
     owner = user if user.is_player() else factories.UserFactory(is_active=True, role=RoleType.CREATOR)
     genres, creators, members = get_querysets
+    # Add friend
+    user.friends.add(*members)
+    user.save()
     original = factories.QuizRoomFactory(
       owner=owner,
       genres=list(genres),
@@ -745,6 +754,9 @@ class TestQuizRoomView(Common):
     all_genres = instance.genres.all().order_by('pk')
     all_creators = instance.creators.all().order_by('pk')
     all_members = instance.members.all().order_by('pk')
+    # Rollback user's friends
+    user.friends.clear()
+    user.save()
 
     assert response.status_code == status.HTTP_302_FOUND
     assert response['Location'] == self.list_view_url

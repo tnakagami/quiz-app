@@ -606,6 +606,9 @@ class TestQuizRoom(Common):
     _, user = get_players
     app = csrf_exempt_django_app
     creators, guests, genres = create_members
+    # Update user's friends
+    user.friends.add(*guests)
+    user.save()
     _ = factories.QuizFactory(creator=creators[0], genre=genres[0], is_completed=True)
     _ = factories.QuizFactory(creator=creators[1], genre=genres[0], is_completed=True)
     forms = app.get(self.create_room_url, user=user).forms
@@ -621,6 +624,9 @@ class TestQuizRoom(Common):
     form['is_enabled'] = False
     response = form.submit().follow()
     instance = models.QuizRoom.objects.get(owner=user, max_question=2)
+    # Rollback user's friends
+    user.friends.clear()
+    user.save()
 
     assert response.status_code == status.HTTP_200_OK
     assert get_current_path(response) == self.room_list_url
@@ -633,6 +639,9 @@ class TestQuizRoom(Common):
     _, user = get_players
     app = csrf_exempt_django_app
     _, guests, _ = create_members
+    # Update user's friends
+    user.friends.add(*guests)
+    user.save()
     forms = app.get(self.create_room_url, user=user).forms
     form = forms['room-form']
     form['name'] = 'test-room'
@@ -641,6 +650,9 @@ class TestQuizRoom(Common):
     form['is_enabled'] = True
     response = form.submit()
     errors = response.context['form'].errors
+    # Rollback user's friends
+    user.friends.clear()
+    user.save()
 
     assert response.status_code == status.HTTP_200_OK
     assert get_current_path(response) == self.create_room_url

@@ -937,7 +937,7 @@ class TestQuizRoomForm(Common):
     # Mock
     mocker.patch('quiz.models.GenreQuerySet.collect_valid_genres', return_value=genres)
     mocker.patch('account.models.CustomUserManager.collect_valid_creators', return_value=creators)
-    mocker.patch('account.models.CustomUserManager.collect_valid_normal_users', return_value=members)
+    mocker.patch('account.models.CustomUserManager.collect_valid_friends', return_value=members)
     # Define room owner
     owner = factories.UserFactory(is_active=True, role=RoleType.GUEST, friends=list(members))
     # Define default param
@@ -961,7 +961,7 @@ class TestQuizRoomForm(Common):
       other = factories.UserFactory(is_active=True)
       new_member = UserModel.objects.filter(pk__in=self.pk_convertor(list(members) + [other])).order_by('-pk')
       params['members'] = new_member
-      mocker.patch('account.models.CustomUserManager.collect_valid_normal_users', return_value=new_member)
+      mocker.patch('account.models.CustomUserManager.collect_valid_friends', return_value=new_member)
     # Inalid patterns
     elif input_type == 'name-is-too-long':
       params['name'] = '1'*129
@@ -1078,7 +1078,7 @@ class TestQuizRoomForm(Common):
     members = factories.UserFactory.create_batch(3, is_active=True)
     members = UserModel.objects.filter(pk__in=self.pk_convertor(members)).order_by('-pk')
     # Mock
-    mocker.patch('account.models.CustomUserManager.collect_valid_normal_users', return_value=members)
+    mocker.patch('account.models.CustomUserManager.collect_valid_friends', return_value=members)
     # Set params
     if instance_type == 'none':
       params = {}
@@ -1124,7 +1124,7 @@ class TestQuizRoomForm(Common):
     # Mock
     mocker.patch('quiz.models.GenreQuerySet.collect_valid_genres', return_value=genres)
     mocker.patch('account.models.CustomUserManager.collect_valid_creators', return_value=creators)
-    mocker.patch('account.models.CustomUserManager.collect_valid_normal_users', return_value=members)
+    mocker.patch('account.models.CustomUserManager.collect_valid_friends', return_value=members)
 
     if len(members) > 5:
       members = members[:5]
@@ -1200,7 +1200,7 @@ class TestQuizRoomForm(Common):
     mocker.patch('quiz.models.Quiz.objects.filter', side_effect=_mock_filter)
     mocker.patch('quiz.models.GenreQuerySet.collect_valid_genres', return_value=genres)
     mocker.patch('account.models.CustomUserManager.collect_valid_creators', return_value=creators)
-    mocker.patch('account.models.CustomUserManager.collect_valid_normal_users', return_value=members)
+    mocker.patch('account.models.CustomUserManager.collect_valid_friends', return_value=members)
     # Create form
     form = forms.QuizRoomForm(user=owner, data=params)
     is_valid = form.is_valid()

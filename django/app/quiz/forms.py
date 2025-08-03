@@ -666,7 +666,7 @@ class QuizRoomForm(ModelFormBasedOnUser):
     super().__init__(*args, **kwargs)
     self.fields['genres'].queryset = models.Genre.objects.collect_valid_genres()
     self.fields['creators'].queryset = UserModel.objects.collect_valid_creators()
-    self.fields['members'].queryset = UserModel.objects.collect_valid_normal_users(self.user)
+    self.fields['members'].queryset = UserModel.objects.collect_valid_friends(self.user)
     self.fields['groups'].queryset = self.user.group_owners.all()
     self.dual_listbox = DualListbox()
 

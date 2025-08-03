@@ -956,7 +956,7 @@ class TestGroupAjax(Common):
     app = csrf_exempt_django_app
     response = app.post_json(self.ajax_url, dict(owner_pk=str(other.pk)), user=user)
     data = response.json
-    expected = g_generate_item(UserModel.objects.collect_valid_normal_users(), False)
+    expected = g_generate_item(UserModel.objects.collect_valid_friends(user), False)
 
     assert response.status_code == status.HTTP_200_OK
     assert 'options' in data.keys()
