@@ -127,7 +127,7 @@ class QuizState:
     return player_answers, correct_answer
 
   ##
-  # @breif Update scores for each player
+  # @brief Update scores for each player
   # @param max_question The number of maximum quizzes
   # @param judgement Judgement result for player's answer
   # @return detail The updated score of each player

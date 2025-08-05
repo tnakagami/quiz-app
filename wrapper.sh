@@ -112,7 +112,6 @@ while [ -n "$1" ]; do
 
     build )
       docker-compose build --build-arg UID="$(id -u)" --build-arg GID="$(id -g)"
-      docker-compose -f ${DOXYGEN_YAML_FILE} --env-file ${BASE_DIR}/.env build --build-arg PUID="$(id -u)" --build-arg PGID="$(id -g)"
       clean_up
 
       shift
@@ -140,6 +139,13 @@ while [ -n "$1" ]; do
       shift
 
       case "$1" in
+        build )
+          docker-compose -f ${DOXYGEN_YAML_FILE} --env-file ${BASE_DIR}/.env build --build-arg PUID="$(id -u)" --build-arg PGID="$(id -g)"
+          clean_up
+
+          shift
+          ;;
+
         start )
           docker-compose -f ${DOXYGEN_YAML_FILE} --env-file ${BASE_DIR}/.env up -d
 
