@@ -28,30 +28,27 @@ fi
 
 # Modify `longtabu*` command. Specifically, replace its command to `longtable` command
 mv doxygen.sty old-doxygen.sty
-perl <<- _EOF_ > doxygen.sty
+perl <<- '_EOF_' > doxygen.sty
 open(IN, "old-doxygen.sty") or die "Can't open file.\n";
 # Read line
 while (<IN>) {
   # If longtabu command exists
-  if (\$_ =~ /longtabu/) {
+  if (/longtabu/) {
     # if the command includes "begin"
-    if (\$_ =~ /begin/) {
+    if (/begin/) {
       # Count the number of pipes
-      \$pipe_count = (() = \$_ =~ m/\|/g);
+      $pipe_count = (() = m/\|/g);
       # Replace "\begin{longtabu*}spread 0pt [l]{|***|***|......|***|}" to "\begin{longtable}{|***|***|......|***|}"
-      \$after = "longtable}{" . ("|c" x (\$pipe_count - 1));
-      (\$output = \$_) =~ s/longtabu\*\}.*(?=\|\})/\$after/;
+      $after = "longtable}{" . ("|c" x ($pipe_count - 1));
+      s/longtabu\*\}.*(?=\|\})/$after/;
     }
     # if the command includes "end"
     else {
       # Replace "longtabu*" to "longtable"
-      (\$output = \$_) =~ s/longtabu\*/longtable/;
+      s/longtabu\*/longtable/;
     }
-    print \$output;
   }
-  else {
-    print;
-  }
+  print;
 }
 close(IN);
 _EOF_

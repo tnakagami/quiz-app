@@ -23,5 +23,5 @@ services:
       - ./config:/doxygen/config:ro
       - ./bashrc:/doxygen/.bashrc:ro
       - ./output:/doxygen/output
-    #network_mode: none
+    network_mode: none
     logging: *json-logging
