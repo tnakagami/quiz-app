@@ -80,13 +80,13 @@ class QuizListPage(LoginRequiredMixin, HasCreatorRole, ListView, DjangoBreadcrum
   )
 
   ##
-  # @breif Get queryset
+  # @brief Get queryset
   # @return queryset Fitered queryset
   def get_queryset(self):
     return self.model.objects.user_relevant_quizzes(self.request.user)
 
   ##
-  # @breif Process POST request
+  # @brief Process POST request
   # @param request Instance of HttpRequest
   # @param args Positional arguments
   # @param kwargs named arguments
@@ -166,7 +166,7 @@ class QuizRoomListPage(LoginRequiredMixin, ListView, DjangoBreadcrumbsMixin):
   )
 
   ##
-  # @breif Get queryset
+  # @brief Get queryset
   # @return queryset Fitered queryset
   def get_queryset(self):
     rooms = self.model.objects.collect_relevant_rooms(self.request.user)

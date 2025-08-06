@@ -1,0 +1,27 @@
+x-logging:
+  &json-logging
+  driver: json-file
+  options:
+    max-size: "1m"
+    max-file: "3"
+
+services:
+  doxygen:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - TIMEZONE=${APP_TIMEZONE:-UTC}
+        - CUSTOMBIN_NAME=aarch64-alpine322.tar.xz
+        - PUID
+        - PGID
+    image: doxygen.quiz-app
+    container_name: doxygen.quiz-app
+    restart: "no"
+    volumes:
+      - ../django/app:/doxygen/src:ro
+      - ./config:/doxygen/config:ro
+      - ./bashrc:/doxygen/.bashrc:ro
+      - ./output:/doxygen/output
+    network_mode: none
+    logging: *json-logging

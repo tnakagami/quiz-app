@@ -1,0 +1,30 @@
+% Specifing the drivers to class and packages
+\PassOptionsToPackage{dvipdfmx}{adjustbox}
+\PassOptionsToPackage{dvipdfmx}{color}
+\PassOptionsToPackage{dvipdfmx}{xcolor}
+\PassOptionsToPackage{dvipdfmx}{graphicx}
+\PassOptionsToPackage{dvipdfm}{geometry}
+%
+%
+% Load hyperref package with dvipdfmx and pxjahyper for japanese environment
+\RequirePackage[dvipdfmx,pagebackref=true,unicode]{hyperref}
+\usepackage{pxjahyper}
+%
+\RequirePackage{xifthen}
+\RequirePackage{letltxmacro}
+%
+% Omit loading hyperref package with pdftex or ps2pdf
+\LetLtxMacro\originalusepackage\usepackage\relax
+\renewcommand\usepackage[2][]{%
+  \ifthenelse{\equal{#2}{hyperref}}{}{\originalusepackage[#1]{#2}}%
+}
+%
+\AtBeginDocument{%
+  % Overwriting and adding hyperref options
+  \hypersetup{%
+    bookmarks=true,bookmarksnumbered=true,% enable bookmarks
+    setpagesize=false}
+  \LetLtxMacro\originalprintindex@fixaddcontentsline\printindex\relax
+    \renewcommand\printindex{%
+      \renewcommand\addcontentsline[3]{}%
+      \originalprintindex@fixaddcontentsline}}%

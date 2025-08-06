@@ -6,6 +6,8 @@ readonly BASE_DIR=$(cd $(dirname $0) && pwd)
 readonly HTTPS_PORTAL_HTML_DIR=${BASE_DIR}/https-portal/html
 readonly WIREGUARD_DIR=${BASE_DIR}/wireguard
 readonly WIREGUARD_YAML_FILE=${WIREGUARD_DIR}/docker-compose.yml
+readonly DOXYGEN_DIR=${BASE_DIR}/doxygen
+readonly DOXYGEN_YAML_FILE=${DOXYGEN_DIR}/docker-compose.yml
 
 function Usage() {
 cat <<- _EOF
@@ -133,8 +135,42 @@ while [ -n "$1" ]; do
       shift
       ;;
 
+    doxygen )
+      shift
+
+      case "$1" in
+        build )
+          docker-compose -f ${DOXYGEN_YAML_FILE} --env-file ${BASE_DIR}/.env build --build-arg PUID="$(id -u)" --build-arg PGID="$(id -g)"
+          clean_up
+
+          shift
+          ;;
+
+        start )
+          docker-compose -f ${DOXYGEN_YAML_FILE} --env-file ${BASE_DIR}/.env up -d
+
+          shift
+          ;;
+
+        stop | restart | down )
+          docker-compose -f ${DOXYGEN_YAML_FILE} $1
+
+          shift
+          ;;
+
+        * )
+          shift
+          ;;
+      esac
+
+      ;;
+
     ps )
-      docker-compose ps | sed -r -e "s|\s{2,}|#|g" | awk -F'[#]' '
+      {
+        docker-compose ps
+        docker-compose -f ${WIREGUARD_YAML_FILE} ps
+        docker-compose -f ${DOXYGEN_YAML_FILE} ps
+      } | sed -r -e "s|\s{2,}|#|g" | awk -F'[#]' '
       BEGIN {
         maxlen_service = -1;
         maxlen_status = -1;
@@ -174,8 +210,11 @@ while [ -n "$1" ]; do
       ;;
 
     logs )
-      docker-compose logs -t | sort -t "|" -k 1,+2d
-      docker-compose -f ${WIREGUARD_YAML_FILE} logs -t | sort -t "|" -k 1,+2d
+      {
+        docker-compose logs -t
+        docker-compose -f ${WIREGUARD_YAML_FILE} logs -t
+        docker-compose -f ${DOXYGEN_YAML_FILE} logs -t
+      } | sort -t "|" -k 1,+2d
 
       shift
       ;;

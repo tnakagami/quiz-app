@@ -1263,7 +1263,7 @@ class TestIndividualGroupAjaxResponse(Common):
     }
     expected = {
       'specific': g_generate_item([friends[0], friends[-1]], False),
-      'all': g_generate_item(UserModel.objects.collect_valid_normal_users(), False),
+      'all': g_generate_item(UserModel.objects.collect_valid_friends(user), False),
     }
     # Get option data
     params = patterns[arg_type]

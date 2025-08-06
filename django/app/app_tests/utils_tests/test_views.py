@@ -35,7 +35,7 @@ class TestUtilsView:
     assert response.status_code == status.HTTP_200_OK
 
   def test_introduction_view_get_access(self, client, get_users):
-    user = get_users
+    _, user = get_users
     client.force_login(user)
     response = client.get(self.introduction_url)
 

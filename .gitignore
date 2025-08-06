@@ -197,3 +197,5 @@ cython_debug/
 is_maintenance
 default_server.crt
 .ids-env
+doxygen/output/*
+!doxygen/output/.git-keep
