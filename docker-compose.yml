@@ -24,13 +24,13 @@ services:
     volumes:
       - https-portal-data:/var/lib/https-portal
       - static:/etc/nginx/static:ro
-      - ./https-portal/custom/open_ssl.rb:/opt/certs_manager/lib/open_ssl.rb:ro
-      - ./https-portal/custom/x509.conf:/opt/certs_manager/x509.conf:ro
       - ./https-portal/bashrc:/root/.bashrc:ro
       - ./https-portal/html:/var/www/html:ro
-      - ./https-portal/default.conf.erb:/var/lib/nginx-conf/default.conf.erb:ro
-      - ./https-portal/default.ssl.conf.erb:/var/lib/nginx-conf/default.ssl.conf.erb:ro
-      - ./https-portal/nginx.conf.erb:/var/lib/nginx-conf/nginx.conf.erb:ro
+      - ./https-portal/custom/open_ssl.rb:/opt/certs_manager/lib/open_ssl.rb:ro
+      - ./https-portal/custom/x509.conf:/opt/certs_manager/x509.conf:ro
+      - ./https-portal/config-templates/default.conf.erb:/var/lib/nginx-conf/default.conf.erb:ro
+      - ./https-portal/config-templates/default.ssl.conf.erb:/var/lib/nginx-conf/default.ssl.conf.erb:ro
+      - ./https-portal/config-templates/nginx.conf.erb:/var/lib/nginx-conf/nginx.conf.erb:ro
     depends_on:
       - django
     networks:

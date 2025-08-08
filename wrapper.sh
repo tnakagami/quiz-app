@@ -229,8 +229,9 @@ while [ -n "$1" ]; do
       ;;
 
     test )
-      docker-compose up -d
-      docker exec -it ${DJANGO_CONTAINER} /opt/tester.sh
+      docker-compose down
+      docker-compose run django /opt/tester.sh
+      docker-compose down
 
       shift
       ;;
