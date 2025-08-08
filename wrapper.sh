@@ -121,7 +121,7 @@ while [ -n "$1" ]; do
       {
         echo PUID=$(id -u)
         echo PGID=$(id -g)
-      } > ${WIREGUARD_DIR}/container_env/.ids-env
+      } > ${WIREGUARD_DIR}/envs/.ids-env
       docker-compose up -d
       docker-compose -f ${WIREGUARD_YAML_FILE} --env-file ${BASE_DIR}/.env up -d
 
@@ -229,8 +229,9 @@ while [ -n "$1" ]; do
       ;;
 
     test )
-      docker-compose up -d
-      docker exec -it ${DJANGO_CONTAINER} /opt/tester.sh
+      docker-compose down
+      docker-compose run django /opt/tester.sh
+      docker-compose down
 
       shift
       ;;

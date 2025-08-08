@@ -4,13 +4,13 @@ I assume that host environment is satisfied with the following conditions.
 
 | Name | Detail | Command |
 | :---- | :---- | :---- |
-| Device | Raspberry Pi 4 Model B Rev 1.1 | `cat /proc/cpuinfo \| sed -e "s/\s\s*/ /g" \| grep -oP "(?<=Model : )(.*)"` |
+| Device | Raspberry Pi 4 Model B Rev 1.1 | `cat /proc/cpuinfo \| sed -e "s/\s\s*/ /g" \| grep -oPi "(?<=model)(.*)" \| tr -d ':'` |
 | Architecture | aarch64 (64bit) | `uname -m` |
 | OS | Ubuntu 22.04.4 LTS | `cat /etc/os-release \| grep -oP '(?<=PRETTY_NAME=")(.*)(?=")'` |
 
 ## Preparation
 ### Common
-1. Install `git`, `docker`, and `docker-compose` to your machine and enable each service because I execute python application, nginx, redis, and PostgreSQL via Docker containers.
+1. Install `git`, `docker`, and `docker-compose` to your machine and enable each service because I execute python application (`Django`), https-portal (`Ruby` and `nginx`), `redis`, and `PostgreSQL` via Docker containers.
 
 1. Run the following command and change current directory to the project.
 
@@ -40,14 +40,14 @@ I assume that host environment is satisfied with the following conditions.
     Please see [env.sample](./env.sample) for details.
 
 ### Create local-network
-Execute the following command and press "Enter" key.
+Execute the following command and press "Enter" key. It's used to access to web server (`Django`) via VPN access.
 
 ```bash
 ./wrapper.sh create-network
 ```
 
 ### Setup wireguard environment variables
-1. Create the `wireguard/container_env/.env` file.
+1. Create the `wireguard/envs/.env` file.
 
     | Envrionment variable name | Overview | Example |
     | :---- | :---- | :---- |
@@ -58,11 +58,11 @@ Execute the following command and press "Enter" key.
     | `MTU` | Maximum Transmission Unit. In general you don't have to change this field. | `MTU=1380` |
     | `KEEP_ALIVE` | Keep alive. In general you don't have to change this field. | `KEEP_ALIVE=25` |
     | `ALLOWEDIPS` | Allowd ips to access this network. In general you don't have to change this field. | `ALLOWEDIPS=10.0.11.0/24` |
-    | `SERVER_ALLOWEDIPS_PEER_${PEER_NAME}` | Peer's subnet mask. Please correspond this field to subnet mask of `APP_VPN_ACCESS_IP` | `SERVER_ALLOWEDIPS_PEER_PublicServer=10.100.0.0/24` |
 
-    Please see [env.sample](./wireguard/container_env/env.sample) for details.
+    Please see [env.sample](./wireguard/envs/env.sample) for details.
 
-1. Create `01-routing-localnet.conf` file to `wireguard/configs/iptables_script/conf.up.d` and `wireguard/configs/iptables_script/conf.down.d`. Please see [README.md](./wireguard/configs/iptables_script/README.md) for details.
+1. Create `01-routing-localnet.conf` file to [conf.up.d](wireguard/configs/iptables_script/conf.up.d) and [conf.down.d](wireguard/configs/iptables_script/conf.down.d).
+Please see [README.md](./wireguard/configs/iptables_script/README.md) for details.
 
 ## Build
 Run the following command to create docker images.
@@ -72,7 +72,22 @@ Run the following command to create docker images.
 # or docker-compose build --build-arg UID="$(id -u)" --build-arg GID="$(id -g)"
 ```
 
-## Create containers
+## Create all containers
+### In the case of production
+To get real certification via `https-portal`, you need to modify `docker-compose.yml` file.
+
+```yml
+  https-portal:
+    image: steveltn/https-portal:1.25
+    container_name: https-portal.quiz-app
+    restart: always
+    environment:
+      - STAGE=production # Change environment variable from `local` to `production`
+      - NUMBITS=4096
+    # other settings
+```
+
+### All containers creation
 Execute the following command to start relevant services.
 
 ```bash
@@ -82,7 +97,7 @@ Execute the following command to start relevant services.
 ### In the case of development
 To access web page using `https:` request, you need to copy relevant certificate which is registered in `https-portal` to client machine. The detail is shown below.
 
-1. Copy target certificate from `https-portal`
+1. Copy target certificate from `https-portal`.
 
     ```bash
     # In the host environment
@@ -101,7 +116,21 @@ Run the following command to create relevant tables in your database.
 ./wrapper.sh migrate
 ```
 
+## Copy peer config file of WireGuard to host machine
+If you want to access to `admin site` in Django, you should use VPN access provided from WireGuard application.
+Therefore, after creating all containers, you need to conduct the following activities.
+
+1. Move to `wireguard/configs/peer_XXXX` directory and check whether config file is created or not.
+
+    For example, if you define `PublicServer` as `PEERS` in `wireguard/envs/.env`, you can find `peer_PublicServer` direcotry.
+
+1. After that, download `peer_XXXX.conf` to your host machine.
+1. Finally, set your global ip to `AllowedIPs` and access to your website via VPN access.
+
+    For instance, the modified `AllowedIPs` is `AllowedIPs = 10.0.11.0/24, 1.12.123.234/30`.
+
 ## Access to web site
 Enter your domain to address-bar of web browser and move to the target page.
+Specifically, access to `http://your-domain-name:${APP_ACCESS_PORT}/` via web browser.
 
-For example, access to `http://your-domain-name:8443/` via web browser.
+For example, you can access to web page by using `http://1.12.123.234:8443`.

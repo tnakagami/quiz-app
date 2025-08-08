@@ -56,8 +56,23 @@ server {
     alias /etc/nginx/static/;
   }
   location ^~ /admin/ {
-    # Restrict access to admin page from public network
+    # Restrict access to admin page from public network except using VPN access
+    <% if ENV["VPN_SERVER_IP"] %>
+    allow <%= ENV["VPN_SERVER_IP"] %>;
+    <% end %>
     deny all;
+
+    <% if ENV['DYNAMIC_UPSTREAM'] && ENV['DYNAMIC_UPSTREAM'].downcase == 'true' %>
+    set $backend <%= domain.multiple_upstreams? ? domain.upstream_proto + domain.upstream_backend_name : domain.upstream %>;
+    proxy_pass $backend;
+    <% else %>
+    proxy_pass <%= domain.multiple_upstreams? ? domain.upstream_proto + domain.upstream_backend_name : domain.upstream %>;
+    <% end %>
+    proxy_set_header Host              $host;
+    proxy_set_header X-Real-IP         $remote_addr;
+    proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Port  $server_port;
   }
   <% if domain.upstream %>
   location / {
@@ -101,6 +116,7 @@ server {
     root /var/www/html/errpages;
     index 404.html;
     expires 0;
+    rewrite ^(.*)$ /404.html break;
   }
   location @maintenance {
     root /var/www/html/maintenance;

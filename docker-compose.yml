@@ -20,17 +20,17 @@ services:
       - CLIENT_MAX_BODY_SIZE=32M
       - ACCESS_LOG_INCLUDE_HOST=on
       - WEBSOCKET=true
-      - VPN_ACCESS_IP=${APP_VPN_ACCESS_IP:-10.100.0.3}
+      - VPN_SERVER_IP=${APP_WIREGUARD_IP:-10.100.0.2}
     volumes:
       - https-portal-data:/var/lib/https-portal
       - static:/etc/nginx/static:ro
-      - ./https-portal/custom/open_ssl.rb:/opt/certs_manager/lib/open_ssl.rb:ro
-      - ./https-portal/custom/x509.conf:/opt/certs_manager/x509.conf:ro
       - ./https-portal/bashrc:/root/.bashrc:ro
       - ./https-portal/html:/var/www/html:ro
-      - ./https-portal/quiz.local.ssl.conf.erb:/var/lib/nginx-conf/quiz.local.ssl.conf.erb:ro
-      - ./https-portal/default.ssl.conf.erb:/var/lib/nginx-conf/default.ssl.conf.erb:ro
-      - ./https-portal/nginx.conf.erb:/var/lib/nginx-conf/nginx.conf.erb:ro
+      - ./https-portal/custom/open_ssl.rb:/opt/certs_manager/lib/open_ssl.rb:ro
+      - ./https-portal/custom/x509.conf:/opt/certs_manager/x509.conf:ro
+      - ./https-portal/config-templates/default.conf.erb:/var/lib/nginx-conf/default.conf.erb:ro
+      - ./https-portal/config-templates/default.ssl.conf.erb:/var/lib/nginx-conf/default.ssl.conf.erb:ro
+      - ./https-portal/config-templates/nginx.conf.erb:/var/lib/nginx-conf/nginx.conf.erb:ro
     depends_on:
       - django
     networks:
@@ -40,9 +40,7 @@ services:
         ipv4_address: ${APP_VPN_ACCESS_IP:-10.100.0.3}
     ports:
       - 80:80
-      - 8443:443
-    expose:
-      - 3002
+      - ${APP_ACCESS_PORT:-8443}:443
     logging: *json-logging
 
   django:
@@ -68,7 +66,7 @@ services:
       - DJANGO_REDIS_PORT=6379
       - DJANGO_DATABASE_HOST=postgres
       - DJANGO_DATABASE_PORT=5432
-      - DJANGO_NGINX_FORWARDING_PORT=8443
+      - DJANGO_NGINX_FORWARDING_PORT=${APP_ACCESS_PORT:-8443}
     volumes:
       - static:/opt/nginx-static
       - ./statics:/var/static:ro
