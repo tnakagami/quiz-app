@@ -121,7 +121,7 @@ while [ -n "$1" ]; do
       {
         echo PUID=$(id -u)
         echo PGID=$(id -g)
-      } > ${WIREGUARD_DIR}/container_env/.ids-env
+      } > ${WIREGUARD_DIR}/envs/.ids-env
       docker-compose up -d
       docker-compose -f ${WIREGUARD_YAML_FILE} --env-file ${BASE_DIR}/.env up -d
 

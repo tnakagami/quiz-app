@@ -11,13 +11,13 @@ services:
     container_name: wireguard
     cap_add:
       - NET_ADMIN
-      - SYS_MODULE
     environment:
+      - WGUI_CONFIG_FILE_PATH=/config/wg_confs/wg0.conf
       - SERVERPORT=${APP_WIREGUARD_PORT:-51820}
       - TZ=Asia/Tokyo
     env_file:
-      - ./container_env/.env
-      - ./container_env/.ids-env
+      - ./envs/.env
+      - ./envs/.ids-env
     networks:
       localnet:
         # Please set the `APP_WIREGUARD_IP` based on your `APP_VPN_ACCESS_IP`.

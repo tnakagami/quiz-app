@@ -4,7 +4,7 @@ I assume that host environment is satisfied with the following conditions.
 
 | Name | Detail | Command |
 | :---- | :---- | :---- |
-| Device | Raspberry Pi 4 Model B Rev 1.1 | `cat /proc/cpuinfo \| sed -e "s/\s\s*/ /g" \| grep -oP "(?<=Model : )(.*)"` |
+| Device | Raspberry Pi 4 Model B Rev 1.1 | `cat /proc/cpuinfo \| sed -e "s/\s\s*/ /g" \| grep -oPi "(?<=model)(.*)" \| tr -d ':'` |
 | Architecture | aarch64 (64bit) | `uname -m` |
 | OS | Ubuntu 22.04.4 LTS | `cat /etc/os-release \| grep -oP '(?<=PRETTY_NAME=")(.*)(?=")'` |
 
@@ -47,7 +47,7 @@ Execute the following command and press "Enter" key.
 ```
 
 ### Setup wireguard environment variables
-1. Create the `wireguard/container_env/.env` file.
+1. Create the `wireguard/envs/.env` file.
 
     | Envrionment variable name | Overview | Example |
     | :---- | :---- | :---- |
@@ -58,9 +58,8 @@ Execute the following command and press "Enter" key.
     | `MTU` | Maximum Transmission Unit. In general you don't have to change this field. | `MTU=1380` |
     | `KEEP_ALIVE` | Keep alive. In general you don't have to change this field. | `KEEP_ALIVE=25` |
     | `ALLOWEDIPS` | Allowd ips to access this network. In general you don't have to change this field. | `ALLOWEDIPS=10.0.11.0/24` |
-    | `SERVER_ALLOWEDIPS_PEER_${PEER_NAME}` | Peer's subnet mask. Please correspond this field to subnet mask of `APP_VPN_ACCESS_IP` | `SERVER_ALLOWEDIPS_PEER_PublicServer=10.100.0.0/24` |
 
-    Please see [env.sample](./wireguard/container_env/env.sample) for details.
+    Please see [env.sample](./wireguard/envs/env.sample) for details.
 
 1. Create `01-routing-localnet.conf` file to `wireguard/configs/iptables_script/conf.up.d` and `wireguard/configs/iptables_script/conf.down.d`. Please see [README.md](./wireguard/configs/iptables_script/README.md) for details.
 
@@ -101,7 +100,20 @@ Run the following command to create relevant tables in your database.
 ./wrapper.sh migrate
 ```
 
+## Copy Peer config file of WireGuard
+If you want to access to `admin site` in Django, you should use VPN access provided from WireGuard application.
+Therefore, after creating all containers, you need to conduct the following activities.
+
+1. Move to `wireguard/configs/peer_XXXX` directory and check whether config file is created or not.
+
+    For example, if you define `PublicServer` as `PEERS` in `wireguard/envs/.env`, you can find `peer_PublicServer` direcotry.
+
+1. After that, download `peer_XXXX.conf` to your host machine.
+1. Finally, set your global ip to `AllowedIPs` and access to your website via VPN access.
+
+    For instance, the modified `AllowedIPs` is `AllowedIPs = 10.0.11.0/24, 1.12.123.234/30`.
+
 ## Access to web site
 Enter your domain to address-bar of web browser and move to the target page.
 
-For example, access to `http://your-domain-name:8443/` via web browser.
+For example, access to `http://your-domain-name:${APP_ACCESS_PORT}/` via web browser.

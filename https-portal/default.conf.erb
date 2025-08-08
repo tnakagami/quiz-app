@@ -1,0 +1,25 @@
+server {
+  listen       80;
+  <% if ENV['LISTEN_IPV6'] && ENV['LISTEN_IPV6'].downcase == 'true' %>
+  listen       [::]:80;
+  <% end %>
+  server_name  <%= domain.name %>;
+  error_page 404 @notfound;
+
+  location / {
+    return 404;
+  }
+
+  <%= acme_challenge_location %>
+
+  <% if ENV['CUSTOM_NGINX_SERVER_PLAIN_CONFIG_BLOCK'] %>
+    <%= ENV['CUSTOM_NGINX_SERVER_PLAIN_CONFIG_BLOCK'] %>
+  <% end %>
+
+  location @notfound {
+    root /var/www/html/errpages;
+    index 404.html;
+    expires 0;
+    rewrite ^(.*)$ /404.html break;
+  }
+}

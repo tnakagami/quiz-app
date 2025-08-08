@@ -1,6 +1,6 @@
 ARG ARCHITECTURE=arm64v8
 
-From ${ARCHITECTURE}/postgres:17-alpine3.21
+FROM ${ARCHITECTURE}/postgres:17-alpine3.21
 ARG TIMEZONE=Asia/Tokyo
 
 LABEL maintainer="tnakagami"

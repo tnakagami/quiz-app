@@ -168,6 +168,7 @@ CORS_PREFLIGHT_MAX_AGE = 60
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
 USE_X_FORWARDED_PORT = True
+CSRF_COOKIE_SECURE = True
 # Define cach setting
 CACHES = {
     'default': {
@@ -188,7 +189,6 @@ CHANNEL_LAYERS = {
 SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
 SESSION_COOKIE_AGE = 3 * 24 * 60 * 60
 SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 # Define the salt of hash value
 HASH_SALT = os.getenv('DJANGO_HASH_SALT')
@@ -214,7 +214,6 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.getenv('DJANGO_EMAIL_ADDRESS')
 EMAIL_HOST_PASSWORD = os.getenv('DJANGO_APPLICATION_PASSWORD')
 DEFAULT_FROM_EMAIL = 'no-reply@led.quiz.com'
-USE_X_FORWARDED_PORT = True
 # User definition variables
 MAX_CSV_FILESIZE = 1024 * 1024 * 8
 CSV_DOWNLOAD_MAX_AGE = 5 * 60
