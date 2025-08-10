@@ -26,6 +26,12 @@ class QuizState:
     self.quiz = None
 
   ##
+  # @brief Get player list
+  #  @return players All player status
+  def get_players(self):
+    return self.players
+
+  ##
   # @brief Update player list
   # @param pk Player's primary key
   # @param do_delete Delete target player from player list if true (Default: False)
@@ -237,8 +243,8 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
   # @return player_ids Player's IDs who can access to this room
   @database_sync_to_async
   def get_player_ids(self):
-    players = self.room.members.all()
-    player_ids = list(map(lambda user: self.get_client_key(user), players))
+    members = self.room.members.all()
+    player_ids = list(map(lambda user: self.get_client_key(user), members)) + [self.get_client_key(self.room.owner)]
 
     return player_ids
 
@@ -275,14 +281,17 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
       g_quizstates.set_state(self.group_name, target)
     # Add user data to player list
     target.update_player(self.get_client_key(user))
+    # Get player list
+    players = target.get_players()
     # Send system message
     message = gettext_lazy('Join {name} to {room}').format(name=str(user), room=self.room.name)
     await self.channel_layer.group_send(
       self.group_name, {
         'type': 'send_group_message',
         'msg_type': 'system',
-        'ids': ['message'],
+        'ids': ['message', 'players'],
         'message': message,
+        'players': players,
       }
     )
 
@@ -291,25 +300,9 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
   # @param close_code status code as closing the connection
   async def disconnect(self, close_code):
     user = self.scope['user']
-    await self.pre_disconnect(user)
     await self.channel_layer.group_discard(self.group_name, self.channel_name)
     await self.close()
     await self.post_disconnect(user)
-
-  ##
-  # @brief Conduct pre-disconnect process
-  # @param user Request user
-  async def pre_disconnect(self, user):
-    # Send system message
-    message = gettext_lazy('Leave {name} from {room}').format(name=str(user), room=self.room.name)
-    await self.channel_layer.group_send(
-      self.group_name, {
-        'type': 'send_group_message',
-        'msg_type': 'system',
-        'ids': ['message'],
-        'message': message,
-      }
-    )
 
   ##
   # @brief Conduct post-disconnect process
@@ -320,6 +313,19 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
 
     if target is not None:
       target.update_player(self.get_client_key(user), do_delete=True)
+      # Send system message
+      message = gettext_lazy('Leave {name} from {room}').format(name=str(user), room=self.room.name)
+      # Get player list
+      players = target.get_players()
+      await self.channel_layer.group_send(
+        self.group_name, {
+          'type': 'send_group_message',
+          'msg_type': 'system',
+          'ids': ['message', 'players'],
+          'message': message,
+          'players': players,
+        }
+      )
 
       if not target.has_player():
         g_quizstates.del_state(self.group_name)

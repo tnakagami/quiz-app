@@ -20,6 +20,8 @@ class DummyBaseQuizState:
     self.current_time = None
   def update_score(self, score):
     self.score = score
+  def get_players(self):
+    return self.players
   def update_player(self, pk, do_delete=False):
     pass
   def has_player(self):
@@ -805,6 +807,31 @@ class TestQuizState(Common):
     assert await self.aget_score_index(score) == 3
     assert await self.aget_score_status(score) == models.QuizStatusType.ANSWERING.value
     assert instance.quiz is None
+
+  @pytest.mark.parametrize([
+    'inputs',
+    'expected',
+  ], [
+    ({}, {'hoge': False, 'foo': False}),
+    ({'hoge': True}, {'hoge': True, 'foo': False}),
+    ({'foo': True}, {'hoge': False, 'foo': True}),
+    ({'hoge': True, 'foo': True}, {'hoge': True, 'foo': True}),
+  ], ids=[
+    'update-nothing',
+    'update-hoge',
+    'update-foo',
+    'update-both',
+  ])
+  def test_get_players(self, inputs, expected):
+    instance = consumers.QuizState(['hoge', 'foo'])
+    # Update status
+    for key, val in inputs.items():
+      instance.players[key] = val
+    # Call target method
+    players = instance.get_players()
+
+    assert len(players) == len(expected)
+    assert all([players[key] == val for key, val in expected.items()])
 
   @pytest.mark.parametrize([
     'do_delete',  # Define whether 'foo' key is deleted or not

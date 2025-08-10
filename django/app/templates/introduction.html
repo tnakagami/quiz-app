@@ -685,10 +685,14 @@
                 </li>
               </ol>
               <p class="small fw-bold text-success">{% blocktrans trimmed %}
-                [Note 1] As the restriction, you need to select at least one of <code>Genres</code> or <code>Creators</code>.
+                [Note 1] To select room members, <code>you have to register your friends</code>.
+                Its function lists up enable members based on your friends.
+              {% endblocktrans %}</p>
+              <p class="small fw-bold text-success">{% blocktrans trimmed %}
+                [Note 2] As the restriction, you need to select at least one of <code>Genres</code> or <code>Creators</code>.
               {% endblocktrans %}</p>
               <p>
-                <div class="small fw-bold text-success">{% trans "[Note 2] The number of maximum quizzes the system can select is calculated by the following conditions." %}</div>
+                <div class="small fw-bold text-success">{% trans "[Note 3] The number of maximum quizzes the system can select is calculated by the following conditions." %}</div>
                 <ul class="small fw-bold text-success">
                   <li>{% trans "The genre of created quizzes is included into the requested ones." %}</li>
                   <li>{% trans "The creator of created quizzes is included into the requested ones." %}</li>
@@ -696,7 +700,7 @@
               </p>
               <div class="row row-cols-1 g-2">
                 <div class="col"><span class="fw-bold">{% trans "Examples" %}: </span>{% blocktrans trimmed %}
-                  In the following case, the system can select ID <code>1, 2, 4, 6, and 7</code>.
+                  In the following case, the system can select the quizzes randomly based on ID <code>1, 2, 4, 6, and 7</code>.
                   Therefore, you must set <code>Max question</code> to <code>less than or equals five</code>.
                 {% endblocktrans %}</div>
                 <div class="col">

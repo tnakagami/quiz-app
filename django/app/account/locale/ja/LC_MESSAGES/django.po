@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-08-03 12:06+0900\n"
+"POT-Creation-Date: 2025-08-10 06:50+0900\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -47,7 +47,9 @@ msgid "Email"
 msgstr "メールアドレス"
 
 #: account/forms.py:166
-msgid "The given email address is not registered or not enabled. Please check your email address."
+msgid ""
+"The given email address is not registered or not enabled. Please check your "
+"email address."
 msgstr "入力されたメールアドレスは登録されていないまたは、アカウントが無効な状態です。入力したメールアドレスを再確認してください。"
 
 #: account/forms.py:198
@@ -107,99 +109,99 @@ msgstr "スーパーユーザは、スタッフ権限を持つ必要がありま
 msgid "Superuser must have is_superuser=True."
 msgstr "スーパーユーザは、スーパーユーザ権限を持つ必要があります。"
 
-#: account/models.py:133
+#: account/models.py:145
 msgid "email address"
 msgstr "メールアドレス"
 
-#: account/models.py:136
+#: account/models.py:148
 msgid "Required. 128 characters allowing only Unicode characters, in addition to @, ., -, and _."
 msgstr "128文字以内。「@, ., -, _」に加えアルファベット半角数字が使用できます。"
 
-#: account/models.py:139
+#: account/models.py:151
 msgid "code"
 msgstr "コード"
 
-#: account/models.py:144
+#: account/models.py:156
 msgid "screen name"
 msgstr "表示名"
 
-#: account/models.py:147
+#: account/models.py:159
 msgid "Optional. 128 characters or fewer."
 msgstr "オプション。128文字以下。"
 
-#: account/models.py:150
+#: account/models.py:162
 msgid "password"
 msgstr "パスワード"
 
-#: account/models.py:152
+#: account/models.py:164
 msgid "It must contain at least four types which are an alphabet (uppercase/lowercase), a number, and a symbol."
 msgstr "アルファベット（大文字と小文字）、半角数字、記号を少なくとも1つずつ含める必要があります。"
 
-#: account/models.py:155
+#: account/models.py:167
 msgid "staff status"
 msgstr "スタッフ権限の有無"
 
-#: account/models.py:157
+#: account/models.py:169
 msgid "Designates whether the user can log into this admin site or not."
 msgstr "ユーザがadminサイトにログインできるかどうかを表す。"
 
-#: account/models.py:160
+#: account/models.py:172
 msgid "superuser status"
 msgstr "スーパーユーザ権限の有無"
 
-#: account/models.py:162
+#: account/models.py:174
 msgid "Designates whether the user is a superuser or not."
 msgstr "ーザがスーパーユーザであるかどうかを表す。"
 
-#: account/models.py:165
+#: account/models.py:177
 msgid "active"
 msgstr "有効／無効"
 
-#: account/models.py:167
+#: account/models.py:179
 msgid "Designates whether this user should be treated as active. Unselect this instead of deleting accounts."
 msgstr "このユーザを有効なユーザとして扱うかどうかを表す。アカウントを削除する代わりにこのフィールドをOFFにする。"
 
-#: account/models.py:170
+#: account/models.py:182
 msgid "Role"
 msgstr "ロール"
 
-#: account/models.py:178
+#: account/models.py:190
 msgid "My friends"
 msgstr "フレンズ"
 
-#: account/models.py:182 account/models.py:406
+#: account/models.py:194 account/models.py:418
 msgid "Created time"
 msgstr "作成日時"
 
-#: account/models.py:335
+#: account/models.py:347
 msgid "Candidate for approval"
 msgstr "承認対象の候補者"
 
-#: account/models.py:340
+#: account/models.py:352
 msgid "Requested time"
 msgstr "要求日時"
 
-#: account/models.py:344
+#: account/models.py:356
 msgid "Approval status"
 msgstr "承認状況"
 
-#: account/models.py:346
+#: account/models.py:358
 msgid "Designates whether this user’s role has already been approved or not."
 msgstr "ユーザのロールが既に承認されているかどうかを表す。"
 
-#: account/models.py:391
+#: account/models.py:403
 msgid "Group owner"
 msgstr "グループ所有者"
 
-#: account/models.py:396
+#: account/models.py:408
 msgid "Group name"
 msgstr "グループ名"
 
-#: account/models.py:398
+#: account/models.py:410
 msgid "Required. 128 characters or fewer."
 msgstr "必須。128文字以下。"
 
-#: account/models.py:403
+#: account/models.py:415
 msgid "Group members"
 msgstr "グループメンバ"
 

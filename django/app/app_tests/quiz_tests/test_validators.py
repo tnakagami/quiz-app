@@ -4,6 +4,8 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 from app_tests import factories
 from quiz import validators
+from quiz.models import Genre
+from account.models import RoleType
 
 UserModel = get_user_model()
 
@@ -28,12 +30,10 @@ class TestCustomCSVFileValidator:
   def test_check_default_callback(self, row, records):
     validator = validators.CustomCSVFileValidator()
     is_valid_length = validator.length_checker(row)
-    is_valid_record, no_err = validator.record_checker(records)
+    validator.record_checker(records)
     extracted = validator.extractor(row)
 
     assert is_valid_length
-    assert is_valid_record
-    assert no_err is None
     assert self.compare_len(extracted, row)
 
   @pytest.mark.parametrize([
@@ -117,7 +117,9 @@ class TestCustomCSVFileValidator:
       kwargs = {'length_checker': lambda row: row[0] != '7'}
       err_msg = 'The length in line {} is invalid.'.format(len(inputs))
     elif request.param == 'data-error':
-      kwargs = {'record_checker': lambda rows: (False, ValidationError('Invalid', code='invalid_file'))}
+      def inner(*args, **kwargs):
+        raise ValidationError('Invalid', code='invalid_file')
+      kwargs = {'record_checker': inner}
       err_msg = 'Invalid'
     # Set data
     data = (inputs, kwargs, encoding, err_msg)
@@ -175,3 +177,107 @@ class TestCustomCSVFileValidator:
 
     assert self.compare_len(estimated, expected)
     assert all([self.compare_items(vals, exacts) for vals, exacts in zip(estimated, expected)])
+
+@pytest.fixture(scope='module')
+def get_specific_users(django_db_blocker):
+  with django_db_blocker.unblock():
+    users = [
+      factories.UserFactory(is_active=True, email='test-validation0-c10@example.com', role=RoleType.CREATOR),
+      factories.UserFactory(is_active=True, email='test-validation1-c11@example.com', role=RoleType.CREATOR),
+      factories.UserFactory(is_active=True, email='test-validation2-c12@example.com', role=RoleType.CREATOR),
+    ]
+    users = UserModel.objects.filter(pk__in=[users[0].pk, users[1].pk, users[2].pk])
+
+  return users
+
+@pytest.mark.quiz
+@pytest.mark.validator
+@pytest.mark.django_db
+class TestCustomCSVDataValidator:
+  def test_check_default_queryset(self, get_specific_users):
+    _ = get_specific_users
+    validator = validators.CustomCSVDataValidator(UserModel, 'hoge')
+    all_queryset = UserModel.objects.all()
+    expected = [str(pk) for pk in validator.base_qs.values_list('pk', flat=True)]
+
+    assert len(all_queryset) == len(expected)
+    assert all([str(obj.pk) in expected for obj in all_queryset])
+
+  @pytest.fixture(params=['genre', 'user-pk', 'user-email'])
+  def get_validation_params(self, get_specific_users, get_genres, request):
+    def inner(has_specific_data):
+      users = get_specific_users
+      genres = get_genres
+      user = users[1]
+      key = request.param
+
+      if key == 'genre':
+        qs = Genre.objects.filter(pk__in=[obj.pk for obj in genres])
+        genre = genres[0]
+        target_set = {genre.name,}
+        condition = 'name__in'
+        field_name = 'name'
+        specific_data = {genre.name,} if has_specific_data else None
+        use_uuid = False
+      elif key == 'user-pk':
+        qs = users
+        target_set = {str(user.pk),}
+        condition = 'pk__in'
+        field_name = 'pk'
+        specific_data = {str(user.pk),} if has_specific_data else None
+        use_uuid = True
+      else:
+        qs = users
+        target_set = {user.email,}
+        condition = 'email__in'
+        field_name = 'email'
+        specific_data = {user.email,} if has_specific_data else None
+        use_uuid = False
+
+      return qs, target_set, condition, field_name, specific_data, use_uuid
+
+    return inner
+
+  @pytest.mark.parametrize([
+    'has_specific_data',
+  ], [
+    (True, ),
+    (False, ),
+  ], ids=[
+    'has-specific-data',
+    'does-not-have-specific-data',
+  ])
+  def test_valid_validation(self, get_validation_params, has_specific_data):
+    qs, target_set, condition, field_name, specific_data, use_uuid = get_validation_params(has_specific_data)
+    validator = validators.CustomCSVDataValidator(UserModel, 'hoge', base_qs=qs)
+
+    try:
+      validator.validate(
+        target_set,
+        condition,
+        field_name,
+        specific_data=specific_data,
+        use_uuid=use_uuid,
+      )
+    except Exception as ex:
+      pytest.fail(f'Unexpected Error: {ex}')
+
+  def test_invalid_uuid(self):
+    validator = validators.CustomCSVDataValidator(UserModel, 'hoge')
+
+    with pytest.raises(ValidationError) as ex:
+      validator.validate({'invalid-c-pk',}, 'hoge', 'foo', use_uuid=True)
+
+    assert 'The csv file includes invalid value(s).' in str(ex.value)
+
+  def test_has_difference(self, get_specific_users):
+    users = get_specific_users
+    validator = validators.CustomCSVDataValidator(UserModel, 'hoge', base_qs=UserModel.objects.filter(pk__in=[users[0].pk]))
+    targets = UserModel.objects.filter(pk__in=[users[1].pk, users[2].pk]).order_by('pk')
+    values = ','.join([str(obj) for obj in targets])
+    err_msg = f'The csv file includes invalid hoge(s). Details: {values}'
+
+    with pytest.raises(ValidationError) as ex:
+      validator.validate({str(users[1].pk), str(users[2].pk)}, 'pk__in', 'pk')
+
+    assert err_msg in str(ex.value)

@@ -1279,7 +1279,7 @@ class TestUploadQuizView(Common):
       err_msg = 'Include invalid records. Please check the detail: test.'
     elif request.param == 'invalid-header-input':
       input_header = False
-      err_msg = 'The csv file includes invalid value(s).'
+      err_msg = 'The csv file includes invalid genre(s).'
     # Setup temporary file
     encoding = 'utf-8'
     tmp_fp = tempfile.NamedTemporaryFile(mode='r+', encoding=encoding, suffix='.csv')
