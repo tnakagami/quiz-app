@@ -414,29 +414,35 @@ class TestQuiz(Common):
   @pytest.mark.parametrize([
     'has_manager_role',
     'indices',
+    'input_type',
   ], [
     #       creator
     #         | genre
     #         |  |
     #         V  V
-    (False, [(0, 1), (0, 2), (0, 0)]),
-    (True,  [(1, 2), (0, 3), (1, 0), (0, 1)]),
+    (False, [(0, 1), (0, 2), (0, 0)], 'pk'),
+    (True,  [(1, 2), (0, 3), (1, 0), (0, 1)], 'pk'),
+    (False, [(0, 1), (0, 2), (0, 0)], 'email'),
+    (True,  [(1, 2), (0, 3), (1, 0), (0, 1)], 'email'),
   ], ids=[
-    'is-creator',
-    'is-manager',
+    'is-creator-with-pk',
+    'is-manager-with-pk',
+    'is-creator-with-email',
+    'is-manager-with-email',
   ])
-  def test_valid_records_by_using_record_checker(self, mocker, get_quizzes_info, has_manager_role, indices):
+  def test_valid_records_by_using_record_checker(self, mocker, get_quizzes_info, has_manager_role, indices, input_type):
     creators, genres = get_quizzes_info
     user = creators[0] if not has_manager_role else factories.UserFactory(is_active=True, role=RoleType.MANAGER)
-    rows = [(str(creators[c_idx].pk), genres[g_idx].name) for c_idx, g_idx in indices]
+    rows = [(str(creators[c_idx].pk if input_type == 'pk' else creators[c_idx].email), genres[g_idx].name) for c_idx, g_idx in indices]
     creators = UserModel.objects.filter(pk__in=self.pk_convertor(creators))
     genres = models.Genre.objects.filter(pk__in=self.pk_convertor(genres))
     mocker.patch('quiz.models.UserModel.objects.collect_creators', return_value=creators)
     mocker.patch('quiz.models.Genre.objects.collect_active_genres', return_value=genres)
-    is_valid, err = models.Quiz.record_checker(rows, user)
-
-    assert is_valid
-    assert err is None
+    # Check inputs
+    try:
+      models.Quiz.record_checker(rows, user)
+    except Exception as ex:
+      pytest.fail(f'Unexpected Error: {ex}')
 
   @pytest.mark.parametrize([
     'has_manager_role',
@@ -482,42 +488,46 @@ class TestQuiz(Common):
       exact_err = f'The csv file includes invalid creator(s). Details: {msg}'
     # Raise exception
     with pytest.raises(ValidationError) as ex:
-      is_valid, err = models.Quiz.record_checker(rows, user)
-      raise err
+      models.Quiz.record_checker(rows, user)
 
-    assert not is_valid
     assert exact_err in str(ex.value)
 
   @pytest.mark.parametrize([
     'role',
-    'rows',
+    'row_type',
   ], [
-    (RoleType.MANAGER, [('invalid-c-pk', 'invalid-g-name')]),
-    (RoleType.CREATOR, [('invalid-c-pk', 'invalid-g-name')]),
-    (RoleType.MANAGER, []),
-    (RoleType.CREATOR, []),
+    (RoleType.MANAGER, 'invalid-pk'),
+    (RoleType.CREATOR, 'invalid-pk'),
   ], ids=[
     'is-manager-with-a-record',
     'is-creator-with-a-record',
-    'is-manager-without-records',
-    'is-creator-without-records',
   ])
-  def test_include_non_uuid_record(self, role, rows):
+  def test_include_non_uuid_record(self, get_genres, role, row_type):
+    genre = get_genres[0]
     user = factories.UserFactory(is_active=True, role=role)
+    rows = [('invalid-c-pk', genre.name)]
 
     with pytest.raises(ValidationError) as ex:
-      is_valid, err = models.Quiz.record_checker(rows, user)
-      raise err
+      models.Quiz.record_checker(rows, user)
 
-    assert not is_valid
     assert 'The csv file includes invalid value(s).' in str(ex.value)
 
-  def test_check_get_instance_from_list_method(self, get_quizzes_info):
+  @pytest.mark.parametrize([
+    'is_pk',
+  ], [
+    (True, ),
+    (False, ),
+  ], ids=[
+    'is-primary-key',
+    'is-email',
+  ])
+  def test_check_get_instance_from_list_method(self, get_quizzes_info, is_pk):
     creators, genres = get_quizzes_info
     _creator = creators[0]
     _genre = genres[0]
+    key = str(_creator.pk) if is_pk else _creator.email
     row = [
-      str(_creator.pk),
+      key,
       _genre.name,
       'hogehoge-quiz',
       'fugafuga-answer',

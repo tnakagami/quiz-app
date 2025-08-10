@@ -40,6 +40,7 @@ const QuizRoom = {};
         switch (msgType) {
           case 'system':
             callbacks.chatLog(response.datetime, response.message);
+            callbacks.updatePlayerStatuses(response.players);
             break;
           case 'sentNextQuiz':
             callbacks.setQuiz(response.data);

@@ -211,17 +211,20 @@
               <thead>
                 <tr class="align-middle">
                   <th scope="col">{% trans "Member" %}</th>
+                  <th scope="col">{% trans "Status" %}</th>
                   <th scope="col">{% trans "Score" %}</th>
                 </tr>
               </thead>
               <tbody class="table-group-divider">
                 <tr class="align-middle">
                   <td scope="row">{{ room.owner|stringformat:"s" }}</td>
+                  <td class="js-player-status" data-pk="user{{ room.owner.pk }}">-</td>
                   <td class="js-player-score" data-pk="{{ room.owner.pk }}">{{ room.score|get_user_score:room.owner.pk }}</td>
                 </tr>
                 {% for member in room.members.all %}
                 <tr class="align-middle">
                   <td scope="row">{{ member|stringformat:"s" }}</td>
+                  <td class="js-player-status" data-pk="user{{ member.pk }}">-</td>
                   <td class="js-player-score" data-pk="{{ member.pk }}">{{ room.score|get_user_score:member.pk }}</td>
                 </tr>
                 {% endfor %}
@@ -391,6 +394,7 @@
       this._initTypeWriter = this._initTypeWriter.bind(this);
       this._addCorrectAnswer = this._addCorrectAnswer.bind(this);
       this.chatLog = this.chatLog.bind(this);
+      this.updatePlayerStatuses = this.updatePlayerStatuses.bind(this);
       this.resetPlayerScore = this.resetPlayerScore.bind(this);
       this.setQuiz = this.setQuiz.bind(this);
       this.notifyReceivedQuiz = this.notifyReceivedQuiz.bind(this);
@@ -453,13 +457,34 @@
       chatLog.scrollTop = chatLog.scrollHeight;
     }
     /**
+     * @brief Update player status
+     * @param[in] players Player status
+    */
+    updatePlayerStatuses(players) {
+      const enableStat = '{% trans "Joined" %}';
+      const disableStat = '{% trans "Leaved" %}';
+      const textStyle = 'text-danger';
+
+      for (const [pk, stat] of Object.entries(players)) {
+        const element = document.querySelector(`[data-pk="${pk}"].js-player-status`);
+
+        if (stat) {
+          element.textContent = enableStat;
+          element.classList.remove(textStyle);
+        }
+        else {
+          element.textContent = disableStat;
+          element.classList.add(textStyle);
+        }
+      }
+    }
+    /**
      * @brief Reset player score table
     */
     resetPlayerScore() {
       const playerScores = document.querySelectorAll('.js-player-score');
       // Reset player score
       for (const element of playerScores) {
-        const pk = element.dataset.pk;
         element.textContent = 0;
       }
     }

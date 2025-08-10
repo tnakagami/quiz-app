@@ -55,6 +55,13 @@ server {
   location /static/ {
     alias /etc/nginx/static/;
   }
+  location = /favicon.ico {
+    access_log off;
+    log_not_found off;
+    empty_gif;
+
+    return 200;
+  }
   location ^~ /admin/ {
     # Restrict access to admin page from public network except using VPN access
     <% if ENV["VPN_SERVER_IP"] %>

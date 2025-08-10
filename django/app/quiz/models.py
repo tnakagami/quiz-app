@@ -8,7 +8,7 @@ from utils.models import (
   get_current_time,
   BaseModel,
 )
-import uuid
+from . import validators
 import urllib.parse
 
 UserModel = get_user_model()
@@ -300,62 +300,32 @@ class Quiz(BaseModel):
   # @brief Check csv file format
   # @param rows All rows of csv file
   # @param user The request user
-  # @return bool Judgement result
-  # @retval True  File format is valid
-  # @retval False File format is invalid
+  # @exception ValidationError Invalid input
   @staticmethod
   def record_checker(rows, user):
-    creator_set = {str(pk) for pk, _ in rows}
+    creator_set = {str(val) for val, _ in rows}
     genre_set = {name for _, name in rows}
-
-    try:
-      # Check whetner creator's pk is uuid or not
-      uuid.UUID(str(rows[0][0]))
-      # Get genre set based on database records
-      genre_names = Genre.objects.collect_active_genres().filter(name__in=list(genre_set)).values_list('name', flat=True)
-      target_genre = {name for name in genre_names}
-      # Get creator set based on database records
-      if user.has_manager_role():
-        creator_ids = UserModel.objects.collect_creators().filter(pk__in=list(creator_set)).values_list('pk', flat=True)
-        target_creator = {str(pk) for pk in creator_ids}
-      else:
-        target_creator = {str(user.pk),}
-      # Calculate difference between original set and generated one based on database
-      diff_genre = genre_set - target_genre
-      diff_creator = creator_set - target_creator
-
-      if diff_genre:
-        genres = Genre.objects.filter(name__in=list(diff_genre)).order_by('name')
-        genres = ','.join([str(instance) for instance in genres])
-        # Create output data
-        is_valid = False
-        err = ValidationError(
-          gettext_lazy('The csv file includes invalid genre(s). Details: %(genres)s'),
-          code='invalid_file',
-          params={'genres': genres},
-        )
-      elif diff_creator:
-        creators = UserModel.objects.filter(pk__in=list(diff_creator)).order_by('pk')
-        creators = ','.join([str(instance) for instance in creators])
-        # Create output data
-        is_valid = False
-        err = ValidationError(
-          gettext_lazy('The csv file includes invalid creator(s). Details: %(creators)s'),
-          code='invalid_file',
-          params={'creators': creators},
-        )
-      else:
-        is_valid = True
-        err = None
-    except (IndexError, ValueError) as ex:
-      is_valid = False
-      err = ValidationError(
-        gettext_lazy('The csv file includes invalid value(s). Details: %(value)s'),
-        code='invalid_file',
-        params={'value': str(ex)},
-      )
-
-    return is_valid, err
+    creator_email_set = {val for val in creator_set if '@' in val}
+    creator_pk_set = creator_set - creator_email_set
+    # Create validator
+    genre_validator = validators.CustomCSVDataValidator(
+      model_class=Genre,
+      exception_field_name=gettext_lazy('genre'),
+      base_qs=Genre.objects.collect_active_genres(),
+    )
+    creator_validator = validators.CustomCSVDataValidator(
+      model_class=UserModel,
+      exception_field_name=gettext_lazy('creator'),
+      base_qs=UserModel.objects.collect_creators(),
+    )
+    if user.has_manager_role():
+      user_email, user_pk = None, None
+    else:
+      user_email, user_pk = {user.email,}, {str(user.pk),}
+    # Validate each target
+    genre_validator.validate(genre_set, 'name__in', 'name')
+    creator_validator.validate(creator_email_set, 'email__in', 'email', specific_data=user_email)
+    creator_validator.validate(creator_pk_set, 'pk__in', 'pk', specific_data=user_pk, use_uuid=True)
 
   ##
   # @brief Create instance from list data
@@ -364,14 +334,17 @@ class Quiz(BaseModel):
   # @return instance Quiz created without saving itself
   @classmethod
   def get_instance_from_list(cls, row):
-    item = {
-      'creator': UserModel.objects.get(pk=row[0]),
+    key = row[0]
+    condition = {'email': key} if '@' in key else {'pk': key}
+    # Create arguments
+    kwargs = {
+      'creator': UserModel.objects.get(**condition),
       'genre': Genre.objects.get(name=row[1]),
       'question': row[2],
       'answer': row[3],
       'is_completed': bool_converter(row[4]),
     }
-    instance = cls(**item)
+    instance = cls(**kwargs)
 
     return instance
 
