@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-08-10 06:50+0900\n"
+"POT-Creation-Date: 2025-08-10 16:46+0900\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -101,8 +101,10 @@ msgid "Conducted provisional registration"
 msgstr "アカウントの仮登録完了"
 
 #: templates/account/done_account_creation.html:8
-msgid "Send message to your e-mail address to conduct a definitive registration."
-msgstr "本登録を行うために、入力されたメールアドレスにメッセージを送信しました。"
+msgid ""
+"Send message to your e-mail address to conduct a definitive registration."
+msgstr ""
+"本登録を行うために、入力されたメールアドレスにメッセージを送信しました。"
 
 #: templates/account/done_account_creation.html:10
 #: templates/account/passwords/done_password_reset.html:10
@@ -149,8 +151,11 @@ msgstr "注意：上記のURLは、%(timelimit)s 分間のみ有効です。"
 
 #: templates/account/mail_template/password_reset/message.txt:9
 #: templates/account/mail_template/provisional_registration/message.txt:11
-msgid "This email was sent from a send-only address, so replies will not be delivered."
-msgstr "このメールは送信専用アドレスから送信されているため、返信メールは届きません。"
+msgid ""
+"This email was sent from a send-only address, so replies will not be "
+"delivered."
+msgstr ""
+"このメールは送信専用アドレスから送信されているため、返信メールは届きません。"
 
 #: templates/account/mail_template/password_reset/message.txt:11
 #: templates/account/mail_template/provisional_registration/message.txt:13
@@ -189,7 +194,8 @@ msgstr "パスワードのリセット"
 
 #: templates/account/passwords/complete_password_reset.html:8
 msgid "Your password was reset. Please login with new password."
-msgstr "パスワードがリセットされました。新しいパスワードでログインしてください。"
+msgstr ""
+"パスワードがリセットされました。新しいパスワードでログインしてください。"
 
 #: templates/account/passwords/complete_password_reset.html:11
 msgid "Go to login page"
@@ -229,7 +235,8 @@ msgstr "パスワードリセットのリクエスト送信"
 
 #: templates/account/passwords/done_password_reset.html:8
 msgid "The request of password reset was sent to your email."
-msgstr "パスワードリセットのリクエストが指定されたメールアドレスに送信されました。"
+msgstr ""
+"パスワードリセットのリクエストが指定されたメールアドレスに送信されました。"
 
 #: templates/account/passwords/password_change_form.html:5
 #: templates/account/profiles/user_profile.html:80
@@ -539,8 +546,12 @@ msgid "What's quiz app?"
 msgstr "クイズアプリとは？"
 
 #: templates/introduction.html:64
-msgid "User can play quizzes provided from registered creators with specific relevant users. Specifically, this app provides the following functions."
-msgstr "ユーザは、特定の関係メンバーと共に、クイズ制作者から提供されるクイズで遊ぶことができます。具体的には、このアプリでは以下の機能を提供しています。"
+msgid ""
+"User can play quizzes provided from registered creators with specific "
+"relevant users. Specifically, this app provides the following functions."
+msgstr ""
+"ユーザは、特定の関係メンバーと共に、クイズ制作者から提供されるクイズで遊ぶこ"
+"とができます。具体的には、このアプリでは以下の機能を提供しています。"
 
 #: templates/introduction.html:68
 msgid "[Note] It's overview. Please see the following sections for detail."
@@ -575,64 +586,110 @@ msgid "Register user information"
 msgstr "ユーザ情報の登録"
 
 #: templates/introduction.html:83
-msgid "At first, access to index page and then, click <code>Create account</code> link after opening the side-bar."
-msgstr "まず、Indexページにアクセスし、サイドバーを開いて<code>アカウント新規作成</code>のリンクをクリックします。"
+msgid ""
+"At first, access to index page and then, click <code>Create account</code> "
+"link after opening the side-bar."
+msgstr ""
+"まず、Indexページにアクセスし、サイドバーを開いて<code>アカウント新規作成</"
+"code>のリンクをクリックします。"
 
 #: templates/introduction.html:89
-msgid "After that, enter the your email-address, screen nam, password, (today's) hash value."
-msgstr "その後、メールアドレス、表示名、パスワード、（今日の）ハッシュ値を入力します。"
+msgid ""
+"After that, enter the your email-address, screen nam, password, (today's) "
+"hash value."
+msgstr ""
+"その後、メールアドレス、表示名、パスワード、（今日の）ハッシュ値を入力しま"
+"す。"
 
 #: templates/introduction.html:90
-msgid "[Note] You need to confirm today's hash value to managers or site administrator."
-msgstr "（備考）管理者かサイト管理者に今日のハッシュ値を確認する必要があります。"
+msgid ""
+"[Note] You need to confirm today's hash value to managers or site "
+"administrator."
+msgstr ""
+"（備考）管理者かサイト管理者に今日のハッシュ値を確認する必要があります。"
 
 #: templates/introduction.html:94
-msgid "After entering all fields, click <code>Provisional registration</code> button."
-msgstr "すべてのフィールドを入力後、<code>アカウント仮登録</code>をクリックします。"
+msgid ""
+"After entering all fields, click <code>Provisional registration</code> "
+"button."
+msgstr ""
+"すべてのフィールドを入力後、<code>アカウント仮登録</code>をクリックします。"
 
 #: templates/introduction.html:97
-msgid "If your account information is valid, the system send an email with definitive registration link. Please check your mail box."
-msgstr "アカウント情報が有効であれば、システムは本登録用のリンクを記載したメールを送信します。自身のメールボックスを確認してください。"
+msgid ""
+"If your account information is valid, the system send an email with "
+"definitive registration link. Please check your mail box."
+msgstr ""
+"アカウント情報が有効であれば、システムは本登録用のリンクを記載したメールを送"
+"信します。自身のメールボックスを確認してください。"
 
 #: templates/introduction.html:98
-msgid "[Note] The definitive registration link is valid for 10 minutes. If the link was invalid, please conduct registration process again."
-msgstr "（備考）本登録用のリンクは、10分間有効です。リンクが無効になった場合、再度、仮登録処理を実行してください。"
+msgid ""
+"[Note] The definitive registration link is valid for 10 minutes. If the link "
+"was invalid, please conduct registration process again."
+msgstr ""
+"（備考）本登録用のリンクは、10分間有効です。リンクが無効になった場合、再度、"
+"仮登録処理を実行してください。"
 
 #: templates/introduction.html:105
 msgid "Conduct definitive registration"
 msgstr "本登録の実施"
 
 #: templates/introduction.html:106
-msgid "After receiving definitive registration link, click its link to complete registration process."
-msgstr "本登録用のリンクを受領後は、アカウントの本登録処理を完了させるため、そのリンクをクリックします。"
+msgid ""
+"After receiving definitive registration link, click its link to complete "
+"registration process."
+msgstr ""
+"本登録用のリンクを受領後は、アカウントの本登録処理を完了させるため、そのリン"
+"クをクリックします。"
 
 #: templates/introduction.html:110
-msgid "If your token is valid, then definitive registration process is completed."
-msgstr "リンクに記載されたトークンが有効であれば、アカウントの本登録処理は完了です。"
+msgid ""
+"If your token is valid, then definitive registration process is completed."
+msgstr ""
+"リンクに記載されたトークンが有効であれば、アカウントの本登録処理は完了です。"
 
 #: templates/introduction.html:117
 msgid "[Optional] Change your role"
 msgstr "（任意）ロール変更"
 
 #: templates/introduction.html:118
-msgid "If you want to create qiuzzes, you need to request role-change process (Default role is <code>GUEST</code>). The detail is shown below."
-msgstr "もしクイズを制作したい場合、ロール変更処理をリクエストする必要があります（デフォルトのロールは、<code>一般ユーザ</code>です）。詳細は以下に示す通りです。"
+msgid ""
+"If you want to create qiuzzes, you need to request role-change process "
+"(Default role is <code>GUEST</code>). The detail is shown below."
+msgstr ""
+"もしクイズを制作したい場合、ロール変更処理をリクエストする必要があります（デ"
+"フォルトのロールは、<code>一般ユーザ</code>です）。詳細は以下に示す通りです。"
 
 #: templates/introduction.html:124
-msgid "After logged-in, open the side-bar and click <code>User Profile</code> link."
-msgstr "ログイン後、サイドバーを開き、<code>ユーザプロフィール</code>のリンクをクリックします。"
+msgid ""
+"After logged-in, open the side-bar and click <code>User Profile</code> link."
+msgstr ""
+"ログイン後、サイドバーを開き、<code>ユーザプロフィール</code>のリンクをクリッ"
+"クします。"
 
 #: templates/introduction.html:130
-msgid "In your profile page, click <code>Change own role to \"CREATOR\"</code> button."
-msgstr "ユーザプロフィールページにて、<code>「クイズ制作者」にロールを変更する</code>をクリックしてください。"
+msgid ""
+"In your profile page, click <code>Change own role to \"CREATOR\"</code> "
+"button."
+msgstr ""
+"ユーザプロフィールページにて、<code>「クイズ制作者」にロールを変更する</code>"
+"をクリックしてください。"
 
 #: templates/introduction.html:136
-msgid "Finally, after checking the content of role-change request, click <code>Request</code> button."
-msgstr "最終的に、ロール変更要求の内容が正しいことを確認した後、<code>リクエスト</code>をクリックします。"
+msgid ""
+"Finally, after checking the content of role-change request, click "
+"<code>Request</code> button."
+msgstr ""
+"最終的に、ロール変更要求の内容が正しいことを確認した後、<code>リクエスト</"
+"code>をクリックします。"
 
 #: templates/introduction.html:141
-msgid "If a manager accepts your request, you role becomes a <code>CREATOR</code>."
-msgstr "管理者があなたのリクエストを承認した場合、ロールが<code>クイズ制作者</code>に変更されます。"
+msgid ""
+"If a manager accepts your request, you role becomes a <code>CREATOR</code>."
+msgstr ""
+"管理者があなたのリクエストを承認した場合、ロールが<code>クイズ制作者</code>に"
+"変更されます。"
 
 #: templates/introduction.html:148
 msgid "Functions for all users"
@@ -647,13 +704,23 @@ msgid "Update screen name"
 msgstr "表示名の更新"
 
 #: templates/introduction.html:153
-msgid "You can update screen name. In general, its name is used in several situation. For example, when you play quiz game with your friends, its name is used to tell the other players your player name. How to change your "
+msgid ""
+"You can update screen name. In general, its name is used in several "
+"situation. For example, when you play quiz game with your friends, its name "
+"is used to tell the other players your player name. How to change your "
 "screen name is shown below."
-msgstr "表示名を更新できます。一般的に、表示名は多くの状況で使用されます。例えば、友達とクイズゲームで遊ぶとき、表示名は、他のプレイヤーに自身の名前を伝えるのに使われます。表示名の変更方法は以下に示す通りです。"
+msgstr ""
+"表示名を更新できます。一般的に、表示名は多くの状況で使用されます。例えば、友"
+"達とクイズゲームで遊ぶとき、表示名は、他のプレイヤーに自身の名前を伝えるのに"
+"使われます。表示名の変更方法は以下に示す通りです。"
 
 #: templates/introduction.html:160
-msgid "Access to User Profile page and then, click <code>Update user profile</code> button."
-msgstr "ユーザプロフィールページにアクセス後、<code>ユーザプロフィールの更新</code>をクリックします。"
+msgid ""
+"Access to User Profile page and then, click <code>Update user profile</code> "
+"button."
+msgstr ""
+"ユーザプロフィールページにアクセス後、<code>ユーザプロフィールの更新</code>を"
+"クリックします。"
 
 #: templates/introduction.html:166
 msgid "Enter your new screen name and click <code>Update</code> button."
@@ -668,8 +735,12 @@ msgid "Update/Reset login password"
 msgstr "ログインパスワードの更新／リセット"
 
 #: templates/introduction.html:180
-msgid "If you want to change login password or forget own password, then you can update/reset your password. The detail is shown below."
-msgstr "ログインパスワードを変更したい場合やパスワードを忘れた場合、パスワードを変更／リセットできます。詳細は以下に示す通りです。"
+msgid ""
+"If you want to change login password or forget own password, then you can "
+"update/reset your password. The detail is shown below."
+msgstr ""
+"ログインパスワードを変更したい場合やパスワードを忘れた場合、パスワードを変更"
+"／リセットできます。詳細は以下に示す通りです。"
 
 #: templates/introduction.html:185
 msgid "In the case of being logged in"
@@ -680,16 +751,25 @@ msgid "If you can login to the site, please conduct the following activities."
 msgstr "もし、サイトにログイン中であれば、下記を実行してください。"
 
 #: templates/introduction.html:189
-msgid "Access to <code>User Profile</code> page and then, click <code>Update password</code> button."
-msgstr "<code>ユーザプロフィール</code>ページにアクセス後、<code>パスワード更新</code>をクリックします。"
+msgid ""
+"Access to <code>User Profile</code> page and then, click <code>Update "
+"password</code> button."
+msgstr ""
+"<code>ユーザプロフィール</code>ページにアクセス後、<code>パスワード更新</"
+"code>をクリックします。"
 
 #: templates/introduction.html:195
-msgid "Enter your old password and new password and then, click <code>Update</code> button."
-msgstr "古いパスワードと新しいパスワードを入力後、<code>更新</code>をクリックしてください。"
+msgid ""
+"Enter your old password and new password and then, click <code>Update</code> "
+"button."
+msgstr ""
+"古いパスワードと新しいパスワードを入力後、<code>更新</code>をクリックしてくだ"
+"さい。"
 
 #: templates/introduction.html:199
 msgid "[Note] You cannt use old password as new one."
-msgstr "（備考）古いパスワードを新しいパスワードとして使用することはできません。"
+msgstr ""
+"（備考）古いパスワードを新しいパスワードとして使用することはできません。"
 
 #: templates/introduction.html:202 templates/introduction.html:237
 msgid "If your passwords are valid, you can use the new password."
@@ -700,8 +780,12 @@ msgid "In the case of not being able to login"
 msgstr "ログイン中ではない場合"
 
 #: templates/introduction.html:207
-msgid "On the other hand, if you cannot login to the site, you need to conduct the following process to change your password without login process."
-msgstr "一方、サイトにログインできない場合、ログインせずにパスワードを変更するために、下記の方法を実施する必要があります。"
+msgid ""
+"On the other hand, if you cannot login to the site, you need to conduct the "
+"following process to change your password without login process."
+msgstr ""
+"一方、サイトにログインできない場合、ログインせずにパスワードを変更するため"
+"に、下記の方法を実施する必要があります。"
 
 #: templates/introduction.html:210
 msgid "Access to login page by opening side-bar."
@@ -716,8 +800,12 @@ msgid "Enter your email-address and then click <code>Send</code> button."
 msgstr "メールアドレス入力後に、<code>送信</code>をクリックします。"
 
 #: templates/introduction.html:227
-msgid "After receiving reset-password link, click its link to access to reset password page."
-msgstr "パスワードリセットリンクを受信後、パスワードをリセットするために送付されたリンクをクリックしてください。"
+msgid ""
+"After receiving reset-password link, click its link to access to reset "
+"password page."
+msgstr ""
+"パスワードリセットリンクを受信後、パスワードをリセットするために送付されたリ"
+"ンクをクリックしてください。"
 
 #: templates/introduction.html:231
 msgid "Enter your new password and then, click <code>Reset</code> button."
@@ -728,16 +816,26 @@ msgid "Functions for manager only"
 msgstr "管理者用機能"
 
 #: templates/introduction.html:246
-msgid "In this section, we'll explain what only manager can conduct in this app."
-msgstr "このセクションでは、このアプリで管理者向けができることについて説明します。"
+msgid ""
+"In this section, we'll explain what only manager can conduct in this app."
+msgstr ""
+"このセクションでは、このアプリで管理者向けができることについて説明します。"
 
 #: templates/introduction.html:249
 msgid "Add genres"
 msgstr "ジャンルの追加"
 
 #: templates/introduction.html:250
-msgid "When a creator registers own quiz to the system, a manager need to define relevant genres in advance. In addition, the system supports the CSV file import function. Therefore, a manager doesn't have to register all genres manually. The concrete procedures are shown below."
-msgstr "クイズ制作者がシステムにクイズを登録する時、事前に管理者が関連するジャンルを定義する必要があります。さらに、システムはCSVファイルのインポート機能を提供します。このため、管理者はすべてのジャンルを手動で登録する必要はありません。具体的な手続きは以下に示す通りです。"
+msgid ""
+"When a creator registers own quiz to the system, a manager need to define "
+"relevant genres in advance. In addition, the system supports the CSV file "
+"import function. Therefore, a manager doesn't have to register all genres "
+"manually. The concrete procedures are shown below."
+msgstr ""
+"クイズ制作者がシステムにクイズを登録する時、事前に管理者が関連するジャンルを"
+"定義する必要があります。さらに、システムはCSVファイルのインポート機能を提供し"
+"ます。このため、管理者はすべてのジャンルを手動で登録する必要はありません。具"
+"体的な手続きは以下に示す通りです。"
 
 #: templates/introduction.html:257
 msgid "Access to <code>Quiz genre</code> page from index page."
@@ -745,15 +843,23 @@ msgstr "Indexページから<code>ジャンル</code>ページにアクセスし
 
 #: templates/introduction.html:263
 msgid "Click <code>Create a new genre</code> button to add a new genre."
-msgstr "新しいジャンルを追加するために、<code>ジャンルの新規作成</code>をクリックしてください。"
+msgstr ""
+"新しいジャンルを追加するために、<code>ジャンルの新規作成</code>をクリックして"
+"ください。"
 
 #: templates/introduction.html:269
 msgid "After entering genre name, click <code>Create/Update</code> button."
 msgstr "ジャンル名を入力後、<code>作成／更新</code>をクリックします。"
 
 #: templates/introduction.html:273
-msgid "[Note] You cannot add same genre name and delete registered genres. Therefore, if you want to ignore specific genres, please change the status from <code>Enable</code> to <code>Disable</code>."
-msgstr "（備考）同じジャンル名を追加できません。また、登録済みのジャンルは削除できません。このため、特定のジャンルを無効にしたい場合、ステータスを<code>有効</code>から<code>無効</code>に変更してください。"
+msgid ""
+"[Note] You cannot add same genre name and delete registered genres. "
+"Therefore, if you want to ignore specific genres, please change the status "
+"from <code>Enable</code> to <code>Disable</code>."
+msgstr ""
+"（備考）同じジャンル名を追加できません。また、登録済みのジャンルは削除できま"
+"せん。このため、特定のジャンルを無効にしたい場合、ステータスを<code>有効</"
+"code>から<code>無効</code>に変更してください。"
 
 #: templates/introduction.html:279
 msgid ""
@@ -768,19 +874,20 @@ msgid "Prepare for CSV file for the following format."
 msgstr "下記のフォーマットに沿ったCSVファイルを準備します。"
 
 #: templates/introduction.html:287 templates/introduction.html:495
-#: templates/introduction.html:504 templates/introduction.html:721
-#: templates/introduction.html:723 templates/introduction.html:729
+#: templates/introduction.html:504 templates/introduction.html:513
+#: templates/introduction.html:730 templates/introduction.html:732
+#: templates/introduction.html:738
 msgid "Game"
 msgstr "ゲーム"
 
-#: templates/introduction.html:288 templates/introduction.html:707
-#: templates/introduction.html:722 templates/introduction.html:726
-#: templates/introduction.html:727
+#: templates/introduction.html:288 templates/introduction.html:716
+#: templates/introduction.html:731 templates/introduction.html:735
+#: templates/introduction.html:736
 msgid "Food"
 msgstr "食べ物"
 
-#: templates/introduction.html:289 templates/introduction.html:724
-#: templates/introduction.html:725 templates/introduction.html:728
+#: templates/introduction.html:289 templates/introduction.html:733
+#: templates/introduction.html:734 templates/introduction.html:737
 msgid "Japanese cartoons"
 msgstr "日本のアニメ・漫画"
 
@@ -793,7 +900,7 @@ msgstr ""
 "code>をクリックしてください。"
 
 #: templates/introduction.html:302 templates/introduction.html:393
-#: templates/introduction.html:529
+#: templates/introduction.html:538
 msgid ""
 "After selecting <code>Encoding</code>, <code>CSV file</code>, and "
 "<code>Header status</code>, click <code>Upload</code> button."
@@ -825,11 +932,12 @@ msgid ""
 "[Note] When you process the requests, the system doesn't confirm your "
 "judgement. Therefore, if you mistake your judgement, please make a request "
 "again to the guest user by using the other communication (e.g., email or "
-"chat). The system does't provide any request functions for a manager."
+"chat). The system does't provide any role change request functions for a "
+"manager."
 msgstr ""
 "（備考）リクエストを処理する時、システムはあなたの判断結果を確認しません。こ"
 "のため、もし判断を間違った場合、該当の一般ユーザに他の連絡手段（例：メールや"
-"チャット）で知らせる必要があります。また、システムは管理者に対する要求機能は"
+"チャット）で知らせる必要があります。また、システムは管理者に対するロール変更要求機能は"
 "提供していません。"
 
 #: templates/introduction.html:324
@@ -914,7 +1022,7 @@ msgstr ""
 "い。フォーマットの詳細は<a href=\"#quiz-upload-format\">こちらのリンク</a>を"
 "ご覧ください。今回は、以下のようなCSVファイルを利用します。"
 
-#: templates/introduction.html:387 templates/introduction.html:523
+#: templates/introduction.html:387 templates/introduction.html:532
 msgid ""
 "In the <code>Quiz list</code> page, click <code>Helper functions</code> and "
 "select <code>Upload quiz</code>."
@@ -922,7 +1030,7 @@ msgstr ""
 "<code>クイズ一覧</code>ページにて、<code>補助機能</code>をクリックし、<code>"
 "クイズのアップロード</code>を選択してください。"
 
-#: templates/introduction.html:399 templates/introduction.html:535
+#: templates/introduction.html:399 templates/introduction.html:544
 msgid ""
 "If the uploaded CSV file is valid, then all quizzes are registered to this "
 "app. In addition, you can confirm uploaded quizzes in the <code>Quiz list</"
@@ -944,7 +1052,7 @@ msgstr ""
 "管理者は、登録されたすべてのクイズをダウンロードできます。具体的な手続きは、"
 "以下をご覧ください。"
 
-#: templates/introduction.html:415 templates/introduction.html:576
+#: templates/introduction.html:415 templates/introduction.html:585
 msgid ""
 "In the <code>Quiz list</code> page, click <code>Helper functions</code> and "
 "select <code>Download quiz</code>."
@@ -952,7 +1060,7 @@ msgstr ""
 "<code>クイズ一覧</code>ページにて、<code>補助機能</code>をクリックし、<code>"
 "クイズのダウンロード</code>を選択してください。"
 
-#: templates/introduction.html:421 templates/introduction.html:582
+#: templates/introduction.html:421 templates/introduction.html:591
 msgid ""
 "In this page, you can select arbitrary quizzes you want to download. On the "
 "left side of the following table, you select some items and enter suffix of "
@@ -962,7 +1070,7 @@ msgstr ""
 "において、ダウンロードしたい項目を選択し、CSVファイルの接尾辞を入力します。そ"
 "の後、<code>ダウンロード</code>をクリックしてください。"
 
-#: templates/introduction.html:429 templates/introduction.html:590
+#: templates/introduction.html:429 templates/introduction.html:599
 msgid "Finally, you can confirm your selected quizzes on your CSV file."
 msgstr "最終的に、選択したクイズをCSV形式でダウンロードできます。"
 
@@ -1053,11 +1161,19 @@ msgstr ""
 msgid "3. 20min"
 msgstr "3. 20分"
 
-#: templates/introduction.html:545
+#: templates/introduction.html:514
+msgid "What does the word \"e\" of \"e-sports\" stand for?"
+msgstr "「eスポーツ」の「e」は何の略？"
+
+#: templates/introduction.html:517
+msgid "electronic"
+msgstr "エレクトロニック（electronic）"
+
+#: templates/introduction.html:554
 msgid "Download genres"
 msgstr "ジャンルのダウンロード"
 
-#: templates/introduction.html:546
+#: templates/introduction.html:555
 msgid ""
 "If creators add new quizzes via CSV file, you need to collect genre list. "
 "Therefore, the system provides the function to download active genres. In "
@@ -1067,7 +1183,7 @@ msgstr ""
 "が必要になります。このため、システムは有効なジャンルをダウンロードする機能を"
 "提供します。加えて、マネージャも、この機能を利用可能です。"
 
-#: templates/introduction.html:553
+#: templates/introduction.html:562
 msgid ""
 "In the <code>Quiz list</code> page, click <code>Helper functions</code> and "
 "select <code>Download genre</code>."
@@ -1075,44 +1191,44 @@ msgstr ""
 "<code>クイズ一覧</code>ページにて、<code>補助機能</code>をクリックし、<code>"
 "ジャンルのダウンロード</code>を選択してください。"
 
-#: templates/introduction.html:559
+#: templates/introduction.html:568
 msgid "After entering suffix of CSV file, click <code>Download</code> button."
 msgstr ""
 "CSVファイルの接尾辞を入力後、<code>ダウンロード</code>をクリックします。"
 
-#: templates/introduction.html:565
+#: templates/introduction.html:574
 msgid "You can collect active genres only."
 msgstr "これにより、有効なジャンルのみを取得できます。"
 
-#: templates/introduction.html:572
+#: templates/introduction.html:581
 msgid "Download quizzes"
 msgstr "クイズのダウンロード"
 
-#: templates/introduction.html:573
+#: templates/introduction.html:582
 msgid "Same as downloading genre, creators can also download own quizzes."
 msgstr ""
 "ジャンルのダウンロードと同様に、クイズ制作者は、自身が作成したクイズもダウン"
 "ロードできます。"
 
-#: templates/introduction.html:599
+#: templates/introduction.html:608
 msgid "Functions for player (Creator/Guest)"
 msgstr "プレイヤー（クイズ制作者／一般ユーザ）向けの機能"
 
-#: templates/introduction.html:600
+#: templates/introduction.html:609
 msgid "In this section, we'll explain what a player can conduct in this app."
 msgstr "このセクションでは、プレイヤーが実施できることについて説明します。"
 
-#: templates/introduction.html:601
+#: templates/introduction.html:610
 msgid "[Note] The player means either Guest user or Creator."
 msgstr ""
 "（備考）ここで、プレイヤーは、一般ユーザまたはクイズ制作者のどちらかを意味し"
 "ます。"
 
-#: templates/introduction.html:604
+#: templates/introduction.html:613
 msgid "Add friends"
 msgstr "フレンドの追加"
 
-#: templates/introduction.html:605
+#: templates/introduction.html:614
 msgid ""
 "When you play the quiz app, you need to add your friends. Please see the "
 "following activities for detail."
@@ -1120,7 +1236,7 @@ msgstr ""
 "クイズアプリで遊ぶ上では、フレンドを追加する必要があります。詳細は、以下をご"
 "覧ください。"
 
-#: templates/introduction.html:606
+#: templates/introduction.html:615
 msgid ""
 "[Note] In this app, the friend registration function is not bidirectional. "
 "This means that even if you add a user as a friend, he/she may not add you "
@@ -1130,7 +1246,7 @@ msgstr ""
 "れは、仮にあるユーザをフレンドとして登録したとしても、その人があなたをフレン"
 "ドとしてしないかもしれません。"
 
-#: templates/introduction.html:609
+#: templates/introduction.html:618
 msgid ""
 "Access to <code>User Profile</code> page and then, click <code>Register/"
 "Unregister friends</code> button."
@@ -1138,17 +1254,17 @@ msgstr ""
 "<code>ユーザプロフィール</code>ページにアクセスし、<code>フレンドの登録／解除"
 "</code>をクリックします。"
 
-#: templates/introduction.html:615
+#: templates/introduction.html:624
 msgid ""
 "After selecting some friends you want to add, click <code>Update</code> "
 "button."
 msgstr "追加したいフレンドを選択後、<code>更新</code>をクリックしてください。"
 
-#: templates/introduction.html:624
+#: templates/introduction.html:633
 msgid "Create individual groups"
 msgstr "個人グループの作成"
 
-#: templates/introduction.html:625
+#: templates/introduction.html:634
 msgid ""
 "When you have many many friends, it takes time to search target friends. To "
 "avoid this situation, this app provides <code>individual group</code> "
@@ -1164,7 +1280,7 @@ msgstr ""
 "意のフレンドをグループに追加できる機能です。具体的な使い方は、以下に示す通り"
 "です。"
 
-#: templates/introduction.html:633
+#: templates/introduction.html:642
 msgid ""
 "Access to <code>User Profile</code> page and then, click <code>Create/Edit/"
 "Delete individual groups</code> button."
@@ -1172,17 +1288,17 @@ msgstr ""
 "<code>ユーザプロフィール</code>ページにアクセスし、<code>個人グループの作成／"
 "更新／削除</code>をクリックします。"
 
-#: templates/introduction.html:639
+#: templates/introduction.html:648
 msgid "Click <code>Create a new group</code> button."
 msgstr "<code>新規グループ作成</code>をクリックしてください。"
 
-#: templates/introduction.html:645
+#: templates/introduction.html:654
 msgid ""
 "After selecting friends you want to add, click <code>Create/Update</code> "
 "button."
 msgstr "追加したいフレンドを選択後、<code>作成／更新</code>をクリックします。"
 
-#: templates/introduction.html:650
+#: templates/introduction.html:659
 msgid ""
 "After you came back to previous page, you can find the added group with the "
 "number of friends."
@@ -1190,7 +1306,7 @@ msgstr ""
 "前のページに戻った後、追加したグループとそのメンバ数が表示されることを確認し"
 "てください。"
 
-#: templates/introduction.html:652
+#: templates/introduction.html:661
 msgid ""
 "[Note] There's a relationship between arbitrary groups and your friends. "
 "Therefore, if you have a group with a friend, you cannot remove the friend "
@@ -1202,11 +1318,11 @@ msgstr ""
 "はできません。この場合、まず、グループから該当のフレンドを削除し、その後、フ"
 "レンド一覧を更新する必要があります。"
 
-#: templates/introduction.html:660
+#: templates/introduction.html:669
 msgid "Create quiz room"
 msgstr "クイズルーム作成"
 
-#: templates/introduction.html:661
+#: templates/introduction.html:670
 msgid ""
 "The system provides the room creation function for players to play quiz game "
 "with relevant players. In the following steps, you can create quiz room."
@@ -1214,17 +1330,17 @@ msgstr ""
 "システムは関連するプレイヤーとクイズゲームで遊ぶために、プレイヤーに対して"
 "ルーム作成機能を提供します。"
 
-#: templates/introduction.html:667
+#: templates/introduction.html:676
 msgid "Access to <code>Quiz room</code> page from the index page."
 msgstr "Indexページから、<code>クイズルーム</code>ページにアクセスします。"
 
-#: templates/introduction.html:673
+#: templates/introduction.html:682
 msgid "Click <code>Create a new quiz room (player only)</code> button."
 msgstr ""
 "<code>クイズルームの作成（一般ユーザ／クイズ制作者のみ）</code>をクリックして"
 "ください。"
 
-#: templates/introduction.html:679
+#: templates/introduction.html:688
 msgid ""
 "After entering <code>Quiz room name</code> and <code>Max question</code>, "
 "and selecting <code>Genres</code>, <code>Creators</code>, <code>Room "
@@ -1238,13 +1354,16 @@ msgstr ""
 "い。さらに、この設定にはいくつかの制約があります。詳細は以下の備考をご覧くだ"
 "さい。"
 
-#: templates/introduction.html:687
+#: templates/introduction.html:696
 msgid ""
 "[Note 1] To select room members, <code>you have to register your friends</"
 "code>. Its function lists up enable members based on your friends."
-msgstr "（備考1）ルームメンバを選択するためには、<code>フレンドを登録する必要があります</code>。このルーム作成機能は、登録されたフレンドに基づいて、有効なメンバをリストアップします。"
+msgstr ""
+"（備考1）ルームメンバを選択するためには、<code>フレンドを登録する必要がありま"
+"す</code>。このルーム作成機能は、登録されたフレンドに基づいて、有効なメンバを"
+"リストアップします。"
 
-#: templates/introduction.html:691
+#: templates/introduction.html:700
 msgid ""
 "[Note 2] As the restriction, you need to select at least one of "
 "<code>Genres</code> or <code>Creators</code>."
@@ -1252,25 +1371,25 @@ msgstr ""
 "（備考2）制約として、<code>ジャンル</code>または<code>クイズ制作者</code>の少"
 "なくとも一方を選択する必要があります。"
 
-#: templates/introduction.html:695
+#: templates/introduction.html:704
 msgid ""
 "[Note 3] The number of maximum quizzes the system can select is calculated "
 "by the following conditions."
 msgstr "（備考3）システムが選択できる最大出題数は、下記の条件で計算されます。"
 
-#: templates/introduction.html:697
+#: templates/introduction.html:706
 msgid "The genre of created quizzes is included into the requested ones."
 msgstr "作成されたクイズのジャンルに、選択されたジャンルが含まれる。"
 
-#: templates/introduction.html:698
+#: templates/introduction.html:707
 msgid "The creator of created quizzes is included into the requested ones."
 msgstr "作成されたクイズのクイズ制作者に、選択されたクイズ制作者が含まれる。"
 
-#: templates/introduction.html:702
+#: templates/introduction.html:711
 msgid "Examples"
 msgstr "例"
 
-#: templates/introduction.html:702
+#: templates/introduction.html:711
 msgid ""
 "In the following case, the system can select the quizzes randomly based on "
 "ID <code>1, 2, 4, 6, and 7</code>. Therefore, you must set <code>Max "
@@ -1280,45 +1399,45 @@ msgstr ""
 "択します。このため、<code>最大出題数</code>は<code>5以下</code>を設定する必要"
 "があります。"
 
-#: templates/introduction.html:707
+#: templates/introduction.html:716
 msgid "Selected genre"
 msgstr "ジャンルを選択"
 
-#: templates/introduction.html:708
+#: templates/introduction.html:717
 msgid "Selected creators"
 msgstr "クイズ制作者を選択"
 
-#: templates/introduction.html:708
+#: templates/introduction.html:717
 msgid "Player 1 and Player 2"
 msgstr "プレイヤー1とプレイヤー2"
 
-#: templates/introduction.html:721 templates/introduction.html:726
+#: templates/introduction.html:730 templates/introduction.html:735
 msgid "Player 1"
 msgstr "プレイヤー1"
 
-#: templates/introduction.html:722 templates/introduction.html:724
+#: templates/introduction.html:731 templates/introduction.html:733
 msgid "Player 2"
 msgstr "プレイヤー2"
 
-#: templates/introduction.html:723 templates/introduction.html:725
-#: templates/introduction.html:727 templates/introduction.html:728
-#: templates/introduction.html:729
+#: templates/introduction.html:732 templates/introduction.html:734
+#: templates/introduction.html:736 templates/introduction.html:737
+#: templates/introduction.html:738
 msgid "Player 3"
 msgstr "プレイヤー3"
 
-#: templates/introduction.html:740
+#: templates/introduction.html:749
 msgid "How to play quiz game"
 msgstr "クイズゲームの遊び方"
 
-#: templates/introduction.html:741
+#: templates/introduction.html:750
 msgid "In this section, we'll explain how to play guiz game in this app."
 msgstr "このセクションでは、クイズゲームの遊び方について説明します。"
 
-#: templates/introduction.html:744
+#: templates/introduction.html:753
 msgid "Access to quiz room"
 msgstr "クイズルームにアクセス"
 
-#: templates/introduction.html:745
+#: templates/introduction.html:754
 msgid ""
 "In the <code>Quiz room list</code> page, you can access to the quiz room "
 "assigned by room owner."
@@ -1326,7 +1445,7 @@ msgstr ""
 "<code>クイズルーム</code>ページでは、ルーム所有者によって割り当てられたクイズ"
 "ルームにアクセスできます。"
 
-#: templates/introduction.html:751
+#: templates/introduction.html:760
 msgid ""
 "When you access to the quiz room, the system message is added to <code>chat "
 "log</code> field. In addition, when the other players enter the room, the "
@@ -1336,11 +1455,11 @@ msgstr ""
 "追加されます。加えて、他のプレイヤーがルームに参加した時、システムは参加済み"
 "のメンバにその旨を通知します。"
 
-#: templates/introduction.html:764
+#: templates/introduction.html:773
 msgid "Reset quiz room"
 msgstr "クイズルームの初期化"
 
-#: templates/introduction.html:765
+#: templates/introduction.html:774
 msgid ""
 "The <code>owner</code> clicks <code>Reset status</code> button to initialize "
 "the room status."
@@ -1348,7 +1467,7 @@ msgstr ""
 "<code>ルーム所有者</code>は、ルームのステータスを初期化するために<code>初期化"
 "</code>をクリックしてください。"
 
-#: templates/introduction.html:771
+#: templates/introduction.html:780
 msgid ""
 "[Note] This process includes shuffling quizzes. Therefore, if you want to "
 "resume previous quiz, you don't have to conduct the process."
@@ -1356,16 +1475,16 @@ msgstr ""
 "（備考）このプロセスはクイズをシャッフルする機能も含まれます。このため、前の"
 "クイズを再開したいならば、このプロセスを実行する必要はありません。"
 
-#: templates/introduction.html:772
+#: templates/introduction.html:781
 msgid ""
 "After initialization, the system notifies the message to the owner only."
 msgstr "初期化後、システムは所有者のみにメッセージを通知します。"
 
-#: templates/introduction.html:779
+#: templates/introduction.html:788
 msgid "Get next quiz"
 msgstr "次のクイズを取得"
 
-#: templates/introduction.html:780
+#: templates/introduction.html:789
 msgid ""
 "To minimalize the communication delay, each player receives the next quiz "
 "from the server in advance. Therefore, the <code>owner</code> needs to click "
@@ -1376,7 +1495,7 @@ msgstr ""
 "します。このため、<code>ルーム所有者</code>は、<code>クイズ取得</code>をク"
 "リックしてください。これにより、サーバが各プレイヤーにクイズを送信します。"
 
-#: templates/introduction.html:787
+#: templates/introduction.html:796
 msgid ""
 "When the client receives the next quiz, the client sends the status to "
 "server. After all clients sent the status, the server sends the message to "
@@ -1386,7 +1505,7 @@ msgstr ""
 "べてのクライアントがステータスを送信した後、サーバはルーム所有者にメッセージ"
 "を送信します。"
 
-#: templates/introduction.html:794
+#: templates/introduction.html:803
 msgid ""
 "[Note] If all players are not joined, <code>Get next quiz</code> process is "
 "not completed. Therefore, the <code>owner</code> has to check whether all "
@@ -1396,11 +1515,11 @@ msgstr ""
 "するプロセスは完了しません。このため、<code>ルーム所有者</code>は、すべてのプ"
 "レイヤーが参加しているかどうかを確認する必要があります。"
 
-#: templates/introduction.html:804 templates/quiz/playing_room.html:70
+#: templates/introduction.html:813 templates/quiz/playing_room.html:70
 msgid "Start question"
 msgstr "クイズ出題"
 
-#: templates/introduction.html:805
+#: templates/introduction.html:814
 msgid ""
 "When the <code>owner</code> clicks <code>Start question</code> button, the "
 "received quiz is shown to the <code>Question</code> field. In addition, "
@@ -1410,11 +1529,11 @@ msgstr ""
 "のクイズが<code>問題</code>欄に表示されます。加えて、<code>各プレイヤー</"
 "code>は、解答欄を用いてクイズに回答できます。"
 
-#: templates/introduction.html:821 templates/quiz/playing_room.html:80
+#: templates/introduction.html:830 templates/quiz/playing_room.html:80
 msgid "End answer"
 msgstr "回答終了"
 
-#: templates/introduction.html:822
+#: templates/introduction.html:831
 msgid ""
 "When all players answered the question or the answering time was over, the "
 "<code>owner</code> needs to click <code>End answer</code> button. After "
@@ -1424,11 +1543,11 @@ msgstr ""
 "</code>は、<code>回答終了</code>をクリックします。クリック後、すべてのプレイ"
 "ヤーは、その問題に回答できなくなります。"
 
-#: templates/introduction.html:835 templates/quiz/playing_room.html:90
+#: templates/introduction.html:844 templates/quiz/playing_room.html:90
 msgid "Conduct judgement"
 msgstr "判定実施"
 
-#: templates/introduction.html:836
+#: templates/introduction.html:845
 msgid ""
 "After stopping answering question, the <code>owner</code> needs to click "
 "<code>Conduct judgement</code> button to evaluate each player's answer. When "
@@ -1438,7 +1557,7 @@ msgstr ""
 "問題に回答するのを止めた後、<code>ルーム所有者</code>は、各プレイヤーの回答を"
 "評価するために<code>判定実施</code>をクリックします。"
 
-#: templates/introduction.html:846
+#: templates/introduction.html:855
 msgid ""
 "The <code>owner</code> check each player's answer and evaluate whether the "
 "answer is correct or incorrect. (Default status is <code>incorrect</code>.) "
@@ -1450,7 +1569,7 @@ msgstr ""
 "能として、ルーム所有者は、正しい回答をしたプレイヤーに対して加点分を調整でき"
 "ます。"
 
-#: templates/introduction.html:853
+#: templates/introduction.html:862
 msgid ""
 "After the owner finished the evaluation, the <code>owner</code> needs to "
 "click <code>Send</code> button to notify the score to the server. After "
@@ -1462,7 +1581,7 @@ msgstr ""
 "コアを受け取ります。さらに、最新のスコアは、各メンバのステータステーブルに反"
 "映されます。"
 
-#: templates/introduction.html:863
+#: templates/introduction.html:872
 msgid ""
 "As the next step is same as <code>Get next quiz</code>. Please check the <a "
 "href=\"#get-next-quiz\">link</a>."
@@ -1470,11 +1589,11 @@ msgstr ""
 "次のステップは<code>次のクイズを取得</code>と同じです。<a href=\"#get-next-"
 "quiz\">このリンク</a>をご覧ください。"
 
-#: templates/introduction.html:869
+#: templates/introduction.html:878
 msgid "Answered all quizzes"
 msgstr "全てのクイズに回答済み"
 
-#: templates/introduction.html:870
+#: templates/introduction.html:879
 msgid ""
 "If you answered all quizzes, you can select either to play quiz game again "
 "after shuffling quizzes or to come back to the quiz room list page."
@@ -1482,7 +1601,7 @@ msgstr ""
 "すべてのクイズに回答した場合、シャッフル後にクイズゲームを再開するか、クイズ"
 "ルーム一覧ページに戻るかを選択できます。"
 
-#: templates/introduction.html:876
+#: templates/introduction.html:885
 msgid ""
 "[Note 1] The status of quiz game is updated at <code>Conduct judgement</"
 "code> phase. Therefore, you can pause the quiz game until you evaluate each "
@@ -1492,7 +1611,7 @@ msgstr ""
 "ます。このため、各プレイヤーの回答を評価するまで、クイズゲームを中断できま"
 "す。"
 
-#: templates/introduction.html:880
+#: templates/introduction.html:889
 msgid ""
 "[Note 2] In the <code>Conduct judgement</code> phase, you can check long "
 "answer by clicking the comment button."
@@ -1742,10 +1861,11 @@ msgstr "ロール：　クイズ制作者"
 
 #: templates/quiz/upload_quiz.html:39
 msgid ""
-"You can only upload own quizzes. Your account ID is shown below and you can "
-"copy it using upper-right button."
+"You can only upload own quizzes by using your email address or your account "
+"ID. Your account ID is shown below and you can copy it using upper-right "
+"button."
 msgstr ""
-"自身が作成したクイズのみアップロードできます。また、右上のボタンからあなたの"
+"自身のメールアドレスやアカウントIDを用いて、自身が作成したクイズのみアップロードできます。また、右上のボタンからあなたの"
 "アカウントIDをコピーできます。"
 
 #: templates/quiz/upload_quiz.html:41

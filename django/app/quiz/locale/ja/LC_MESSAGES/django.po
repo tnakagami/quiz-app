@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-08-10 16:24+0900\n"
+"POT-Creation-Date: 2025-08-10 16:52+0900\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -414,7 +414,7 @@ msgstr "CSVファイルに無効な値が含まれます。詳細： %(value)s"
 
 #: quiz/validators.py:130
 msgid "The csv file includes invalid %(name)s(s). Details: %(values)s"
-msgstr "CSVファイルに無効な%(name)sが含まれます。詳細： %(value)s"
+msgstr "CSVファイルに無効な %(name)s が含まれます。詳細： %(value)s"
 
 #: quiz/views.py:39
 msgid "Genre list"

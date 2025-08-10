@@ -317,7 +317,7 @@
               <p class="small fw-bold text-success">{% blocktrans trimmed %}
                 [Note] When you process the requests, the system doesn't confirm your judgement.
                 Therefore, if you mistake your judgement, please make a request again to the guest user by using the other communication (e.g., email or chat).
-                The system does't provide any request functions for a manager.
+                The system does't provide any role change request functions for a manager.
               {% endblocktrans %}</p>
               <ol class="list-group list-group-numbered">
                 <li class="list-group-item">
@@ -482,7 +482,7 @@
                     <table class="table ms-3 border rounded custom-width-of-table text-align-center">
                       <thead>
                         <tr class="align-middle">
-                          <th scope="col" class="text-nowrap">Creator.pk</th>
+                          <th scope="col" class="text-nowrap">Creator.pk or Creator.email</th>
                           <th scope="col" class="text-nowrap">Genre</th>
                           <th scope="col" class="text-nowrap">Question</th>
                           <th scope="col" class="text-nowrap">Answer</th>
@@ -491,7 +491,7 @@
                       </thead>
                       <tbody>
                         <tr>
-                          <td scope="row">your-primary-key</td>
+                          <td scope="row">8a84c642-d8e2-bccc-6a53-b067a6794590</td>
                           <td>{% trans "Game" %}</td>
                           <td>{% blocktrans trimmed %}
                             How long is one side of a block used in Minecraft?<br /><br />1. 100cm<br />2. 80cm<br />3. 16cm<br />4. 50cm
@@ -500,13 +500,22 @@
                           <td>TRUE</td>
                         </tr>
                         <tr>
-                          <td scope="row">your-primary-key</td>
+                          <td scope="row">8a84c642-d8e2-bccc-6a53-b067a6794590</td>
                           <td>{% trans "Game" %}</td>
                           <td>{% blocktrans trimmed %}
                             How many minutes in real time is one day in Minecraft?<br /><br />1. 40min<br />2. 35min<br />3. 20min<br />4. 15min
                           {% endblocktrans %}</td>
                           <td>{% trans "3. 20min" %}</td>
                           <td>TRUE</td>
+                        </tr>
+                        <tr>
+                          <td scope="row">creator-mail-address@example.com</td>
+                          <td>{% trans "Game" %}</td>
+                          <td>{% blocktrans trimmed %}
+                            What does the word "e" of "e-sports" stand for?
+                          {% endblocktrans %}</td>
+                          <td>{% trans "electronic" %}</td>
+                          <td>FALSE</td>
                         </tr>
                         <tr>
                           <td scope="row">...</td>
