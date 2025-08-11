@@ -33,6 +33,7 @@ I assume that host environment is satisfied with the following conditions.
     | `APP_ACCESS_PORT` | 8443 | from 1025 to 65535 |
     | `APP_ARCHITECTURE` | arm64v8 | amd64, arm32v5, arm32v6, arm32v7, arm64v8, i386, mips64le, ppc64le, riscv64, s390x |
     | `APP_TIMEZONE` | Asia/Tokyo | UTC, Asia/Tokyo, etc. |
+    | `APP_DOZZLE_ACCESS_IP` | 10.100.0.4 | 10.100.0.4, 10.17.31.124, etc. |
     | `APP_VPN_ACCESS_IP` | 10.100.0.3 | 10.100.0.3, 10.17.31.123, etc. |
     | `APP_WIREGUARD_IP` | 10.100.0.2 | 10.100.0.2, 10.17.31.2, etc. |
     | `APP_WIREGUARD_PORT` | 51820 | 51012, 51013, etc. |
@@ -61,7 +62,7 @@ Execute the following command and press "Enter" key. It's used to access to web 
 
     Please see [env.sample](./wireguard/envs/env.sample) for details.
 
-1. Create `01-routing-localnet.conf` file to [conf.up.d](wireguard/configs/iptables_script/conf.up.d) and [conf.down.d](wireguard/configs/iptables_script/conf.down.d).
+1. Create `01-routing-localnet.conf` file to [conf.up.d](./wireguard/configs/iptables_script/conf.up.d) and [conf.down.d](./wireguard/configs/iptables_script/conf.down.d).
 Please see [README.md](./wireguard/configs/iptables_script/README.md) for details.
 
 ## Build
@@ -84,7 +85,7 @@ To get real certification via `https-portal`, you need to modify `docker-compose
     environment:
       - STAGE=production # Change environment variable from `local` to `production`
       - NUMBITS=4096
-    # other settings
+    # other settings...
 ```
 
 ### All containers creation
