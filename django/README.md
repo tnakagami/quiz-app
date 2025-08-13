@@ -8,7 +8,7 @@ Migrations are how Django stores changes to your models and Django manages your 
 docker-compose run --rm django bash
 
 # In the docker environment
-python manage.py makemigrations utils account quiz
+python manage.py makemigrations utils passkey account quiz
 python manage.py migrate
 ```
 
@@ -30,15 +30,30 @@ Specifically, after definition of `email` and `password`, you can type the follo
 
 ```bash
 # In the docker environment
+#
+# [Attention] `email` and `password` are examples. Please replace appropriate expression you can use.
+#
 python manage.py custom_createsuperuser --email hoge@example.com --password superuser-password
 ```
 
-### Collect static files
-After that, execute the following command to get static files.
+### Create manager account
+After that, you need to create manager account. Specifically, execute the following command.
 
 ```bash
 # In the docker environment
-python manage.py collectstatic
+python manage.py shell
+
+# In the python interpreter environment
+#
+# [Attention] `email` and `password` are examples. Please replace appropriate expression you can use.
+#
+manager_email = 'your-manager-account@your-domain'
+manager_passwd = 'manager-password'
+manager_name = 'manager'
+
+# Common commands
+from account.models import User, RoleType
+User.objects.create_user(email=manager_email, password=manager_passwd, is_active=True, screen_name=manager_name, role=RoleType.MANAGER)
 ```
 
 ### Create multilingual localization messages
@@ -47,7 +62,7 @@ Run the following commands to reflect translation messages.
 ```bash
 #
 # If you need to create/update translated file, type the following commands and execute them.
-
+#
 # In the docker environment
 django-admin makemessages -l ${DJANGO_LANGUAGE_CODE:-en}
 exit # or press Ctrl + D

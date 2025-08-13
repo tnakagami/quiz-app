@@ -80,6 +80,14 @@
           {% trans "Update password" %}
         </a>
       </div>
+      <div class="col">
+        <a
+          href="{% url 'passkey:passkey_list' %}"
+          class="btn btn-primary w-100 custom-boxshadow"
+        >
+          {% trans "Setup passkeys" %}
+        </a>
+      </div>
       {% if owner.is_player %}
       <div class="col">
         <a

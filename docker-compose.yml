@@ -26,7 +26,7 @@ services:
     container_name: https-portal.quiz-app
     restart: always
     environment:
-      - STAGE=local
+      - STAGE=${APP_STAGE_TYPE:-local}
       - NUMBITS=4096
       - DOMAINS=${APP_DOMAINS:-'localhost -> http://django:8001'}
       - ACCESS_LOG=stdout

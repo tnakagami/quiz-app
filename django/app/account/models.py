@@ -266,7 +266,7 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
   # @param subject E-mail subject
   # @param message E-mail body
   # @param from_email Sender of e-mail (default is None)
-  # @param kwargs named arguments
+  # @param kwargs Named arguments
   def email_user(self, subject, message, from_email=None, **kwargs):
     logger = getLogger(__name__)
 

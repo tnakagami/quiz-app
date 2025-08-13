@@ -22,7 +22,7 @@ services:
       localnet:
         # Please set the `APP_WIREGUARD_IP` based on your `APP_VPN_ACCESS_IP`.
         # For example, if you set `APP_VPN_ACCESS_IP=10.17.31.123` then, you can select arbitrary number except ".0", ".1", ".123", and ".255"
-        # Details:
+        # Detail of invalid patterns:
         # - In the case of APP_WIREGUARD_IP=10.17.31.0, it's reserved ip-address which is known as `network address`.
         # - In the case of APP_WIREGUARD_IP=10.17.31.1, it's used as gateway.
         # - In the case of APP_WIREGUARD_IP=10.17.31.123, it's already used in `APP_VPN_ACCESS_IP`.

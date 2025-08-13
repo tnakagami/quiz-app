@@ -23,6 +23,7 @@ urlpatterns = [
     path('i18n/', include('django.conf.urls.i18n')),
 ] + i18n_patterns(
     path('', include('utils.urls')),
+    path('passkey/', include('passkey.urls')),
     path('account/', include('account.urls')),
     path('quiz/', include('quiz.urls')),
 )

@@ -582,7 +582,6 @@
      * @param[in] message  Received message
     */
     resetQuiz(datetime, message) {
-      this.resetPlayerScore();
       // Enable next button
       const element = document.querySelector('[data-cmd="next"].owner-events');
       element.disabled = false;

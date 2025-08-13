@@ -1,7 +1,7 @@
 from django import forms
 from django.conf import settings
 from django.core.signing import dumps
-from django.contrib.auth import get_user_model
+from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.forms import (
   AuthenticationForm,
   BaseUserCreationForm,
@@ -12,6 +12,7 @@ from django.contrib.auth.forms import (
 from django.contrib.sites.shortcuts import get_current_site
 from django.template.loader import render_to_string
 from django.utils.translation import gettext_lazy
+from django.views.decorators.debug import sensitive_variables
 from utils.models import (
   generate_default_filename,
   get_digest,
@@ -37,7 +38,30 @@ def _get_forwarding_port():
   return port
 
 class LoginForm(AuthenticationForm, BaseFormWithCSS):
-  username = forms.EmailField(widget=forms.EmailInput(attrs={'autofocus': True}))
+  username = forms.EmailField(
+    label=gettext_lazy('Email address'),
+    required=False,
+    widget=forms.EmailInput(attrs={
+      'autofocus': True,
+      'autocomplete': 'username webauthn',
+    }),
+  )
+  password = forms.CharField(
+    label=gettext_lazy('Password'),
+    required=False,
+    strip=False,
+    widget=forms.PasswordInput(attrs={
+      'autocomplete': 'current-password',
+    }),
+  )
+  passkeys = forms.CharField(
+    label=gettext_lazy('Passkey'),
+    required=False,
+    widget=forms.HiddenInput(attrs={
+      'id': 'passkeys',
+      'name': 'passkeys',
+    }),
+  )
 
   ##
   # @brief Check whether the given user has `is_staff` permission or not.
@@ -50,6 +74,23 @@ class LoginForm(AuthenticationForm, BaseFormWithCSS):
         gettext_lazy('The given user who has staff permission cannot login.'),
         code='invalid_login',
       )
+
+  ##
+  # @breif Check input parameters
+  # @return cleaned_data Valid field parameters
+  @sensitive_variables()
+  def clean(self):
+    username = self.cleaned_data.get('username', '')
+    password = self.cleaned_data.get('password', '')
+    # Authentication with backend
+    self.user_cache = authenticate(self.request, username=username, password=password)
+    # Check authenticated result
+    if self.user_cache is None:
+      raise self.get_invalid_login_error()
+    else:
+      self.confirm_login_allowed(self.user_cache)
+
+    return self.cleaned_data
 
 ##
 # @brief Validate input digest
