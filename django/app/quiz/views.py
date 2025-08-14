@@ -89,7 +89,7 @@ class QuizListPage(LoginRequiredMixin, HasCreatorRole, ListView, DjangoBreadcrum
   # @brief Process POST request
   # @param request Instance of HttpRequest
   # @param args Positional arguments
-  # @param kwargs named arguments
+  # @param kwargs Named arguments
   # @return Instance of HttpResponse
   def post(self, request, *args, **kwargs):
     params = self.request.POST.copy() or {}
@@ -102,7 +102,7 @@ class QuizListPage(LoginRequiredMixin, HasCreatorRole, ListView, DjangoBreadcrum
 
   ##
   # @brief Get context data
-  # @param kwargs named arguments
+  # @param kwargs Named arguments
   # @return context context which is used in template file
   def get_context_data(self, **kwargs):
     context = super().get_context_data(**kwargs)
@@ -126,7 +126,7 @@ class CreateQuizPage(BaseCreateUpdateView, IsCreator, CreateView, DjangoBreadcru
 
   ##
   # @brief Get context data
-  # @param kwargs named arguments
+  # @param kwargs Named arguments
   # @return context context which is used in template file
   def get_context_data(self, **kwargs):
     context = super().get_context_data(**kwargs)
@@ -179,7 +179,7 @@ class QuizRoomListPage(LoginRequiredMixin, ListView, DjangoBreadcrumbsMixin):
 
   ##
   # @brief Get context data
-  # @param kwargs named arguments
+  # @param kwargs Named arguments
   # @return context context which is used in template file
   def get_context_data(self, **kwargs):
     context = super().get_context_data(**kwargs)
@@ -201,7 +201,7 @@ class CreateQuizRoomPage(BaseCreateUpdateView, IsPlayer, CreateView, DjangoBread
 
   ##
   # @brief Get context data
-  # @param kwargs named arguments
+  # @param kwargs Named arguments
   # @return context context which is used in template file
   def get_context_data(self, **kwargs):
     context = super().get_context_data(**kwargs)
@@ -244,7 +244,7 @@ class EnterQuizRoom(LoginRequiredMixin, UserPassesTestMixin, DetailView, DjangoB
 
   ##
   # @brief Get context data
-  # @param kwargs named arguments
+  # @param kwargs Named arguments
   # @return context context which is used in template file
   def get_context_data(self, **kwargs):
     context = super().get_context_data(**kwargs)
@@ -336,8 +336,8 @@ class UploadQuizPage(LoginRequiredMixin, HasCreatorRole, FormView, DjangoBreadcr
   ##
   # @brief Set request user to form params
   # @param args Positional arguments
-  # @param kwargs named arguments
-  # @return kwargs named arguments to create form instance
+  # @param kwargs Named arguments
+  # @return kwargs Named arguments to create form instance
   def get_form_kwargs(self, *args, **kwargs):
     kwargs = super().get_form_kwargs(*args, **kwargs)
     kwargs['user'] = self.request.user
@@ -374,8 +374,8 @@ class DownloadQuizPage(LoginRequiredMixin, HasCreatorRole, FormView, DjangoBread
   ##
   # @brief Set request user to form params
   # @param args Positional arguments
-  # @param kwargs named arguments
-  # @return kwargs named arguments to create form instance
+  # @param kwargs Named arguments
+  # @return kwargs Named arguments to create form instance
   def get_form_kwargs(self, *args, **kwargs):
     kwargs = super().get_form_kwargs(*args, **kwargs)
     kwargs['user'] = self.request.user
@@ -412,7 +412,7 @@ class QuizAjaxResponse(LoginRequiredMixin, HasCreatorRole, View):
   # @brief Process GET method requested by ajax function
   # @param request Instance of HttpRequest
   # @param args Positional arguments
-  # @param kwargs named arguments
+  # @param kwargs Named arguments
   # @return response Instance of JsonResponse
   def get(self, request, *args, **kwargs):
     quizzes = models.Quiz.get_quizzes(request.user)

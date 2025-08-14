@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load i18n %}
+{% load static %}
 
 {% block content %}
 {% include 'breadcrumbs.html' with title=_("Login") %}
@@ -30,6 +31,16 @@
               </a>
             </div>
           </div>
+          {# Login by passkey #}
+          <div class="mt-2">
+            <button
+              id="passkey-login"
+              type="button"
+              class="btn btn-dark w-100 custom-boxshadow"
+            >
+              <i class="fa-solid fa-key"></i> &nbsp; {% trans "Login by passkeys" %}
+            </button>
+          </div>
         </form>
         <div class="col">
           <a
@@ -46,4 +57,32 @@
 {% endblock %}
 
 {% block bodyjs %}
+<script type="application/javascript" src="{% static 'js/passkey-helpers.js' %}"></script>
+<script>
+(function () {
+  // Add DOM event
+  document.addEventListener('DOMContentLoaded', () => {
+    const passkeyBtn = document.querySelector('#passkey-login');
+    const authURL = '{% url "passkey:begin_passkey_auth" %}';
+    const formElement = document.querySelector('#login-form');
+    const passkeyElem = document.querySelector('#passkeys');
+    const callback = (err) => console.error(err);
+    // Initialize passkey library
+    Passkey.Init();
+    // Check conditional ui
+    Passkey.CheckConditionalUI((isAvailable, err) => {
+      if (isAvailable) {
+        Passkey.Authentication(authURL, formElement, passkeyElem, true, callback);
+      }
+      else {
+        console.error(err);
+      }
+    });
+    // Add event
+    passkeyBtn.addEventListener('click', () => {
+      Passkey.Authentication(authURL, formElement, passkeyElem, false, callback);
+    });
+  });
+})();
+</script>
 {% endblock %}

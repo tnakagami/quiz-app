@@ -42,6 +42,9 @@ const QuizRoom = {};
             callbacks.chatLog(response.datetime, response.message);
             callbacks.updatePlayerStatuses(response.players);
             break;
+          case 'resetCompleted':
+            callbacks.resetPlayerScore();
+            break;
           case 'sentNextQuiz':
             callbacks.setQuiz(response.data);
             callbacks.notifyReceivedQuiz(response.datetime, response.index, response.message);
@@ -84,9 +87,6 @@ const QuizRoom = {};
         //
         else {
           switch (msgType) {
-            case 'resetCompleted':
-              callbacks.resetPlayerScore();
-              break;
             case 'sentAnswers':
               callbacks.registerExactAnswer(response.datetime, response.correctAnswer)
               break;

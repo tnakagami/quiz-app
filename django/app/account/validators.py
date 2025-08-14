@@ -44,7 +44,7 @@ class CustomDigestValidator:
   ##
   # @brief Validate input digest
   # @param value message digest
-  # @param kwargs named arguments
+  # @param kwargs Named arguments
   # @exception ValidationError Input digest is invalid
   def validate(self, value, **kwargs):
     is_valid = self._digest == value

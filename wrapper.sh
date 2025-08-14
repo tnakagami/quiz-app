@@ -1,6 +1,7 @@
 #!/bin/bash
 
 readonly NETWORK_NAME="shared-localnet"
+readonly COMPOSE_CMD="docker-compose"
 readonly DJANGO_CONTAINER=django.quiz-app
 readonly BASE_DIR=$(cd $(dirname $0) && pwd)
 readonly HTTPS_PORTAL_HTML_DIR=${BASE_DIR}/https-portal/html
@@ -31,6 +32,10 @@ Enabled commands:
 
   down
     Destroy all containers
+
+  doxygen
+    Execute commands with relevant to Doxygen.
+    You can use `build`, `start`, `stop`, `restart`, `down` commands.
 
   ps
     Show the running containers
@@ -111,7 +116,7 @@ while [ -n "$1" ]; do
       ;;
 
     build )
-      docker-compose build --build-arg UID="$(id -u)" --build-arg GID="$(id -g)"
+      ${COMPOSE_CMD} build --build-arg UID="$(id -u)" --build-arg GID="$(id -g)"
       clean_up
 
       shift
@@ -122,15 +127,15 @@ while [ -n "$1" ]; do
         echo PUID=$(id -u)
         echo PGID=$(id -g)
       } > ${WIREGUARD_DIR}/envs/.ids-env
-      docker-compose up -d
-      docker-compose -f ${WIREGUARD_YAML_FILE} --env-file ${BASE_DIR}/.env up -d
+      ${COMPOSE_CMD}                                                       up -d
+      ${COMPOSE_CMD} -f ${WIREGUARD_YAML_FILE} --env-file ${BASE_DIR}/.env up -d
 
       shift
       ;;
 
     stop | restart | down )
-      docker-compose $1
-      docker-compose -f ${WIREGUARD_YAML_FILE} $1
+      ${COMPOSE_CMD}                           $1
+      ${COMPOSE_CMD} -f ${WIREGUARD_YAML_FILE} $1
 
       shift
       ;;
@@ -140,20 +145,20 @@ while [ -n "$1" ]; do
 
       case "$1" in
         build )
-          docker-compose -f ${DOXYGEN_YAML_FILE} --env-file ${BASE_DIR}/.env build --build-arg PUID="$(id -u)" --build-arg PGID="$(id -g)"
+          ${COMPOSE_CMD} -f ${DOXYGEN_YAML_FILE} --env-file ${BASE_DIR}/.env build --build-arg PUID="$(id -u)" --build-arg PGID="$(id -g)"
           clean_up
 
           shift
           ;;
 
         start )
-          docker-compose -f ${DOXYGEN_YAML_FILE} --env-file ${BASE_DIR}/.env up -d
+          ${COMPOSE_CMD} -f ${DOXYGEN_YAML_FILE} --env-file ${BASE_DIR}/.env up -d
 
           shift
           ;;
 
         stop | restart | down )
-          docker-compose -f ${DOXYGEN_YAML_FILE} $1
+          ${COMPOSE_CMD} -f ${DOXYGEN_YAML_FILE} $1
 
           shift
           ;;
@@ -166,61 +171,25 @@ while [ -n "$1" ]; do
       ;;
 
     ps )
-      {
-        docker-compose ps
-        docker-compose -f ${WIREGUARD_YAML_FILE} ps
-        docker-compose -f ${DOXYGEN_YAML_FILE} ps
-      } | sed -r -e "s|\s{2,}|#|g" | awk -F'[#]' '
-      BEGIN {
-        maxlen_service = -1;
-        maxlen_status = -1;
-        maxlen_port = -1;
-      }
-      FNR > 1{
-        _services[FNR] = $3;
-        _statuses[FNR] = $4;
-        _ports[FNR] = $5;
-        service_len = length($3);
-        status_len = length($4);
-        port_len = length($5);
-
-        if (maxlen_service < service_len) { maxlen_service = service_len; }
-        if (maxlen_status < status_len) { maxlen_status = status_len; }
-        if (maxlen_port < port_len) { maxlen_port = port_len; }
-      }
-      END {
-        if (FNR > 1) {
-          total_len = maxlen_service + maxlen_status + maxlen_port;
-          hyphens = sprintf("%*s", total_len + 9, "");
-          gsub(".", "-", hyphens);
-          # Output
-          printf("%-*s | %-*s | %-*s\n", maxlen_service, "Service", maxlen_status, "Status", maxlen_port, "Port");
-          print hyphens;
-
-          for (idx = 2; idx <= FNR; idx++) {
-            printf("%*s | %*s | %-*s\n",
-              maxlen_service, _services[idx],
-              maxlen_status, _statuses[idx],
-              maxlen_port, _ports[idx]);
-          }
-        }
-      }'
+      ${COMPOSE_CMD}                           ps --format 'table {{ .Service }}\t{{ .Status }}\t{{ .Ports }}'
+      ${COMPOSE_CMD} -f ${WIREGUARD_YAML_FILE} ps --format 'table {{ .Service }}\t{{ .Status }}\t{{ .Ports }}' | grep -v "SERVICE"
+      ${COMPOSE_CMD} -f ${DOXYGEN_YAML_FILE}   ps --format 'table {{ .Service }}\t{{ .Status }}\t{{ .Ports }}' | grep -v "SERVICE"
 
       shift
       ;;
 
     logs )
       {
-        docker-compose logs -t
-        docker-compose -f ${WIREGUARD_YAML_FILE} logs -t
-        docker-compose -f ${DOXYGEN_YAML_FILE} logs -t
+        ${COMPOSE_CMD}                           logs -t
+        ${COMPOSE_CMD} -f ${WIREGUARD_YAML_FILE} logs -t
+        ${COMPOSE_CMD} -f ${DOXYGEN_YAML_FILE}   logs -t
       } | sort -t "|" -k 1,+2d
 
       shift
       ;;
 
     migrate )
-      docker-compose up -d
+      ${COMPOSE_CMD} up -d
       apps=$(find django/app -type f | grep -oP "(?<=/)([a-zA-Z]+)(?=/apps.py$)" | tr '\n' ' ')
       commands="python manage.py makemigrations ${apps}; python manage.py migrate"
       docker exec ${DJANGO_CONTAINER} bash -c "${commands}"
@@ -229,9 +198,10 @@ while [ -n "$1" ]; do
       ;;
 
     test )
-      docker-compose down
-      docker-compose run django /opt/tester.sh
-      docker-compose down
+      ${COMPOSE_CMD} down
+      ${COMPOSE_CMD} run django /opt/tester.sh
+      ${COMPOSE_CMD} down
+      docker ps -a | grep Exited | awk '{print $1}' | xargs docker rm -f
 
       shift
       ;;

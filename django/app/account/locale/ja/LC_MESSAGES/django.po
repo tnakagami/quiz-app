@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-08-10 06:50+0900\n"
+"POT-Creation-Date: 2025-08-14 02:35+0900\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -26,62 +26,83 @@ msgstr "権限"
 msgid "Important dates"
 msgstr "重要な日付"
 
+#: account/forms.py:42
+msgid "Email address"
+msgstr "メールアドレス"
+
 #: account/forms.py:50
+msgid "Password"
+msgstr "パスワード"
+
+#: account/forms.py:58
+msgid "Passkey"
+msgstr "パスキー"
+
+#: account/forms.py:74
 msgid "The given user who has staff permission cannot login."
 msgstr "スタッフ権限を持つユーザはログインできません。"
 
-#: account/forms.py:77
+#: account/forms.py:118
 msgid "Hash value"
 msgstr "ハッシュ値"
 
-#: account/forms.py:81
+#: account/forms.py:122
 msgid "Enter the today’s hash value."
 msgstr "今日のハッシュ値を入力"
 
-#: account/forms.py:142
-msgid "The old password is same as new password. Please enter difference passwords."
-msgstr "古いパスワードと新しいパスワードが同一です。異なるパスワードを入力してください。"
+#: account/forms.py:183
+msgid ""
+"The old password is same as new password. Please enter difference passwords."
+msgstr ""
+"古いパスワードと新しいパスワードが同一です。異なるパスワードを入力してくださ"
+"い。"
 
-#: account/forms.py:150
+#: account/forms.py:191
 msgid "Email"
 msgstr "メールアドレス"
 
-#: account/forms.py:166
+#: account/forms.py:207
 msgid ""
 "The given email address is not registered or not enabled. Please check your "
 "email address."
-msgstr "入力されたメールアドレスは登録されていないまたは、アカウントが無効な状態です。入力したメールアドレスを再確認してください。"
+msgstr ""
+"入力されたメールアドレスは登録されていないまたは、アカウントが無効な状態で"
+"す。入力したメールアドレスを再確認してください。"
 
-#: account/forms.py:198
+#: account/forms.py:239
 msgid "CSV filename"
 msgstr "CSVファイル名"
 
-#: account/forms.py:205
+#: account/forms.py:246
 msgid "You don’t have to enter the extention."
 msgstr "拡張子を入力する必要はありません。"
 
-#: account/forms.py:250
+#: account/forms.py:291
 msgid "Your request has already registered."
 msgstr "要求は申請済みです。"
 
-#: account/forms.py:281
+#: account/forms.py:322
 msgid "Approve or not"
 msgstr "承認／否認"
 
-#: account/forms.py:297
+#: account/forms.py:338
 msgid "You don’t have permission to update this record."
 msgstr "このデータを更新する権限がありません。"
 
-#: account/forms.py:364
+#: account/forms.py:405
 #, python-format
-msgid "You need to select relevant friends because the individual group \"%(group)s\" has %(friends)s member(s)."
-msgstr "個人グループ「%(group)s」に %(friends)s が含まれます。これらのメンバを選択してください。"
+msgid ""
+"You need to select relevant friends because the individual group "
+"\"%(group)s\" has %(friends)s member(s)."
+msgstr ""
+"個人グループ「%(group)s」に %(friends)s が含まれます。これらのメンバを選択し"
+"てください。"
 
-#: account/forms.py:414
+#: account/forms.py:455
 msgid "This field is required."
 msgstr "このフィールドは必須です。"
 
-#: account/forms.py:420
+#: account/forms.py:461
 msgid "Invalid member list. Some members are assigned except owner’s friends."
 msgstr "無効なメンバリストです。あなたのフレンドに含まれないメンバがいます。"
 
@@ -114,8 +135,11 @@ msgid "email address"
 msgstr "メールアドレス"
 
 #: account/models.py:148
-msgid "Required. 128 characters allowing only Unicode characters, in addition to @, ., -, and _."
-msgstr "128文字以内。「@, ., -, _」に加えアルファベット半角数字が使用できます。"
+msgid ""
+"Required. 128 characters allowing only Unicode characters, in addition to "
+"@, ., -, and _."
+msgstr ""
+"128文字以内。「@, ., -, _」に加えアルファベット半角数字が使用できます。"
 
 #: account/models.py:151
 msgid "code"
@@ -134,8 +158,12 @@ msgid "password"
 msgstr "パスワード"
 
 #: account/models.py:164
-msgid "It must contain at least four types which are an alphabet (uppercase/lowercase), a number, and a symbol."
-msgstr "アルファベット（大文字と小文字）、半角数字、記号を少なくとも1つずつ含める必要があります。"
+msgid ""
+"It must contain at least four types which are an alphabet (uppercase/"
+"lowercase), a number, and a symbol."
+msgstr ""
+"アルファベット（大文字と小文字）、半角数字、記号を少なくとも1つずつ含める必要"
+"があります。"
 
 #: account/models.py:167
 msgid "staff status"
@@ -158,8 +186,12 @@ msgid "active"
 msgstr "有効／無効"
 
 #: account/models.py:179
-msgid "Designates whether this user should be treated as active. Unselect this instead of deleting accounts."
-msgstr "このユーザを有効なユーザとして扱うかどうかを表す。アカウントを削除する代わりにこのフィールドをOFFにする。"
+msgid ""
+"Designates whether this user should be treated as active. Unselect this "
+"instead of deleting accounts."
+msgstr ""
+"このユーザを有効なユーザとして扱うかどうかを表す。アカウントを削除する代わり"
+"にこのフィールドをOFFにする。"
 
 #: account/models.py:182
 msgid "Role"
@@ -206,8 +238,12 @@ msgid "Group members"
 msgstr "グループメンバ"
 
 #: account/validators.py:36
-msgid "Your password must contain at least four types which are an alphabet (uppercase/lowercase), a number, and a symbol."
-msgstr "アルファベット（大文字と小文字）、半角数字、記号を少なくとも1つずつ含める必要があります。"
+msgid ""
+"Your password must contain at least four types which are an alphabet "
+"(uppercase/lowercase), a number, and a symbol."
+msgstr ""
+"アルファベット（大文字と小文字）、半角数字、記号を少なくとも1つずつ含める必要"
+"があります。"
 
 #: account/validators.py:62
 msgid "Invalid a digest value."

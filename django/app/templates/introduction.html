@@ -35,6 +35,19 @@
   .custom-width-of-table > tbody {
     border-top: 0.25rem solid #212529 !important;
   }
+  @media (min-width: 768px) {
+    /*
+      xs:  <  576px
+      sm:  >= 576px
+      md:  >= 768px
+      lg:  >= 992px
+      xl:  >= 1200px
+      xxl: >= 1400px
+    */
+    .border-md-end {
+      border-right: 1px solid #dee2e6 !important;
+    }
+  }
 </style>
 {% endblock %}
 
@@ -42,7 +55,7 @@
 {% include 'breadcrumbs.html' with title=_("Introduction") %}
 <article class="justify-content-center">
   <div class="row">
-    <div class="col-12 col-md-4 col-lg-3 d-none d-md-block border-end">
+    <div class="col-12 col-md-4 col-lg-3 mb-5 mb-md-0 d-md-block border-md-end">
       <div class="d-flex flex-column align-self-start sticky-top" style="top: 1rem;">
         <span class="ms-1 fw-bold">{% trans "Table of contents" %}</span>
         <div id="table-of-contents" class="ms-2 js-toc"></div>
@@ -238,6 +251,57 @@
                 </li>
               </ol>
             </section>
+            {# Setup passkey and login with its key #}
+            <section class="my-3">
+              <h3 class="h3" id="setup-passkey">{% trans "Setup passkey to login by more secure" %}</h3>
+              <p>{% blocktrans trimmed %}
+                Recentry, it's recommended to sign in with a passkey insted of a password in several web site.
+                Therefore, in this web site, you can login by using passkeys you registered in advance.
+                In this section, we'll explain how to register passkeys and how to login by using it.
+              {% endblocktrans %}</p>
+              <ol class="list-group list-group-numbered">
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    Access to <code>User Profile</code> page and then, click <code>Setup passkeys</code> button.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/account/041_use-passkeys.webp' %}" alt="Click `Setup passkeys` button" />
+                  <p class="small fw-bold text-success">{% trans "[Note] If your device cannot provide <code>passkey function</code>, you need to use conventional login process." %}</p>
+                </li>
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    Click <code>Add a new passkey</code> button.
+                    After that, enter a new token name to input field shown in the modal window and click <code>Add</code> button.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/account/042_use-passkeys.webp' %}" alt="Click `Add a new passkey` button" />
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/account/043_use-passkeys.webp' %}" alt="Enter a new token name" />
+                </li>
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    If a new passkey creation message is shown, press <code>Create</code> button.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/account/044_use-passkeys.webp' %}" alt="Press `Create` button" />
+                </li>
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    Conduct the authentication process based on the method provided from your device.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/account/045_use-passkeys.webp' %}" alt="Conduct authentication" />
+                  <p class="small fw-bold text-success">{% blocktrans trimmed %}[Note] The above image is an example in the case of <code>Windows machine</code>.{% endblocktrans %}</p>
+                </li>
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    If the registration is successful, the system refreshes the current page after three seconds.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/account/046_use-passkeys.webp' %}" alt="Success message is shown" />
+                </li>
+                <li class="list-group-item">
+                  <span>{% blocktrans trimmed %}
+                    After the registration is completed, you can login by using added passkeys when you login next time.
+                  {% endblocktrans %}</span>
+                  <img class="mb-3 img-fluid border rounded img-shadow" src="{% static 'img/introduction/account/047_use-passkeys.webp' %}" alt="Login by using added passkeys" />
+                </li>
+              </ol>
+            </section>
           </section>
 
           {# For manager #}
@@ -406,7 +470,7 @@
             </section>
 
             <section class="my-3">
-              <h3 class="h3" id="download-quizzes">{% trans "Download quizzes for all creators" %}</h3>
+              <h3 class="h3" id="download-quizzes-for-all-creators">{% trans "Download quizzes for all creators" %}</h3>
               <p>{% blocktrans trimmed %}
                 Manager can download all registered quizzes. The concrete procedure is shown below.
               {% endblocktrans %}</p>
@@ -482,7 +546,7 @@
                     <table class="table ms-3 border rounded custom-width-of-table text-align-center">
                       <thead>
                         <tr class="align-middle">
-                          <th scope="col" class="text-nowrap">Creator.pk or Creator.email</th>
+                          <th scope="col">Creator.pk or Creator.email</th>
                           <th scope="col" class="text-nowrap">Genre</th>
                           <th scope="col" class="text-nowrap">Question</th>
                           <th scope="col" class="text-nowrap">Answer</th>
@@ -909,7 +973,6 @@
   document.addEventListener('DOMContentLoaded', () => {
     const tocLinkClass ='toc-link';
     const backgroundColor = 'bg-danger-subtle';
-    const attrName = 'data-isClicked';
     // Initialize tocbot
     tocbot.init({
       tocSelector: '.js-toc',
@@ -932,20 +995,8 @@
           else {
             item.classList.remove(backgroundColor);
           }
-          item.removeAttribute(attrName);
         });
       },
-    });
-    // Add event listener
-    document.querySelectorAll(`.${tocLinkClass}`).forEach((item) => {
-      item.addEventListener('click', (event) => {
-        if (!item.hasAttribute(attrName)) {
-          setTimeout(() => {
-            item.setAttribute(attrName, 'true');
-            item.click();
-          }, 100);
-        }
-      })
     });
     // Add current position
     const topLinkElement = document.querySelector(`.${tocLinkClass}`);

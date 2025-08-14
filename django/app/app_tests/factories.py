@@ -1,9 +1,11 @@
 import factory
+from factory.fuzzy import FuzzyChoice, FuzzyText
 from django.db.models.signals import post_save
 from django.utils import timezone
 from faker import Factory as FakerFactory
 from account import models as account_models
 from quiz import models as quiz_models
+from passkey import models as passkey_models
 
 faker = FakerFactory.create()
 
@@ -79,8 +81,8 @@ class QuizFactory(factory.django.DjangoModelFactory):
 
   creator = factory.SubFactory(UserFactory)
   genre = factory.SubFactory(GenreFactory)
-  question = factory.LazyAttribute(lambda instance: faker.pystr(min_chars=1, max_chars=1024))
-  answer = factory.LazyAttribute(lambda instance: faker.pystr(min_chars=1, max_chars=1024))
+  question = FuzzyText(length=1024)
+  answer = FuzzyText(length=1024)
   is_completed = False
 
 @factory.django.mute_signals(post_save)
@@ -139,3 +141,17 @@ class ScoreFactory(factory.django.DjangoModelFactory):
   index = factory.LazyAttribute(lambda instance: faker.pyint(min_value=1, max_value=256, step=1))
   sequence = factory.LazyAttribute(lambda instance: gen_dict(3))
   detail = factory.LazyAttribute(lambda instance: gen_dict(5))
+
+class UserPasskeyFactory(factory.django.DjangoModelFactory):
+  class Meta:
+    model = passkey_models.UserPasskey
+
+  class Params:
+    platform_types = ['Apple', 'Amazon', 'Microsoft', 'Google', 'Unknown']
+
+  user = factory.SubFactory(UserFactory)
+  name = factory.LazyAttribute(lambda instance: faker.pystr(min_chars=1, max_chars=255))
+  is_enabled = True
+  platform = FuzzyChoice(Params.platform_types)
+  credential_id = factory.Sequence(lambda idx: '{}{}'.format(faker.pystr(min_chars=1, max_chars=192), idx))
+  token = factory.LazyAttribute(lambda instance: faker.pystr(min_chars=255, max_chars=255))

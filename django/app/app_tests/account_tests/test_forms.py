@@ -124,18 +124,19 @@ class TestLoginForm:
     ('hoge@example.com', 'test-hoge2pass',  False, True),
     ('nobody@foo.com',   'test-hoge2pass',  False, False),
     ('hoge@example.com', 'wrong-pass2word', False, False),
-    (              None, 'test-hoge2pass',  False, False),
-    ('hoge@example.com',              None, False, False),
     ('hoge@example.com', 'test-hoge2pass',  True,  False),
   ], ids=[
     'can-login',
     'invalid-email',
     'invalid-password',
-    'email-is-empty',
-    'password-is-empty',
     'is-staff-user',
   ])
-  def test_check_login_form(self, email, password, is_staff, is_valid):
+  def test_check_login_form_with_password(self, email, password, is_staff, is_valid):
+    class DummyRequest:
+      def __init__(self, *args, **kwargs):
+        self.session = {}
+        self.POST = {}
+
     raw_password = 'test-hoge2pass'
     user = factories.UserFactory(email='hoge@example.com', is_active=True, is_staff=is_staff)
     user.set_password(raw_password)
@@ -147,7 +148,7 @@ class TestLoginForm:
       params['username'] = email
     if password is not None:
       params['password'] = password
-    form = forms.LoginForm(data=params)
+    form = forms.LoginForm(data=params, request=DummyRequest())
 
     assert form.is_valid() == is_valid
 

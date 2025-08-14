@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     'corsheaders',
     # User's app
     'utils.apps.UtilsConfig',
+    'passkey.apps.PasskeyConfig',
     'account.apps.AccountConfig',
     'quiz.apps.QuizConfig',
 ]
@@ -142,6 +143,7 @@ USE_TZ = True
 LOCALE_PATHS = (
     os.path.join(BASE_DIR, 'account', 'locale'),
     os.path.join(BASE_DIR, 'config', 'locale'),
+    os.path.join(BASE_DIR, 'passkey', 'locale'),
     os.path.join(BASE_DIR, 'quiz', 'locale'),
     os.path.join(BASE_DIR, 'templates', 'locale'),
     os.path.join(BASE_DIR, 'utils', 'locale'),
@@ -152,7 +154,7 @@ LOCALE_PATHS = (
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
-STATIC_ROOT = '/var/static'
+STATIC_ROOT = '/opt/nginx-static'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -192,10 +194,14 @@ SESSION_COOKIE_SECURE = True
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 # Define the salt of hash value
 HASH_SALT = os.getenv('DJANGO_HASH_SALT')
+# Define relevant parameters of pass-key
+FIDO_SERVER_ID = os.getenv('DJANGO_FIDO_SERVER_ID')
+FIDO_SERVER_NAME = 'L.E.D Quiz'
+KEY_ATTACHMENT = None
 # Define custom user model
 AUTH_USER_MODEL = 'account.User'
 AUTHENTICATION_BACKENDS = [
-    'django.contrib.auth.backends.ModelBackend',
+    'passkey.backend.PasskeyModelBackend',
 ]
 LOGIN_URL = 'account:login'
 LOGIN_REDIRECT_URL = 'utils:index'

@@ -1,0 +1,270 @@
+from django.db import models
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.utils.translation import gettext_lazy
+from utils.models import (
+  get_current_time,
+  BaseModel,
+)
+import json
+import traceback
+from base64 import urlsafe_b64encode
+from fido2.server import Fido2Server
+from fido2.utils import websafe_decode, websafe_encode
+from fido2.webauthn import (
+  PublicKeyCredentialRpEntity,
+  AttestedCredentialData,
+  ResidentKeyRequirement,
+)
+from logging import getLogger
+from user_agents.parsers import parse as ua_parse
+
+UserModel = get_user_model()
+
+class UserPasskey(BaseModel):
+  class Meta:
+    ordering = ('name', '-last_used')
+
+  user = models.ForeignKey(
+    UserModel,
+    verbose_name=gettext_lazy('User'),
+    on_delete=models.CASCADE,
+    related_name='passkeys',
+  )
+  name = models.CharField(
+    gettext_lazy('Passkey name'),
+    max_length=255,
+    help_text=gettext_lazy('Required. 255 characters or fewer.'),
+  )
+  is_enabled = models.BooleanField(
+    gettext_lazy('Passkey status'),
+    default=True,
+    help_text=gettext_lazy('Describes whether the passkey is enabled or not.'),
+  )
+  platform = models.CharField(
+    gettext_lazy('Platform'),
+    max_length=255,
+    default='',
+    help_text=gettext_lazy('Optional. 255 characters or fewer.'),
+  )
+  created_at = models.DateTimeField(
+    gettext_lazy('Added time'),
+    default=get_current_time,
+  )
+  last_used = models.DateTimeField(
+    gettext_lazy('Last used time'),
+    null=True,
+    default=None,
+  )
+  credential_id = models.CharField(
+    gettext_lazy('Credential ID'),
+    max_length=255,
+    unique=True,
+  )
+  token = models.CharField(
+    gettext_lazy('Token'),
+    max_length=255,
+    null=False,
+  )
+
+  ##
+  # @brief Get string object for the quiz room
+  # @return The room name and the owner's name
+  def __str__(self):
+    return f'{self.user}({self.platform})'
+
+  ##
+  # @brief Check whether request user has a update permission
+  # @param user Request user
+  # @return bool Judgement result
+  # @retval True  The request user can update instance
+  # @retval False The request user cannot update instance
+  def has_update_permission(self, user):
+    return self.user.pk == user.pk
+
+  ##
+  # @brief Check whether request user has a delete permission
+  # @param user Request user
+  # @return bool Judgement result
+  # @retval True  The request user can delete instance
+  # @retval False The request user cannot delete instance
+  def has_delete_permission(self, user):
+    return self.has_update_permission(user) and not self.is_enabled
+
+  ##
+  # @brief Get credentials for requested user
+  # @return credentials Decoded credentials
+  def get_credentials(self):
+    queryset = UserPasskey.objects.filter(user=self.user)
+    credentials = [AttestedCredentialData(websafe_decode(obj.token)) for obj in queryset]
+
+    return credentials
+
+  ##
+  # @brief Get FIDO2 server
+  # @param request Instance of HttpRequest (Default: None)
+  # @return server Instance of FIDO2 server
+  @staticmethod
+  def get_server(request=None):
+    fido_server_id = getattr(settings, 'FIDO_SERVER_ID')
+    fido_server_name = getattr(settings, 'FIDO_SERVER_NAME')
+    # Get server id
+    if callable(fido_server_id):
+      server_id = fido_server_id(request)
+    else:
+      server_id = str(fido_server_id)
+    # Get server name
+    if callable(fido_server_name):
+      server_name = fido_server_name(request)
+    else:
+      server_name = str(fido_server_name)
+    # Get relying party and server
+    relying_party = PublicKeyCredentialRpEntity(id=server_id, name=server_name)
+    server = Fido2Server(relying_party)
+
+    return server
+
+  ##
+  # @brief Get platform information
+  # @param request Instance of HttpRequest
+  # @return platform Platform name
+  @staticmethod
+  def get_current_platform(request):
+    user_agent = ua_parse(request.META['HTTP_USER_AGENT'])
+    ua_string = user_agent.ua_string
+    device = user_agent.device.family
+    os = user_agent.os.family
+    browser = user_agent.browser.family
+
+    if any([device in ['iPhone', 'iPad', 'iPod', 'AppleTV'], os in ['iOS', 'Mac OS X'], browser in ['Chrome Mobile iOS', 'Safari']]):
+      platform = 'Apple'
+    elif any([key in device for key in ['Kindle', 'AFTS', 'AFTB', 'AFTM', 'AFTT']]) or 'Amazon' in ua_string:
+      platform = 'Amazon'
+    elif 'Windows' in os:
+      platform = 'Microsoft'
+    elif any(['Android' in os, 'Linux' in os and 'Chrome' in browser, 'Chrome OS' in os]):
+      platform = 'Google'
+    else:
+      platform = 'Unknown'
+
+    return platform
+
+  ##
+  # @brief Register a new FIDO device
+  # @param request Instance of HttpRequest
+  # @param data Registration data
+  def register_begin(self, request):
+    server = self.get_server(request)
+    auth_attachment = getattr(settings, 'KEY_ATTACHMENT', None)
+    params = {
+      'id': urlsafe_b64encode(self.user.pk.bytes),
+      'name': getattr(self.user, UserModel.USERNAME_FIELD),
+      'displayName': str(self.user),
+    }
+    credentials = self.get_credentials()
+    # Conduct registration
+    data, state = server.register_begin(
+      params,
+      credentials,
+      authenticator_attachment=auth_attachment,
+      resident_key_requirement=ResidentKeyRequirement.PREFERRED
+    )
+    request.session['fido2_state'] = state
+
+    return data
+
+  ##
+  # @brief Complete the device registration
+  # @param request Instance of HttpRequest
+  # @return status Process status
+  def register_complete(self, request):
+    logger = getLogger(__name__)
+
+    try:
+      if 'fido2_state' not in request.session:
+        status = {
+          'code': 401,
+          'message': gettext_lazy('FIDO Status can’t be found, please try again'),
+        }
+      else:
+        data = json.loads(request.body)
+        server = self.get_server(request)
+        auth_data = server.register_complete(request.session.pop('fido2_state'), response=data)
+        platform = self.get_current_platform(request)
+        # Update current instance data
+        self.name = data.get('key_name', platform)
+        self.is_enabled = True
+        self.token = websafe_encode(auth_data.credential_data)
+        self.platform = platform
+        self.credential_id = data.get('id')
+        self.save()
+        status = {
+          'code': 200,
+          'message': 'OK',
+        }
+    except Exception as ex:
+      logger.error(traceback.format_exc())
+      logger.error(str(ex))
+      status = {
+        'code': 500,
+        'message': gettext_lazy('Error on server, please try again later'),
+      }
+
+    return status
+
+  ##
+  # @brief Conduct authentication with passkey
+  # @param request Instance of HttpRequest
+  # @param data Authentication data
+  @classmethod
+  def auth_begin(cls, request):
+    if request.user.is_authenticated:
+      instance = cls(user=request.user)
+      credentials = instance.get_credentials()
+    else:
+      credentials = []
+    server = cls.get_server(request)
+    data, state = server.authenticate_begin(credentials)
+    request.session['fido2_state'] = state
+
+    return data
+
+  ##
+  # @brief Complete authentication with passkey
+  # @param request Instance of HttpRequest
+  # @param user Instance of User model
+  @classmethod
+  def auth_complete(cls, request):
+    logger = getLogger(__name__)
+    data = json.loads(request.POST.get('passkeys'))
+    credential_id = data.get('id')
+
+    try:
+      instance = cls.objects.get(credential_id=credential_id, is_enabled=True)
+      server = instance.get_server(request)
+      credentials = [AttestedCredentialData(websafe_decode(instance.token))]
+      # Authentication
+      _ = server.authenticate_complete(
+        request.session.pop('fido2_state'),
+        credentials=credentials,
+        response=data,
+      )
+      # Update instance
+      instance.last_used = get_current_time()
+      is_cross_platform = instance.get_current_platform(request) == instance.platform
+      request.session['passkey'] = {
+        'passkey': True,
+        'name': instance.name,
+        'id': instance.pk,
+        'platform': instance.platform,
+        'cross_platform': is_cross_platform,
+      }
+      instance.save()
+      user = instance.user
+    except (cls.DoesNotExist, ValueError):
+      user = None
+    except Exception as ex:
+      logger.error(str(ex))
+      user = None
+
+    return user

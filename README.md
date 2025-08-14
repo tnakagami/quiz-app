@@ -30,21 +30,16 @@ I assume that host environment is satisfied with the following conditions.
     | Envrionment variable name | Example | Enables (option) |
     | :---- | :---- | :---- |
     | `APP_DOMAINS` | `localhost -> http://django:8001` | See [https-portal](https://github.com/SteveLTN/https-portal) for details. |
+    | `APP_STAGE_TYPE` | local | `local` or `production` <br /> See [https-portal](https://github.com/SteveLTN/https-portal) for details. |
     | `APP_ACCESS_PORT` | 8443 | from 1025 to 65535 |
     | `APP_ARCHITECTURE` | arm64v8 | amd64, arm32v5, arm32v6, arm32v7, arm64v8, i386, mips64le, ppc64le, riscv64, s390x |
     | `APP_TIMEZONE` | Asia/Tokyo | UTC, Asia/Tokyo, etc. |
+    | `APP_DOZZLE_ACCESS_IP` | 10.100.0.4 | 10.100.0.4, 10.17.31.124, etc. |
     | `APP_VPN_ACCESS_IP` | 10.100.0.3 | 10.100.0.3, 10.17.31.123, etc. |
     | `APP_WIREGUARD_IP` | 10.100.0.2 | 10.100.0.2, 10.17.31.2, etc. |
     | `APP_WIREGUARD_PORT` | 51820 | 51012, 51013, etc. |
 
     Please see [env.sample](./env.sample) for details.
-
-### Create local-network
-Execute the following command and press "Enter" key. It's used to access to web server (`Django`) via VPN access.
-
-```bash
-./wrapper.sh create-network
-```
 
 ### Setup wireguard environment variables
 1. Create the `wireguard/envs/.env` file.
@@ -61,32 +56,38 @@ Execute the following command and press "Enter" key. It's used to access to web 
 
     Please see [env.sample](./wireguard/envs/env.sample) for details.
 
-1. Create `01-routing-localnet.conf` file to [conf.up.d](wireguard/configs/iptables_script/conf.up.d) and [conf.down.d](wireguard/configs/iptables_script/conf.down.d).
+1. Create `01-routing-localnet.conf` file to [conf.up.d](./wireguard/configs/iptables_script/conf.up.d) and [conf.down.d](./wireguard/configs/iptables_script/conf.down.d).
 Please see [README.md](./wireguard/configs/iptables_script/README.md) for details.
+
+### Edit docker-compose.yml file
+If you don't setup `docker-compose` command in your environemnt, you should modify the following expression for `wrapper.sh`.
+
+```bash
+#!/bin/bash
+
+readonly NETWORK_NAME="shared-localnet"
+#                     vvvvvvvvvvvvvv
+readonly COMPOSE_CMD="docker compose"  # Replace it from "docker-compose" to "docker compose". In other words, remove hyphen
+#                     ^^^^^^^^^^^^^^
+readonly DJANGO_CONTAINER=django.quiz-app
+```
+
+### Create local-network
+Execute the following command and press "Enter" key. It's used to access to web server (`Django`) via VPN access.
+
+```bash
+./wrapper.sh create-network
+```
 
 ## Build
 Run the following command to create docker images.
 
 ```bash
 ./wrapper.sh build
-# or docker-compose build --build-arg UID="$(id -u)" --build-arg GID="$(id -g)"
+# or docker compose build --build-arg UID="$(id -u)" --build-arg GID="$(id -g)"
 ```
 
 ## Create all containers
-### In the case of production
-To get real certification via `https-portal`, you need to modify `docker-compose.yml` file.
-
-```yml
-  https-portal:
-    image: steveltn/https-portal:1.25
-    container_name: https-portal.quiz-app
-    restart: always
-    environment:
-      - STAGE=production # Change environment variable from `local` to `production`
-      - NUMBITS=4096
-    # other settings
-```
-
 ### All containers creation
 Execute the following command to start relevant services.
 
@@ -109,12 +110,19 @@ To access web page using `https:` request, you need to copy relevant certificate
 1. Download the certificate to client machine.
 1. Install the certificate as "Trusted Root Certification Authorities".
 
-## Initialize Database
+## Initialize Database and setup Django application
 Run the following command to create relevant tables in your database.
 
 ```bash
 ./wrapper.sh migrate
 ```
+
+After that, you need to conduct the following activities.
+* Create superuser account
+* Create manager account
+* Create Japanese translation files (if its activity is not conducted, the system provides English environment only)
+
+Please see `Preparations` section of [README.md](./django/README.md) for details.
 
 ## Copy peer config file of WireGuard to host machine
 If you want to access to `admin site` in Django, you should use VPN access provided from WireGuard application.
@@ -127,7 +135,7 @@ Therefore, after creating all containers, you need to conduct the following acti
 1. After that, download `peer_XXXX.conf` to your host machine.
 1. Finally, set your global ip to `AllowedIPs` and access to your website via VPN access.
 
-    For instance, the modified `AllowedIPs` is `AllowedIPs = 10.0.11.0/24, 1.12.123.234/30`.
+    As an example of how to modify `AllowedIPs`, you can set `AllowedIPs = 10.0.11.0/24, 1.12.123.234/30`.
 
 ## Access to web site
 Enter your domain to address-bar of web browser and move to the target page.

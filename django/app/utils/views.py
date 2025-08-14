@@ -86,7 +86,7 @@ class DjangoBreadcrumbsMixin(CrumblesViewMixin):
   ##
   # @brief URL resolver
   # @param args positional arguments
-  # @param kwargs named arguments
+  # @param kwargs Named arguments
   # @return Reconstructed link from human readable expression
   def url_resolve(self, *args, **kwargs):
     return reverse(*args, **kwargs)
@@ -124,8 +124,8 @@ class Index(TemplateView, DjangoBreadcrumbsMixin):
 
   ##
   # @brief Get context data
-  # @param kwargs named arguments
-  # @return context context which is used in template file
+  # @param kwargs Named arguments
+  # @return context The context which is used in template file
   def get_context_data(self, **kwargs):
     context = super().get_context_data(**kwargs)
     context['hash_value'] = get_digest()
