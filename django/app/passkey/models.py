@@ -6,7 +6,6 @@ from utils.models import (
   get_current_time,
   BaseModel,
 )
-import fido2.features
 import json
 import traceback
 from base64 import urlsafe_b64encode
@@ -84,12 +83,13 @@ class UserPasskey(BaseModel):
     return self.user.pk == user.pk
 
   ##
-  # @brief Update mapping status of fido2
-  def enable_json_mapping(self):
-    try:
-      fido2.features.webauthn_json_mapping.enabled = True
-    except:
-      pass
+  # @brief Check whether request user has a delete permission
+  # @param user Request user
+  # @return bool Judgement result
+  # @retval True  The request user can delete instance
+  # @retval False The request user cannot delete instance
+  def has_delete_permission(self, user):
+    return self.has_update_permission(user) and not self.is_enabled
 
   ##
   # @brief Get credentials for requested user
@@ -106,16 +106,18 @@ class UserPasskey(BaseModel):
   # @return server Instance of FIDO2 server
   @staticmethod
   def get_server(request=None):
+    fido_server_id = getattr(settings, 'FIDO_SERVER_ID')
+    fido_server_name = getattr(settings, 'FIDO_SERVER_NAME')
     # Get server id
-    if callable(settings.FIDO_SERVER_ID):
-      server_id = settings.FIDO_SERVER_ID(request)
+    if callable(fido_server_id):
+      server_id = fido_server_id(request)
     else:
-      server_id = settings.FIDO_SERVER_ID
+      server_id = str(fido_server_id)
     # Get server name
-    if callable(settings.FIDO_SERVER_NAME):
-      server_name = settings.FIDO_SERVER_NAME(request)
+    if callable(fido_server_name):
+      server_name = fido_server_name(request)
     else:
-      server_name = settings.FIDO_SERVER_NAME
+      server_name = str(fido_server_name)
     # Get relying party and server
     relying_party = PublicKeyCredentialRpEntity(id=server_id, name=server_name)
     server = Fido2Server(relying_party)
@@ -126,7 +128,8 @@ class UserPasskey(BaseModel):
   # @brief Get platform information
   # @param request Instance of HttpRequest
   # @return platform Platform name
-  def get_current_platform(self, request):
+  @staticmethod
+  def get_current_platform(request):
     user_agent = ua_parse(request.META['HTTP_USER_AGENT'])
 
     if 'Safari' in user_agent.browser.family:
@@ -147,7 +150,6 @@ class UserPasskey(BaseModel):
   # @param request Instance of HttpRequest
   # @param data Registration data
   def register_begin(self, request):
-    self.enable_json_mapping()
     server = self.get_server(request)
     auth_attachment = getattr(settings, 'KEY_ATTACHMENT', None)
     params = {
@@ -181,7 +183,6 @@ class UserPasskey(BaseModel):
           'message': gettext_lazy('FIDO Status can’t be found, please try again'),
         }
       else:
-        self.enable_json_mapping()
         data = json.loads(request.body)
         server = self.get_server(request)
         auth_data = server.register_complete(request.session.pop('fido2_state'), response=data)
@@ -236,11 +237,10 @@ class UserPasskey(BaseModel):
 
     try:
       instance = cls.objects.get(credential_id=credential_id, is_enabled=True)
-      instance.enable_json_mapping()
       server = instance.get_server(request)
       credentials = [AttestedCredentialData(websafe_decode(instance.token))]
       # Authentication
-      cred = server.authenticate_complete(
+      _ = server.authenticate_complete(
         request.session.pop('fido2_state'),
         credentials=credentials,
         response=data,
@@ -250,7 +250,7 @@ class UserPasskey(BaseModel):
       is_cross_platform = instance.get_current_platform(request) == instance.platform
       request.session['passkey'] = {
         'passkey': True,
-        'name': str(instance.user),
+        'name': instance.name,
         'id': instance.pk,
         'platform': instance.platform,
         'cross_platform': is_cross_platform,

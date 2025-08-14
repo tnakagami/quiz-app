@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-08-10 16:46+0900\n"
+"POT-Creation-Date: 2025-08-14 02:35+0900\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -80,7 +80,7 @@ msgid "Provisional registration"
 msgstr "アカウント仮登録"
 
 #: templates/account/create_account.html:29
-#: templates/account/download_creator.html:27 templates/account/login.html:29
+#: templates/account/download_creator.html:27 templates/account/login.html:30
 #: templates/account/passwords/password_change_form.html:27
 #: templates/account/passwords/password_reset_form.html:27
 #: templates/account/profiles/change_role_form.html:53
@@ -120,12 +120,16 @@ msgstr "クイズ制作者一覧のダウンロード"
 msgid "Download"
 msgstr "ダウンロード"
 
-#: templates/account/login.html:5 templates/account/login.html:21
+#: templates/account/login.html:6 templates/account/login.html:22
 #: templates/header.html:40
 msgid "Login"
 msgstr "ログイン"
 
-#: templates/account/login.html:39
+#: templates/account/login.html:41
+msgid "Login by passkeys"
+msgstr "パスキーでログイン"
+
+#: templates/account/login.html:50
 msgid "Forget own password"
 msgstr "パスワードを忘れた方"
 
@@ -286,7 +290,7 @@ msgid "Request"
 msgstr "リクエスト"
 
 #: templates/account/profiles/friend_form.html:9
-#: templates/account/profiles/user_profile.html:89
+#: templates/account/profiles/user_profile.html:97
 msgid "Register/Unregister friends"
 msgstr "フレンドの登録／解除"
 
@@ -341,8 +345,8 @@ msgstr "メンバ数"
 #: templates/account/profiles/group_list.html:25
 #: templates/account/profiles/role_change_requests.html:17
 #: templates/account/profiles/user_profile.html:16
-#: templates/quiz/genre_list.html:33 templates/quiz/quiz_list.html:77
-#: templates/quiz/room_list.html:42
+#: templates/passkey/passkey_list.html:32 templates/quiz/genre_list.html:33
+#: templates/quiz/quiz_list.html:77 templates/quiz/room_list.html:42
 msgid "Operation"
 msgstr "操作"
 
@@ -353,8 +357,8 @@ msgid "Edit"
 msgstr "更新"
 
 #: templates/account/profiles/group_list.html:48
-#: templates/quiz/quiz_list.html:104 templates/quiz/room_list.html:87
-#: templates/quiz/room_list.html:97
+#: templates/passkey/passkey_list.html:64 templates/quiz/quiz_list.html:104
+#: templates/quiz/room_list.html:87 templates/quiz/room_list.html:97
 msgid "Delete"
 msgstr "削除"
 
@@ -428,11 +432,15 @@ msgstr "コピーしました"
 msgid "Code"
 msgstr "コード"
 
-#: templates/account/profiles/user_profile.html:97
+#: templates/account/profiles/user_profile.html:88
+msgid "Setup passkeys"
+msgstr "パスキーの設定"
+
+#: templates/account/profiles/user_profile.html:105
 msgid "Create/Edit/Delete indivitual groups"
 msgstr "個人グループの作成／更新／削除"
 
-#: templates/account/profiles/user_profile.html:107
+#: templates/account/profiles/user_profile.html:115
 msgid "Change own role to \"CREATOR\""
 msgstr "自身のロールを「クイズ制作者」に変更"
 
@@ -444,7 +452,7 @@ msgstr "削除の確認"
 msgid "May I really delete this record?"
 msgstr "このデータを本当に削除しても良いですか？"
 
-#: templates/delete_modal_form.html:24
+#: templates/delete_modal_form.html:24 templates/passkey/passkey_list.html:114
 msgid "Close"
 msgstr "閉じる"
 
@@ -937,8 +945,8 @@ msgid ""
 msgstr ""
 "（備考）リクエストを処理する時、システムはあなたの判断結果を確認しません。こ"
 "のため、もし判断を間違った場合、該当の一般ユーザに他の連絡手段（例：メールや"
-"チャット）で知らせる必要があります。また、システムは管理者に対するロール変更要求機能は"
-"提供していません。"
+"チャット）で知らせる必要があります。また、システムは管理者に対するロール変更"
+"要求機能は提供していません。"
 
 #: templates/introduction.html:324
 msgid "Access to <code>Role change request</code> page from the index page."
@@ -1619,6 +1627,64 @@ msgstr ""
 "（備考2）<code>判定実施</code>フェーズでは、コメントボタンをクリックすること"
 "で、長文の回答を確認できます。"
 
+#: templates/passkey/passkey_list.html:7
+msgid "Passkey list"
+msgstr "パスキー一覧"
+
+#: templates/passkey/passkey_list.html:18
+#: templates/passkey/passkey_list.html:90
+msgid "Add a new passkey"
+msgstr "新規パスキーの追加"
+
+#: templates/passkey/passkey_list.html:27
+msgid "Name"
+msgstr "名称"
+
+#: templates/passkey/passkey_list.html:28
+msgid "Created at"
+msgstr "登録日時"
+
+#: templates/passkey/passkey_list.html:29
+msgid "Platform"
+msgstr "プラットフォーム"
+
+#: templates/passkey/passkey_list.html:30
+msgid "Last Used"
+msgstr "最終使用日時"
+
+#: templates/passkey/passkey_list.html:31 templates/quiz/download_quiz.html:60
+#: templates/quiz/playing_room.html:106 templates/quiz/playing_room.html:214
+msgid "Status"
+msgstr "作成状況"
+
+#: templates/passkey/passkey_list.html:53
+msgid "Disabled"
+msgstr "無効化"
+
+#: templates/passkey/passkey_list.html:53
+msgid "Enabled"
+msgstr "有効化"
+
+#: templates/passkey/passkey_list.html:78
+msgid "There is no passkey."
+msgstr "パスキーが存在しません。"
+
+#: templates/passkey/passkey_list.html:94
+msgid "Enter a new token name"
+msgstr "新規登録するトークン名を入力"
+
+#: templates/passkey/passkey_list.html:100
+msgid "Laptop, PC, mobile, etc."
+msgstr "ラップトップ、PC、モバイル など"
+
+#: templates/passkey/passkey_list.html:109
+msgid "Add"
+msgstr "追加"
+
+#: templates/passkey/passkey_list.html:171
+msgid "Registered Successfully. After 3 seconds, refresh the page."
+msgstr "登録完了。3秒後にページをリロードします。"
+
 #: templates/quiz/download_genre.html:5 templates/quiz/quiz_list.html:49
 msgid "Download genre"
 msgstr "ジャンルのダウンロード"
@@ -1645,11 +1711,6 @@ msgstr "問題"
 #: templates/quiz/playing_room.html:263 templates/quiz/quiz_list.html:76
 msgid "Answer"
 msgstr "解答"
-
-#: templates/quiz/download_quiz.html:60 templates/quiz/playing_room.html:106
-#: templates/quiz/playing_room.html:214
-msgid "Status"
-msgstr "作成状況"
 
 #: templates/quiz/download_quiz.html:110
 msgid "Checked"
@@ -1865,8 +1926,8 @@ msgid ""
 "ID. Your account ID is shown below and you can copy it using upper-right "
 "button."
 msgstr ""
-"自身のメールアドレスやアカウントIDを用いて、自身が作成したクイズのみアップロードできます。また、右上のボタンからあなたの"
-"アカウントIDをコピーできます。"
+"自身のメールアドレスやアカウントIDを用いて、自身が作成したクイズのみアップ"
+"ロードできます。また、右上のボタンからあなたのアカウントIDをコピーできます。"
 
 #: templates/quiz/upload_quiz.html:41
 msgid "Your account ID (secret)"

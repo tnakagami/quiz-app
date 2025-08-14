@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load i18n %}
+{% load static %}
 
 {% block content %}
 {% include 'breadcrumbs.html' with title=_("User profile") %}
@@ -82,8 +83,12 @@
       </div>
       <div class="col">
         <a
-          href="{% url 'passkey:passkey_list' %}"
-          class="btn btn-primary w-100 custom-boxshadow"
+          id="passkey-link"
+          href="#"
+          class="btn btn-primary w-100 custom-boxshadow disabled"
+          tabindex="-1"
+          role="button"
+          aria-disabled="true"
         >
           {% trans "Setup passkeys" %}
         </a>
@@ -123,6 +128,7 @@
 
 {% block bodyjs %}
 {{ block.super }}
+<script type="application/javascript" src="{% static 'js/passkey-helpers.js' %}"></script>
 <script>
 (function () {
   const init = () => {
@@ -137,6 +143,15 @@
         popover.show();
       }, false);
     }
+    // Initialize passkey library
+    Passkey.Init();
+    Passkey.CheckPasskeys(() => {
+      const element = document.querySelector('#passkey-link');
+      element.href = '{% url "passkey:passkey_list" %}';
+      element.removeAttribute('tabindex');
+      element.setAttribute('aria-disabled', 'false');
+      element.classList.remove('disabled');
+    });
   };
   // Add DOM event
   document.addEventListener('DOMContentLoaded', init);

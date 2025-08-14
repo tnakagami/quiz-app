@@ -221,12 +221,26 @@ class TestIndexLoginLogout(Common):
   def test_login_view_post_access(self, get_guest, client):
     _, email, password = get_guest
     params = {
-      'email': email,
+      'username': email,
       'password': password,
     }
     response = client.post(self.login_url, params)
 
+    assert response.status_code == status.HTTP_302_FOUND
+
+  def test_login_failed(self, get_guest, client):
+    _, email, password = get_guest
+    username = f'dummy-{email}'
+    params = {
+      'username': username,
+      'password': password,
+    }
+    response = client.post(self.login_url, params)
+    errors = response.context['form'].errors
+    err_msg = 'Please enter a correct email address and password.'
+
     assert response.status_code == status.HTTP_200_OK
+    assert err_msg in str(errors)
 
   def test_logout_page(self, get_guest, client):
     user, _, _ = get_guest

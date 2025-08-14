@@ -143,6 +143,7 @@ USE_TZ = True
 LOCALE_PATHS = (
     os.path.join(BASE_DIR, 'account', 'locale'),
     os.path.join(BASE_DIR, 'config', 'locale'),
+    os.path.join(BASE_DIR, 'passkey', 'locale'),
     os.path.join(BASE_DIR, 'quiz', 'locale'),
     os.path.join(BASE_DIR, 'templates', 'locale'),
     os.path.join(BASE_DIR, 'utils', 'locale'),

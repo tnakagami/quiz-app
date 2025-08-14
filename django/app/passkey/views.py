@@ -22,7 +22,6 @@ class PasskeyListPage(LoginRequiredMixin, ListView, DjangoBreadcrumbsMixin):
   template_name = 'passkey/passkey_list.html'
   paginate_by = 50
   context_object_name = 'passkeys'
-  extra_context = {'enroll': False}
   crumbles = DjangoBreadcrumbsMixin.get_target_crumbles(
     url_name='passkey:passkey_list',
     title=gettext_lazy('Passkey list'),
@@ -76,7 +75,7 @@ class CompletePasskeyRegistration(LoginRequiredMixin, View):
   def post(self, request, *args, **kwargs):
     instance = models.UserPasskey(user=request.user)
     status = instance.register_complete(request)
-    response = JsonResponse(status, json_dumps_params={'ensure_ascii': False}, status=status['code'])
+    response = JsonResponse(dict(status), json_dumps_params={'ensure_ascii': False}, status=status['code'])
 
     return response
 

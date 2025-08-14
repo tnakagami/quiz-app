@@ -170,46 +170,40 @@ const Passkey = {};
   */
   Passkey.RegisterPasskey = (registerURL, completeURL, keyName, csrftoken, callback) => {
     // Register passkey
-    fetch(registerURL, { method: 'GET' })
-      .then((response) => {
-        // Check response status
-        if (!response.ok) {
-          throw new Error('Getting registration data!');
-        }
+    fetch(registerURL, { method: 'GET' }).then((response) => {
+      // Check response status
+      if (!response.ok) {
+        throw new Error('Getting registration data!');
+      }
 
-        return response.json();
-      })
-      .then((data) => {
-        const options = makeCredReq(data);
-        // Create credential
-        return navigator.credentials.create(options);
-      })
-      .then((credential) => {
-        // Complete passkey registration
-        const jsonData = publickeyCredentialToJson(credential);
-        jsonData['key_name'] = keyName;
+      return response.json();
+    }).then((data) => {
+      const options = makeCredReq(data);
+      // Create credential
+      return navigator.credentials.create(options);
+    }).then((credential) => {
+      // Complete passkey registration
+      const jsonData = publickeyCredentialToJson(credential);
+      jsonData['key_name'] = keyName;
 
-        return fetch(completeURL, {
-          method: 'POST',
-          headers: {
-            'X-CSRFToken': csrftoken,
-          },
-          body: JSON.stringify(jsonData),
-        });
-      })
-      .then((response) => {
-        return response.json();
-      })
-      .then((data) => {
-        // Callback with received data
-        callback(data.code, data.message);
-      })
-      .catch((err) => {
-        const statusCode = err.status_code || 500;
-        const message = err.message || err;
-        // Callback with error message
-        callback(statusCode, message);
+      return fetch(completeURL, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': csrftoken,
+        },
+        body: JSON.stringify(jsonData),
       });
+    }).then((response) => {
+      return response.json();
+    }).then((data) => {
+      // Callback with received data
+      callback(data.code, data.message);
+    }).catch((err) => {
+      const statusCode = err.status_code || 500;
+      const message = err.message || err;
+      // Callback with error message
+      callback(statusCode, message);
+    });
   };
 
   /**
@@ -219,14 +213,12 @@ const Passkey = {};
   Passkey.CheckConditionalUI = (callback) => {
     if (window.PublicKeyCredential && PublicKeyCredential.isConditionalMediationAvailable) {
       // Check if conditional mediation is available
-      PublicKeyCredential.isConditionalMediationAvailable()
-        .then((result) => {
-          window.conditionalUI = result;
-          callback(true, null);
-        })
-        .catch((err) => {
-          callback(false, err);
-        });
+      PublicKeyCredential.isConditionalMediationAvailable().then((result) => {
+        window.conditionalUI = result;
+        callback(true, null);
+      }).catch((err) => {
+        callback(false, err);
+      });
     }
   };
 
@@ -239,36 +231,33 @@ const Passkey = {};
    * @param[in] callback The callback function if error has occured
   */
   Passkey.Authentication = (authURL, formElement, passkeyElement, hasConditionalUI = false, callback = null) => {
+    const failedCallback = callback || ((err) => null);
     // Authentication with passkey
-    fetch(authURL, { method: 'GET' })
-      .then((response) => {
-        // Check response status
-        if (!response.ok) {
-          throw new Error('No credential available to authenticate!');
-        }
+    fetch(authURL, { method: 'GET' }).then((response) => {
+      // Check response status
+      if (!response.ok) {
+        throw new Error('No credential available to authenticate!');
+      }
 
-        return response.json();
-      })
-      .then((data) => {
-        const options = getAssertReq(data);
-        // Get credentials
-        if (hasConditionalUI) {
-          options.mediation = 'conditional';
-          options.signal = window.conditionUIAbortSignal;
-        }
-        else {
-          window.conditionUIAbortController.abort('Intended refusal due to not be able to use conditional ui.');
-        }
+      return response.json();
+    }).then((data) => {
+      const options = getAssertReq(data);
+      // Get credentials
+      if (hasConditionalUI) {
+        options.mediation = 'conditional';
+        options.signal = window.conditionUIAbortSignal;
+      }
+      else {
+        window.conditionUIAbortController.abort('Intended refusal due to not be able to use conditional ui.');
+      }
 
-        return navigator.credentials.get(options);
-      })
-      .then((assertion) => {
-        passkeyElement.value = JSON.stringify(publickeyCredentialToJson(assertion));
-        formElement.submit();
-      })
-      .catch((err) => {
-        callback(err);
-      });
+      return navigator.credentials.get(options);
+    }).then((assertion) => {
+      passkeyElement.value = JSON.stringify(publickeyCredentialToJson(assertion));
+      formElement.submit();
+    }).catch((err) => {
+      failedCallback(err);
+    });
   };
 
   /**
@@ -279,18 +268,16 @@ const Passkey = {};
   Passkey.CheckPasskeys = (callback, errHandle = null) => {
     const failedCallback = errHandle || ((err) => null);
 
-    PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
-      .then((isAvailable) => {
-        if (isAvailable) {
-          callback();
-        }
-        else {
-          failedCallback('Cannot use passkey on your device.');
-        }
-      })
-      .catch((err) => {
-        failedCallback(err);
-      });
+    PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().then((isAvailable) => {
+      if (isAvailable) {
+        callback();
+      }
+      else {
+        failedCallback('Cannot use passkey on your device.');
+      }
+    }).catch((err) => {
+      failedCallback(err);
+    });
   };
 
   Object.freeze(Passkey);
