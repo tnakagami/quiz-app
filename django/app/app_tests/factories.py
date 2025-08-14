@@ -147,7 +147,7 @@ class UserPasskeyFactory(factory.django.DjangoModelFactory):
     model = passkey_models.UserPasskey
 
   class Params:
-    platform_types = ['Apple', 'Chrome on Apple', 'Google', 'Microsoft', 'Unknown']
+    platform_types = ['Apple', 'Amazon', 'Microsoft', 'Google', 'Unknown']
 
   user = factory.SubFactory(UserFactory)
   name = factory.LazyAttribute(lambda instance: faker.pystr(min_chars=1, max_chars=255))

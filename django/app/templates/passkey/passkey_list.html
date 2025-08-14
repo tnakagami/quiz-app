@@ -101,6 +101,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
+        {% csrf_token %}
         <p>{% trans "Enter a new token name" %}</p>
         <div>
           <input
@@ -162,7 +163,7 @@
       const registerURL = '{% url "passkey:register_passkey" %}';
       const completeURL = '{% url "passkey:complete_passkey_registration" %}';
       const keyName = inputKey.value;
-      const csrftoken = helper.getCookie('csrftoken');
+      const csrftoken = document.querySelector('[name="csrfmiddlewaretoken"]').value;
       const callback = (status_code, message) => {
         const createResultNode = (text, msgType) => {
           const node = document.createElement('div');
@@ -178,7 +179,7 @@
         }
         // Update result node
         if (status_code === 200) {
-          const text = '{% trans "Registered Successfully. After 3 seconds, refresh the page." %}';
+          const text = '{% trans "Registered successfully. After 3 seconds, refresh the page." %}';
           const node = createResultNode(text, 'alert-success');
           result.appendChild(node);
           setTimeout(() => {

@@ -173,7 +173,7 @@ const Passkey = {};
     fetch(registerURL, { method: 'GET' }).then((response) => {
       // Check response status
       if (!response.ok) {
-        throw new Error('Getting registration data!');
+        throw new Error('Failed to request passkey registration.');
       }
 
       return response.json();
@@ -190,10 +190,16 @@ const Passkey = {};
         method: 'POST',
         headers: {
           'X-CSRFToken': csrftoken,
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify(jsonData),
       });
     }).then((response) => {
+      // Check response status
+      if (!response.ok) {
+        throw new Error('Failed to complete passkey registration.');
+      }
+
       return response.json();
     }).then((data) => {
       // Callback with received data

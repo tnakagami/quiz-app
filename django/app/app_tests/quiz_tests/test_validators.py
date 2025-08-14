@@ -182,9 +182,9 @@ class TestCustomCSVFileValidator:
 def get_specific_users(django_db_blocker):
   with django_db_blocker.unblock():
     users = [
-      factories.UserFactory(is_active=True, email='test-validation0-c10@example.com', role=RoleType.CREATOR),
-      factories.UserFactory(is_active=True, email='test-validation1-c11@example.com', role=RoleType.CREATOR),
-      factories.UserFactory(is_active=True, email='test-validation2-c12@example.com', role=RoleType.CREATOR),
+      factories.UserFactory(is_active=True, email='test-validation0-c10@example.com', screen_name='test-hoge0', role=RoleType.CREATOR),
+      factories.UserFactory(is_active=True, email='test-validation1-c11@example.com', screen_name='test-hoge1', role=RoleType.CREATOR),
+      factories.UserFactory(is_active=True, email='test-validation2-c12@example.com', screen_name='test-hoge2', role=RoleType.CREATOR),
     ]
     users = UserModel.objects.filter(pk__in=[users[0].pk, users[1].pk, users[2].pk])
 

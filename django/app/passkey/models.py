@@ -131,15 +131,19 @@ class UserPasskey(BaseModel):
   @staticmethod
   def get_current_platform(request):
     user_agent = ua_parse(request.META['HTTP_USER_AGENT'])
+    ua_string = user_agent.ua_string
+    device = user_agent.device.family
+    os = user_agent.os.family
+    browser = user_agent.browser.family
 
-    if 'Safari' in user_agent.browser.family:
+    if any([device in ['iPhone', 'iPad', 'iPod', 'AppleTV'], os in ['iOS', 'Mac OS X'], browser in ['Chrome Mobile iOS', 'Safari']]):
       platform = 'Apple'
-    elif 'Chrome' in user_agent.browser.family and user_agent.os.family == 'Mac OS X':
-      platform = 'Chrome on Apple'
-    elif 'Android' in user_agent.os.family:
-      platform = 'Google'
-    elif 'Windows' in user_agent.os.family:
+    elif any([key in device for key in ['Kindle', 'AFTS', 'AFTB', 'AFTM', 'AFTT']]) or 'Amazon' in ua_string:
+      platform = 'Amazon'
+    elif 'Windows' in os:
       platform = 'Microsoft'
+    elif any(['Android' in os, 'Linux' in os and 'Chrome' in browser, 'Chrome OS' in os]):
+      platform = 'Google'
     else:
       platform = 'Unknown'
 
