@@ -76,7 +76,7 @@ class LoginForm(AuthenticationForm, BaseFormWithCSS):
       )
 
   ##
-  # @breif Check input parameters
+  # @brief Check input parameters
   # @return cleaned_data Valid field parameters
   @sensitive_variables()
   def clean(self):
