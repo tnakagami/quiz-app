@@ -1,6 +1,6 @@
 [project]
 name = "quiz-app"
-version = "0.0.1"
+version = "0.9.1"
 authors = [{ name="tnakagami", email="61491272+tnakagami@users.noreply.github.com" },]
 maintainers = [{ name="tnakagami", email="61491272+tnakagami@users.noreply.github.com" },]
 description = "Backend application using Django"
@@ -9,8 +9,8 @@ readme = "README.md"
 requires-python = ">=3.10"
 
 [project.urls]
-homepage = "https://github.com/tnakagami/asset-management/blob/master/README.md"
-repository = "https://github.com/tnakagami/asset-management"
+homepage = "https://github.com/tnakagami/quiz-app/blob/master/README.md"
+repository = "https://github.com/tnakagami/quiz-app"
 
 [tool.poetry]
 package-mode = false
