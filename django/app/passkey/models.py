@@ -8,6 +8,7 @@ from utils.models import (
 )
 import json
 import traceback
+import uuid
 from base64 import urlsafe_b64encode
 from fido2.server import Fido2Server
 from fido2.utils import websafe_decode, websafe_encode
@@ -24,6 +25,9 @@ UserModel = get_user_model()
 class UserPasskey(BaseModel):
   class Meta:
     ordering = ('name', '-last_used')
+    constraints = [
+      models.UniqueConstraint(fields=['user', 'credential_id'], name='passkey_unique_user_credential'),
+    ]
 
   user = models.ForeignKey(
     UserModel,
@@ -59,7 +63,6 @@ class UserPasskey(BaseModel):
   credential_id = models.CharField(
     gettext_lazy('Credential ID'),
     max_length=255,
-    unique=True,
   )
   token = models.CharField(
     gettext_lazy('Token'),
@@ -157,7 +160,7 @@ class UserPasskey(BaseModel):
     server = self.get_server(request)
     auth_attachment = getattr(settings, 'KEY_ATTACHMENT', None)
     params = {
-      'id': urlsafe_b64encode(self.user.pk.bytes),
+      'id': self.user.pk.bytes,
       'name': getattr(self.user, UserModel.USERNAME_FIELD),
       'displayName': str(self.user),
     }
@@ -237,10 +240,16 @@ class UserPasskey(BaseModel):
   def auth_complete(cls, request):
     logger = getLogger(__name__)
     data = json.loads(request.POST.get('passkeys'))
-    credential_id = data.get('id')
 
     try:
-      instance = cls.objects.get(credential_id=credential_id, is_enabled=True)
+      byte_uid = websafe_decode(data['response']['userHandle'])
+      user_id = uuid.UUID(bytes=byte_uid)
+      credential_id = data.get('id')
+      instance = cls.objects.get(
+        user__pk=user_id,
+        credential_id=credential_id,
+        is_enabled=True,
+      )
       server = instance.get_server(request)
       credentials = [AttestedCredentialData(websafe_decode(instance.token))]
       # Authentication

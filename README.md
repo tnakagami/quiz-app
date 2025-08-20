@@ -10,7 +10,7 @@ I assume that host environment is satisfied with the following conditions.
 
 ## Preparation
 ### Common
-1. Install `git`, `docker`, and `docker-compose` to your machine and enable each service because I execute python application (`Django`), https-portal (`Ruby` and `nginx`), `redis`, and `PostgreSQL` via Docker containers.
+1. Install `git`, `docker`, and `docker-compose` to your machine and enable each service because I execute python application (`Django`), https-portal (`Ruby` and `Nginx`), `redis`, and `PostgreSQL` via Docker containers.
 
 1. Run the following command and change current directory to the project.
 
@@ -59,15 +59,16 @@ I assume that host environment is satisfied with the following conditions.
 1. Create `01-routing-localnet.conf` file to [conf.up.d](./wireguard/configs/iptables_script/conf.up.d) and [conf.down.d](./wireguard/configs/iptables_script/conf.down.d).
 Please see [README.md](./wireguard/configs/iptables_script/README.md) for details.
 
-### Edit docker-compose.yml file
+### Edit shell script
 If you don't setup `docker-compose` command in your environemnt, you should modify the following expression for `wrapper.sh`.
 
 ```bash
 #!/bin/bash
 
 readonly NETWORK_NAME="shared-localnet"
+# Replace it from "docker-compose" to "docker compose". In other words, remove hyphen
 #                     vvvvvvvvvvvvvv
-readonly COMPOSE_CMD="docker compose"  # Replace it from "docker-compose" to "docker compose". In other words, remove hyphen
+readonly COMPOSE_CMD="docker compose"
 #                     ^^^^^^^^^^^^^^
 readonly DJANGO_CONTAINER=django.quiz-app
 ```
@@ -142,3 +143,5 @@ Enter your domain to address-bar of web browser and move to the target page.
 Specifically, access to `http://your-domain-name:${APP_ACCESS_PORT}/` via web browser.
 
 For example, you can access to web page by using `http://1.12.123.234:8443`.
+
+[Note] In this case, you need to set `1.12.123.234` to `DJANGO_ALLOWED_HOSTS` in `./container_envs/django/.env`.

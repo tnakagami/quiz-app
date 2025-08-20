@@ -973,6 +973,7 @@
   document.addEventListener('DOMContentLoaded', () => {
     const tocLinkClass ='toc-link';
     const backgroundColor = 'bg-danger-subtle';
+    const attrName = 'data-isClicked';
     // Initialize tocbot
     tocbot.init({
       tocSelector: '.js-toc',
@@ -995,8 +996,20 @@
           else {
             item.classList.remove(backgroundColor);
           }
+          item.removeAttribute(attrName);
         });
       },
+    });
+    // Add event listener
+    document.querySelectorAll(`.${tocLinkClass}`).forEach((item) => {
+      item.addEventListener('click', (event) => {
+        if (!item.hasAttribute(attrName)) {
+          setTimeout(() => {
+            item.setAttribute(attrName, 'true');
+            item.click();
+          }, 100);
+        }
+      })
     });
     // Add current position
     const topLinkElement = document.querySelector(`.${tocLinkClass}`);

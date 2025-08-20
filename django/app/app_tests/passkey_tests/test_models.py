@@ -1,5 +1,7 @@
 import pytest
+from base64 import urlsafe_b64encode
 from django.urls import reverse
+from django.db.utils import IntegrityError
 from app_tests import factories
 from passkey import models
 
@@ -40,6 +42,42 @@ class TestUserPasskey:
     passkey = factories.UserPasskeyFactory.build()
 
     assert isinstance(passkey, models.UserPasskey)
+
+  def test_valid_constraints(self, get_users):
+    _, user = get_users
+    other = factories.UserFactory()
+    credential_id = 'same-credential-id'
+    factories.UserPasskeyFactory(user=user, credential_id=credential_id)
+
+    try:
+      models.UserPasskey.objects.create(
+        user=other,
+        name='valid-key',
+        platform='Apple',
+        credential_id=credential_id,
+        token='valid-token',
+        is_enabled=True,
+      )
+    except Exception as ex:
+      pytest.fail(f'Unexpected Error: {ex}')
+
+  def test_invalid_constraints(self, get_users):
+    _, user = get_users
+    credential_id = 'same-credential-id'
+    factories.UserPasskeyFactory(user=user, credential_id=credential_id)
+    err_msg = 'violates unique constraint'
+
+    with pytest.raises(IntegrityError) as ex:
+      models.UserPasskey.objects.create(
+        user=user,
+        name='test-invalid-key',
+        platform='Microsoft',
+        credential_id=credential_id,
+        token='test-invalid-token',
+        is_enabled=True,
+      )
+
+    assert err_msg in ex.value.args[0]
 
   @pytest.mark.parametrize([
     'platform_name',
@@ -276,7 +314,7 @@ class TestUserPasskey:
     instance = models.UserPasskey(user=user)
     status = instance.register_complete(request)
     estimated = dict(status)
-    instance = models.UserPasskey.objects.get(credential_id=params['id'])
+    instance = models.UserPasskey.objects.get(user=user, credential_id=params['id'])
 
     assert all([key in ['code', 'message'] for key in estimated.keys()])
     assert estimated['code'] == 200
@@ -361,6 +399,9 @@ class TestUserPasskey:
     )
     params = {
       'passkeys': {
+        'response': {
+          'userHandle': urlsafe_b64encode(user.pk.bytes),
+        },
         'id': credential_id,
       },
     }
@@ -370,7 +411,7 @@ class TestUserPasskey:
     # Call target method
     output = models.UserPasskey.auth_complete(request)
     passkey = request.session.get('passkey')
-    instance = models.UserPasskey.objects.get(credential_id=credential_id, is_enabled=True)
+    instance = models.UserPasskey.objects.get(user=user, credential_id=credential_id, is_enabled=True)
 
     assert output.pk == user.pk
     assert passkey is not None
@@ -385,6 +426,9 @@ class TestUserPasskey:
     credential_id = 'invalid-id-in-auth-complete'
     params = {
       'passkeys': {
+        'response': {
+          'userHandle': urlsafe_b64encode(user.pk.bytes),
+        },
         'id': credential_id,
       },
     }
@@ -410,6 +454,9 @@ class TestUserPasskey:
     _, user = get_test_user
     params = {
       'passkeys': {
+        'response': {
+          'userHandle': urlsafe_b64encode(user.pk.bytes),
+        },
         'id': 'hgoehoge',
       },
     }
