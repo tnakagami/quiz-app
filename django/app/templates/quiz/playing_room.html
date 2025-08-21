@@ -695,9 +695,9 @@
         const hours = today.getHours();
         const minutes = today.getMinutes();
         const seconds = today.getSeconds();
-        const formatDateTime =  `${year}-${month}-${date} ${hours}:${minutes}:${seconds}`;
+        const ret = `${year}-${month}-${date} ${hours}:${minutes}:${seconds}`;
 
-        return formatDateTime;
+        return ret;
       })();
       callbacks.chatLog(datetime, data, 'bg-primary');
     });

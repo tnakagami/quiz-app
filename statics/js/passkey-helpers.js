@@ -219,9 +219,9 @@ const Passkey = {};
   Passkey.CheckConditionalUI = (callback) => {
     if (window.PublicKeyCredential && PublicKeyCredential.isConditionalMediationAvailable) {
       // Check if conditional mediation is available
-      PublicKeyCredential.isConditionalMediationAvailable().then((result) => {
-        window.conditionalUI = result;
-        callback(true, null);
+      PublicKeyCredential.isConditionalMediationAvailable().then((isAvailable) => {
+        window.conditionalUI = isAvailable;
+        callback(isAvailable, 'Cannot use conditional UI');
       }).catch((err) => {
         callback(false, err);
       });
