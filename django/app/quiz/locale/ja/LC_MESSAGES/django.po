@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-08-15 01:11+0900\n"
+"POT-Creation-Date: 2025-09-21 17:28+0900\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -61,15 +61,15 @@ msgstr "スコアを更新しました。次のクイズを出題してくださ
 msgid "Input filesize is too large. Max filesize: %(size)d MB"
 msgstr "入力ファイルサイズが大きすぎます。最大サイズ： %(size)d MB"
 
-#: quiz/forms.py:53 quiz/forms.py:634
+#: quiz/forms.py:53 quiz/forms.py:651
 msgid "Enable/Disable"
 msgstr "有効／無効"
 
-#: quiz/forms.py:58 quiz/forms.py:639 quiz/models.py:41 quiz/models.py:455
+#: quiz/forms.py:58 quiz/forms.py:656 quiz/models.py:41 quiz/models.py:460
 msgid "Enable"
 msgstr "有効"
 
-#: quiz/forms.py:59 quiz/forms.py:640
+#: quiz/forms.py:59 quiz/forms.py:657
 msgid "Disable"
 msgstr "無効"
 
@@ -208,24 +208,40 @@ msgstr "有効なメンバ"
 msgid "Assigned members"
 msgstr "選択済みメンバ"
 
+#: quiz/forms.py:634
+msgid "Use typewriter effect/Bulk display"
+msgstr "一文字ずつ出力／一括出力"
+
+#: quiz/forms.py:639 quiz/models.py:455
+msgid "Use typewriter effect"
+msgstr "一文字ずつ出力"
+
+#: quiz/forms.py:640
+msgid "Bulk display"
+msgstr "一括出力"
+
 #: quiz/forms.py:647 quiz/models.py:457
+msgid "Describes whether typewriter effect is used or not."
+msgstr "一文字ずつ出力するかどうかを表す。"
+
+#: quiz/forms.py:664 quiz/models.py:462
 msgid "Describes whether this quiz room is enabled or not."
 msgstr "このクイズルームが有効かどうかを表す。"
 
-#: quiz/forms.py:651
+#: quiz/forms.py:668
 msgid "Individual group"
 msgstr "個人グループ"
 
-#: quiz/forms.py:658
+#: quiz/forms.py:675
 msgid "Select a group to filter specific users."
 msgstr "特定のユーザをフィルタリングするためにグループを選択してください。"
 
-#: quiz/forms.py:685
+#: quiz/forms.py:702
 msgid "You have to assign at least one of genres or creators to the quiz room."
 msgstr ""
 "少なくとも1つのジャンルまたは1人のクイズ制作者を選択する必要があります。"
 
-#: quiz/forms.py:694
+#: quiz/forms.py:711
 #, python-format
 msgid ""
 "The number of quizzes this system can set is %(max_count)s, but the "
@@ -242,7 +258,7 @@ msgstr "ジャンル名"
 msgid "Required. 128 characters or fewer."
 msgstr "必須。128文字以下。"
 
-#: quiz/models.py:46 quiz/models.py:460
+#: quiz/models.py:46 quiz/models.py:465
 msgid "Created time"
 msgstr "作成日時"
 
@@ -323,71 +339,71 @@ msgstr "最大出題数"
 msgid "The maximum number of questions"
 msgstr "出題するクイズの最大数"
 
-#: quiz/models.py:581
+#: quiz/models.py:586
 msgid "You have to assign only creators."
 msgstr "クイズ制作者のみ割り当てる必要があります。"
 
-#: quiz/models.py:587
+#: quiz/models.py:592
 msgid "You have to assign only players whose role is `Guest` or `Creator`."
 msgstr "「一般ユーザ」または「クイズ制作者」のみを割り当てる必要があります。"
 
-#: quiz/models.py:593
+#: quiz/models.py:598
 msgid "Start"
 msgstr "開始"
 
-#: quiz/models.py:594
+#: quiz/models.py:599
 msgid "Waiting"
 msgstr "出題終了"
 
-#: quiz/models.py:595
+#: quiz/models.py:600
 msgid "Sent question"
 msgstr "問題文を送信済み"
 
-#: quiz/models.py:596
+#: quiz/models.py:601
 msgid "Answering"
 msgstr "出題中"
 
-#: quiz/models.py:597
+#: quiz/models.py:602
 msgid "Received answers"
 msgstr "回答受領済み"
 
-#: quiz/models.py:598
+#: quiz/models.py:603
 msgid "Judging"
 msgstr "判定中"
 
-#: quiz/models.py:599
+#: quiz/models.py:604
 msgid "End"
 msgstr "終了"
 
-#: quiz/models.py:607
+#: quiz/models.py:612
 msgid "Room"
 msgstr "クイズルーム"
 
-#: quiz/models.py:612
+#: quiz/models.py:617
 msgid "Status"
 msgstr "状態"
 
-#: quiz/models.py:617
+#: quiz/models.py:622
 msgid "Index"
 msgstr "Index"
 
-#: quiz/models.py:620
+#: quiz/models.py:625
 msgid "The n-th question"
 msgstr "第 n 番目の問題"
 
-#: quiz/models.py:623
+#: quiz/models.py:628
 msgid "Sequence"
 msgstr "出題順"
 
-#: quiz/models.py:626
+#: quiz/models.py:631
 msgid "Sequence of questions"
 msgstr "クイズの出題順"
 
-#: quiz/models.py:629
+#: quiz/models.py:634
 msgid "Detail score"
 msgstr "詳細スコア"
 
-#: quiz/models.py:632
+#: quiz/models.py:637
 msgid "Detail score of each member."
 msgstr "各メンバの詳細スコア"
 

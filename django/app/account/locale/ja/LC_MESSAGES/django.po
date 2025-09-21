@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-08-14 02:35+0900\n"
+"POT-Creation-Date: 2025-09-21 17:28+0900\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -43,12 +43,12 @@ msgid "The given user who has staff permission cannot login."
 msgstr "スタッフ権限を持つユーザはログインできません。"
 
 #: account/forms.py:118
-msgid "Hash value"
-msgstr "ハッシュ値"
+msgid "Pre-shared key"
+msgstr "事前共有キー"
 
 #: account/forms.py:122
 msgid "Enter the pre-shared key."
-msgstr "今日のハッシュ値を入力"
+msgstr "事前共有キーを入力"
 
 #: account/forms.py:183
 msgid ""

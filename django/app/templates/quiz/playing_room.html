@@ -382,16 +382,11 @@
      * @param sentenceID DOM element ID which is used to show quiz sentences
      * @param useTypeWriterEffect Describes whether typewriter effect is used or not.
     */
-    constructor(sentenceID, useTypeWriterEffect = false) {
+    constructor(sentenceID, useTypeWriterEffect) {
       this.sentenceID = sentenceID;
       this.use_typeit = useTypeWriterEffect;
       this.typeWriter = null;
-      this.options = Object.freeze({
-        speed: 75,
-        nextStringDelay: 50,
-        cursor: false,
-        loop: false,
-      });
+      // Bind all functions to the instance
       this.init = this.init.bind(this);
       this.start = this.start.bind(this);
       this.stop = this.stop.bind(this);
@@ -407,7 +402,13 @@
       element.innerHTML = '';
       // Initialize TypeIt object
       if (this.use_typeit) {
-        this.typeWriter = new TypeIt(id_, this.options);
+        const options = {
+          speed: 75,
+          nextStringDelay: 50,
+          cursor: false,
+          loop: false,
+        };
+        this.typeWriter = new TypeIt(id_, options);
       }
     }
     /**
