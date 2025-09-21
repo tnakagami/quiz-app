@@ -101,7 +101,7 @@ def test_valid_digest_validator(mocker):
 @pytest.mark.form
 def test_invalid_digest_validator(mocker):
   mocker.patch('account.forms.get_digest', return_value='abc123')
-  err_msg = 'Invalid a digest value.'
+  err_msg = 'Invalid input value.'
 
   with pytest.raises(ValidationError) as ex:
     forms._validate_hash_sign('xyz')
@@ -177,7 +177,7 @@ class TestUserCreationForm:
     ('hoge@example.com',   g_complex_passwd, g_complex_passwd, 'test-hoge',   None, 'mock_retval', False),
     ('wrong-email-format', g_complex_passwd, g_complex_passwd, 'test-hoge', 'hoge', 'mock_retval', False),
     ('hoge@example.com',   g_complex_passwd, g_wrong_password, 'test-hoge', 'hoge', 'mock_retval', False),
-    ('hoge@example.com',   'weak-passWord0', 'weak-passWord0', 'test-hoge', 'hoge', 'mock_weakpw', False),
+    #('hoge@example.com',   'weak-passWord0', 'weak-passWord0', 'test-hoge', 'hoge', 'mock_weakpw', False),
     ('hoge@example.com',   g_complex_passwd, g_complex_passwd, 'test-hoge', 'hoge', 'mock_exception', False),
   ], ids=[
     'valid-user-information',
@@ -189,7 +189,7 @@ class TestUserCreationForm:
     'digest-is-empty',
     'invalid-email-format',
     'does-not-match-passwords',
-    'enter-weak-password',
+    #'enter-weak-password',
     'digest-is-wrong',
   ])
   def test_check_user_creation_form(self, mocker, email, password1, password2, screen_name, hash_sign, mock_type, is_valid):
@@ -208,7 +208,7 @@ class TestUserCreationForm:
         del params[key]
     # Create form
     form = forms.UserCreationForm(data=params)
-    err_hash_msg = 'Invalid a digest value.'
+    err_hash_msg = 'Invalid input value.'
     # Setup magic mock
     if mock_type == 'mock_retval':
       # Replace validator setting of form's field

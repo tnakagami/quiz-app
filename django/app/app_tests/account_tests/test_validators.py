@@ -88,7 +88,7 @@ class TestCustomDigestValidator:
 
   def test_check_invalid_digest(self):
     validator = validators.CustomDigestValidator('abc123')
-    err_msg = 'Invalid a digest value.'
+    err_msg = 'Invalid input value.'
 
     with pytest.raises(ValidationError) as ex:
       validator.validate('xyz')

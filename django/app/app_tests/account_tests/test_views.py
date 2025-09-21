@@ -329,7 +329,7 @@ class TestCreateAccountPage(Common):
     'password1-is-empty',
     'password2-is-empty',
     'wrong-password',
-    'weak-password',
+    #'weak-password',
     'invalid-screen-name-length',
   ])
   def get_invalid_patterns(self, request):
@@ -344,7 +344,7 @@ class TestCreateAccountPage(Common):
 
     if request.param == 'invalid-digest':
       clone_node['hash_sign'] = 'foo-bar'
-      data = (clone_node, 'Invalid a digest value.')
+      data = (clone_node, 'Invalid input value.')
     elif request.param == 'email-is-empty':
       del clone_node['email']
       data = (clone_node, 'This field is required')

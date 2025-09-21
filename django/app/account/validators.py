@@ -59,7 +59,7 @@ class CustomDigestValidator:
   # @brief Get constraint message
   # @return Constraint message
   def get_help_text(self):
-    return gettext_lazy('Invalid a digest value.')
+    return gettext_lazy('Invalid input value.')
 
 class CustomRegistrationTokenValidator:
   ##

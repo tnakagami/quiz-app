@@ -375,6 +375,77 @@
     elem.setAttribute('data-bs-content', val);
     new bootstrap.Popover(elem);
   };
+  // Setup question viewer
+  class QuestionViewer {
+    /**
+     * @brief Constructor of QuestionViewer
+     * @param sentenceID DOM element ID which is used to show quiz sentences
+     * @param useTypeWriterEffect Describes whether typewriter effect is used or not.
+    */
+    constructor(sentenceID, useTypeWriterEffect = false) {
+      this.sentenceID = sentenceID;
+      this.use_typeit = useTypeWriterEffect;
+      this.typeWriter = null;
+      this.options = Object.freeze({
+        speed: 75,
+        nextStringDelay: 50,
+        cursor: false,
+        loop: false,
+      });
+      this.init = this.init.bind(this);
+      this.start = this.start.bind(this);
+      this.stop = this.stop.bind(this);
+      // Call initialized function
+      this.init();
+    }
+    /**
+     * @brief Initialize question script
+    */
+    init() {
+      const id_ = `#${this.sentenceID}`;
+      const element = document.querySelector(id_);
+      element.innerHTML = '';
+      // Initialize TypeIt object
+      if (this.use_typeit) {
+        this.typeWriter = new TypeIt(id_, this.options);
+      }
+    }
+    /**
+     * @brief Start to show quiz
+     * @param question Target question
+    */
+    start(question) {
+      const sentences = question.split(/\r\n|\n/);
+      // In the case of using typewriter effect
+      if (this.use_typeit) {
+        // Register quiz sentences
+        for (const sentence of sentences) {
+          this.typeWriter.type(`${sentence}`).break();
+        }
+        this.typeWriter.go();
+      }
+      // In the case of bulking display
+      else {
+        const element = document.querySelector(`#${this.sentenceID}`);
+        const node = document.createElement('div');
+        // Add quiz sentences
+        for (const sentence of sentences) {
+          const divElement = document.createElement('div');
+          divElement.textContent = sentence;
+          node.appendChild(divElement);
+        }
+        element.appendChild(node);
+      }
+    }
+    /**
+     * @brief Stop to show quiz
+    */
+    stop() {
+      if (this.use_typeit) {
+        this.typeWriter.freeze();
+      }
+    }
+  }
   // Setup callbacks of WebSocket
   class Callbacks {
     /**
@@ -382,16 +453,11 @@
      * @param userID Logged-in user's primary key
     */
     constructor(userID) {
+      const useTypeWriterEffect = {% if room.use_typewriter_effect %}true{% else %}false{% endif %};
       this.uid = userID;
       this.question = '';
-      this.options = {
-        speed: 75,
-        nextStringDelay: 50,
-        cursor: false,
-        loop: false,
-      };
-      this.typeWriter = new TypeIt('#question-sentences', this.options);
-      this._initTypeWriter = this._initTypeWriter.bind(this);
+      this.viewer = new QuestionViewer('question-sentences', useTypeWriterEffect);
+      // Bind all functions to the instance
       this._addCorrectAnswer = this._addCorrectAnswer.bind(this);
       this.chatLog = this.chatLog.bind(this);
       this.updatePlayerStatuses = this.updatePlayerStatuses.bind(this);
@@ -410,14 +476,6 @@
       this.executeJudgement = this.executeJudgement.bind(this);
       this.endJudgement = this.endJudgement.bind(this);
       {% endif %}
-    }
-    /**
-     * @brief Initialize type wirter
-    */
-    _initTypeWriter() {
-      const element = document.querySelector('#question-sentences');
-      element.innerHTML = '';
-      this.typeWriter = new TypeIt('#question-sentences', this.options);
     }
     /**
      * @brief Add correct answer
@@ -524,12 +582,7 @@
       const sendButton = document.querySelector('#send-answer');
       inputArea.disabled = false;
       sendButton.disabled = false;
-      const sentences = this.question.split(/\r\n|\n/);
-      // Register quiz sentences
-      for (const sentence of sentences) {
-        this.typeWriter.type(`${sentence}`).break();
-      }
-      this.typeWriter.go();
+      this.viewer.start(this.question);
     }
     /**
      * @brief Stopped answering quiz
@@ -541,7 +594,7 @@
       const sendButton = document.querySelector('#send-answer');
       inputArea.disabled = true;
       sendButton.disabled = true;
-      this.typeWriter.freeze();
+      this.viewer.stop();
       this.setQuiz('');
       this.chatLog(datetime, message);
     }
@@ -568,8 +621,8 @@
       }
       const ownScore = document.querySelector('#own-score');
       ownScore.textContent = results[this.uid];
-      // Initialize type writer
-      this._initTypeWriter();
+      // Initialize viewer
+      this.viewer.init();
       const inputArea = document.querySelector('#player-answer');
       inputArea.value = '';
       const message = '{% trans "The score table is updated. Please check it." %}';

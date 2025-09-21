@@ -93,6 +93,7 @@ class QuizRoomFactory(factory.django.DjangoModelFactory):
   owner = factory.SubFactory(UserFactory)
   name = factory.LazyAttribute(lambda instance: faker.pystr(min_chars=1, max_chars=128))
   max_question = factory.LazyAttribute(lambda instance: faker.pyint(min_value=1, max_value=256, step=1))
+  use_typewriter_effect = False
   is_enabled = False
   score = factory.RelatedFactory('app_tests.factories.ScoreFactory', factory_related_name='room')
 

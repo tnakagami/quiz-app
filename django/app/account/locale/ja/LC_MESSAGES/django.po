@@ -47,7 +47,7 @@ msgid "Hash value"
 msgstr "ハッシュ値"
 
 #: account/forms.py:122
-msgid "Enter the today’s hash value."
+msgid "Enter the pre-shared key."
 msgstr "今日のハッシュ値を入力"
 
 #: account/forms.py:183
@@ -246,8 +246,8 @@ msgstr ""
 "があります。"
 
 #: account/validators.py:62
-msgid "Invalid a digest value."
-msgstr "無効なハッシュ値"
+msgid "Invalid input value."
+msgstr "無効な入力値"
 
 #: account/validators.py:95
 msgid "Invalid token."

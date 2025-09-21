@@ -947,6 +947,7 @@ class TestQuizRoomForm(Common):
       'creators': creators,
       'members': members,
       'max_question': 1,
+      'use_typewriter_effect': False,
       'is_enabled': False,
     }
     err_msg = ''
@@ -1134,6 +1135,7 @@ class TestQuizRoomForm(Common):
       'creators': creators,
       'members': members,
       'max_question': 1,
+      'use_typewriter_effect': False,
       'is_enabled': False,
     }
     form = forms.QuizRoomForm(user=owner, data=params)
@@ -1187,6 +1189,7 @@ class TestQuizRoomForm(Common):
       'creators': [creators[0], creators[2]],
       'members': members,
       'max_question': 6,
+      'use_typewriter_effect': True,
       'is_enabled': True,
     }
     # Mock

@@ -601,7 +601,7 @@ class QuizRoomForm(ModelFormBasedOnUser):
 
   class Meta:
     model = models.QuizRoom
-    fields = ('name', 'genres', 'creators', 'members', 'max_question', 'is_enabled')
+    fields = ('name', 'genres', 'creators', 'members', 'max_question', 'use_typewriter_effect', 'is_enabled')
     widgets = {
       'name': forms.TextInput(attrs={
         'class': 'form-control',
@@ -629,6 +629,23 @@ class QuizRoomForm(ModelFormBasedOnUser):
         'class': 'form-control',
       }),
     }
+
+  use_typewriter_effect = forms.TypedChoiceField(
+    label=gettext_lazy('Use typewriter effect/Bulk display'),
+    coerce=bool_converter,
+    initial=False,
+    empty_value=False,
+    choices=(
+      (True, gettext_lazy('Use typewriter effect')),
+      (False, gettext_lazy('Bulk display')),
+    ),
+    widget=CustomRadioSelect(attrs={
+      'class': 'form-check form-check-inline',
+      'input-class': 'form-check-input',
+      'label-class': 'form-check-label',
+    }),
+    help_text=gettext_lazy('Describes whether typewriter effect is used or not.'),
+  )
 
   is_enabled = forms.TypedChoiceField(
     label=gettext_lazy('Enable/Disable'),

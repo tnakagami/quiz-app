@@ -604,18 +604,16 @@ msgstr ""
 
 #: templates/introduction.html:89
 msgid ""
-"After that, enter the your email-address, screen nam, password, (today's) "
-"hash value."
+"After that, enter the your email-address, screen nam, password, pre-shared key."
 msgstr ""
-"その後、メールアドレス、表示名、パスワード、（今日の）ハッシュ値を入力しま"
-"す。"
+"その後、メールアドレス、表示名、パスワード、事前共有キーを入力します。"
 
 #: templates/introduction.html:90
 msgid ""
-"[Note] You need to confirm today's hash value to managers or site "
+"[Note] You need to confirm pre-shared key to managers or site "
 "administrator."
 msgstr ""
-"（備考）管理者かサイト管理者に今日のハッシュ値を確認する必要があります。"
+"（備考）管理者かサイト管理者に事前共有キーを確認する必要があります。"
 
 #: templates/introduction.html:94
 msgid ""
