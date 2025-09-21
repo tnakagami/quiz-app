@@ -115,11 +115,11 @@ class UserCreationForm(BaseUserCreationForm, BaseFormWithCSS):
     }
 
   hash_sign = forms.CharField(
-    label=gettext_lazy('Hash value'),
+    label=gettext_lazy('Pre-shared key'),
     required=True,
     widget=forms.TextInput(),
     validators=[_validate_hash_sign],
-    help_text=gettext_lazy("Enter the today’s hash value."),
+    help_text=gettext_lazy("Enter the pre-shared key."),
   )
 
   ##

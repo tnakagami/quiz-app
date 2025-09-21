@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-08-15 00:56+0900\n"
+"POT-Creation-Date: 2025-09-21 17:28+0900\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -27,55 +27,55 @@ msgstr ""
 msgid "`passkeys` are required in request.POST"
 msgstr "POSTリクエスト時は、`passkeys` が必須です。"
 
-#: passkey/models.py:30
+#: passkey/models.py:34
 msgid "User"
 msgstr "ユーザ"
 
-#: passkey/models.py:35
+#: passkey/models.py:39
 msgid "Passkey name"
 msgstr "パスキー名"
 
-#: passkey/models.py:37
+#: passkey/models.py:41
 msgid "Required. 255 characters or fewer."
 msgstr "必須。255文字以下。"
 
-#: passkey/models.py:40
+#: passkey/models.py:44
 msgid "Passkey status"
 msgstr "パスキーのステータス"
 
-#: passkey/models.py:42
+#: passkey/models.py:46
 msgid "Describes whether the passkey is enabled or not."
 msgstr "パスキーが有効かどうかを表す。"
 
-#: passkey/models.py:45
+#: passkey/models.py:49
 msgid "Platform"
 msgstr "プラットフォーム"
 
-#: passkey/models.py:48
+#: passkey/models.py:52
 msgid "Optional. 255 characters or fewer."
 msgstr "任意。255文字以下。"
 
-#: passkey/models.py:51
+#: passkey/models.py:55
 msgid "Added time"
 msgstr "登録日時"
 
-#: passkey/models.py:55
+#: passkey/models.py:59
 msgid "Last used time"
 msgstr "最終使用日時"
 
-#: passkey/models.py:60
+#: passkey/models.py:64
 msgid "Credential ID"
 msgstr "資格情報識別子"
 
-#: passkey/models.py:65
+#: passkey/models.py:68
 msgid "Token"
 msgstr "トークン"
 
-#: passkey/models.py:183
+#: passkey/models.py:190
 msgid "FIDO Status can’t be found, please try again"
 msgstr "FIDOステータスが見つかりません。再度トライしてください。"
 
-#: passkey/models.py:206
+#: passkey/models.py:213
 msgid "Error on server, please try again later"
 msgstr "サーバーエラーのため、後ほど再度トライしてください。"
 

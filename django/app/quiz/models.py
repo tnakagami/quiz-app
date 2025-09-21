@@ -451,6 +451,11 @@ class QuizRoom(BaseModel):
     validators=[MinValueValidator(1)],
     help_text=gettext_lazy('The maximum number of questions'),
   )
+  use_typewriter_effect = models.BooleanField(
+    gettext_lazy('Use typewriter effect'),
+    default=False,
+    help_text=gettext_lazy('Describes whether typewriter effect is used or not.'),
+  )
   is_enabled = models.BooleanField(
     gettext_lazy('Enable'),
     default=False,

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 readonly NETWORK_NAME="shared-localnet"
-readonly COMPOSE_CMD="docker-compose"
+readonly COMPOSE_CMD="docker compose"
 readonly DJANGO_CONTAINER=django.quiz-app
 readonly BASE_DIR=$(cd $(dirname $0) && pwd)
 readonly HTTPS_PORTAL_HTML_DIR=${BASE_DIR}/https-portal/html

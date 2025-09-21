@@ -51,6 +51,7 @@ def test_generate_default_filename(mocker):
 
   assert filename == expected
 
+@pytest.mark.skip(reason='To change design of this function')
 @pytest.mark.utils
 @pytest.mark.model
 def test_check_get_digest_method(settings, mocker):
@@ -68,6 +69,28 @@ def test_check_get_digest_method(settings, mocker):
 
   assert args[0] == expected_input_val
   assert ret == 'dummy'
+
+@pytest.mark.utils
+@pytest.mark.model
+@pytest.mark.parametrize([
+  'input_val',
+  'expected',
+], [
+  ('L.E.D', 'L.E.D'),
+  (None, '789'),
+], ids=[
+  'set-digest',
+  'does-not-set-digest',
+])
+def test_check_get_digest_method(settings, input_val, expected):
+  if input_val is None:
+    delattr(settings, 'HASH_SALT')
+  else:
+    settings.HASH_SALT = input_val
+  # Call target function
+  ret = models.get_digest()
+
+  assert ret == expected
 
 @dataclass
 class DummyModel:

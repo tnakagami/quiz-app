@@ -663,6 +663,7 @@ class TestQuizRoomView(Common):
       'creators': self.pk_convertor(creators),
       'members': self.pk_convertor(members),
       'max_question': 4,
+      'use_typewriter_effect': False,
       'is_enabled': True,
     }
     client.force_login(user)
@@ -744,6 +745,7 @@ class TestQuizRoomView(Common):
       'creators': [str(creators[0].pk), str(creators[1].pk)],
       'members': [str(user.pk) for user in members],
       'max_question': 3,
+      'use_typewriter_effect': True,
       'is_enabled': True,
     }
     response = client.post(url, data=params)
@@ -768,6 +770,7 @@ class TestQuizRoomView(Common):
     assert self.compare_qs(all_creators, UserModel.objects.filter(pk__in=params['creators']).order_by('pk'))
     assert self.compare_qs(all_members, members)
     assert instance.max_question == params['max_question']
+    assert instance.use_typewriter_effect == params['use_typewriter_effect']
     assert instance.is_enabled == params['is_enabled']
 
   @pytest.mark.parametrize([
@@ -802,6 +805,7 @@ class TestQuizRoomView(Common):
       'creators': [str(creators[0].pk)],
       'members': [str(members[0].pk)],
       'max_question': 3,
+      'use_typewriter_effect': False,
       'is_enabled': True,
     }
     if data_type == 'both-genres-and-creators-are-none':
